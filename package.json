@@ -1,0 +1,31 @@
+{
+  "name": "borker-d",
+  "version": "0.1.0",
+  "description": "Censorship-resistant news sharing on Dogecoin",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rimraf dist/*",
+    "compile": "tsc",
+    "start": "ts-node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "MattDHill",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.16.4",
+    "pg": "^7.7.1",
+    "reflect-metadata": "^0.1.12",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2",
+    "typeorm": "0.2.11",
+    "typescript-rest": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.16.0",
+    "@types/node": "^8.0.29",
+    "@types/request-promise": "^4.1.42",
+    "rimraf": "^2.6.3",
+    "ts-node": "3.3.0",
+    "typescript": "3.2.2"
+  }
+}

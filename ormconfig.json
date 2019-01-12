@@ -1,0 +1,20 @@
+{
+  "type": "postgres",
+  "host": "localhost",
+  "port": 5432,
+  "database": "borker",
+  "username": "username",
+  "password": "password",
+  "synchronize": true,
+  "logging": true,
+  "entities": [
+    "src/db/entities/*.js"
+  ],
+  "migrations": [
+    "src/db/migrations/*.js"
+  ],
+  "cli": {
+    "entitiesDir": "src/db/entities",
+    "migrationsDir": "src/db/migrations"
+  }
+}
