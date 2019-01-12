@@ -4,3 +4,4 @@ dist/
 
 # files
 config.ts
+ormconfig.json

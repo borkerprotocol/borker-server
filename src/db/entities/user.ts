@@ -5,7 +5,7 @@ import {
   OneToMany,
   PrimaryColumn,
 } from "typeorm"
-import { Post } from "./Post"
+import { Post } from "./post"
 
 @Entity()
 export class User {

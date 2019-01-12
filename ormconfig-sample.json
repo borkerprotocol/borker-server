@@ -3,15 +3,14 @@
   "host": "localhost",
   "port": 5432,
   "database": "borker",
-  "username": "username",
-  "password": "password",
-  "synchronize": true,
+  "username": "",
+  "password": "",
   "logging": true,
   "entities": [
-    "src/db/entities/*.js"
+    "./src/db/entities/*.js"
   ],
   "migrations": [
-    "src/db/migrations/*.js"
+    "./src/db/migrations/*.js"
   ],
   "cli": {
     "entitiesDir": "src/db/entities",
