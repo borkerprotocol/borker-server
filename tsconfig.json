@@ -1,14 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "noUnusedParameters": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "sourceMap": true
-  },
-  "exclude": [
-    "node_modules"
-  ]
+	"compilerOptions": {
+		"target": "es2017",
+		"module": "commonjs",
+		"outDir": "./dist",
+		"noUnusedParameters": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"sourceMap": true
+	},
+	"exclude": [
+		"node_modules"
+	]
 }

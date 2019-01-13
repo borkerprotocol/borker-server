@@ -1,7 +1,7 @@
-# directories
+.vscode
+
 node_modules/
 dist/
 
-# files
 config.ts
 ormconfig.json

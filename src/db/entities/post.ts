@@ -1,49 +1,55 @@
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  ManyToOne,
-  PrimaryColumn,
+	Column,
+	CreateDateColumn,
+	Entity,
+	ManyToOne,
+	OneToMany,
+	PrimaryColumn,
+	JoinColumn,
 } from "typeorm"
 import { User } from "./user"
 
 export enum PostType {
-  user = 'post',
-  reply = 'reply',
-  repost = 'repost',
-  like = 'like',
-  profileUpdate = 'profile_update',
+	user = 'post',
+	reply = 'reply',
+	repost = 'repost',
+	like = 'like',
+	profileUpdate = 'profile_update',
 }
 
 @Entity()
 export class Post {
 
-  @PrimaryColumn('text', { name: 'txid' })
-  txid: string
+	@PrimaryColumn('text', { name: 'txid' })
+	txid: string
 
-  @CreateDateColumn( { name: 'created_at' })
-  createdAt: string
+	@CreateDateColumn({ name: 'created_at' })
+	createdAt: string
 
-  @Index()
-  @Column('text', { name: 'ref_txid', nullable: true })
-  refTxid: string
+	@Column("enum", { name: 'type', enum: PostType })
+	type: PostType
 
-  @Column("enum", { name: 'type', enum: PostType })
-  type: PostType
+	@Column('text', { name: 'content', nullable: true })
+	content: string
 
-  @Column('text', { name: 'content', nullable: true })
-  content: string
+	@Column('numeric', { name: 'value', nullable: true })
+	value: string
 
-  @Column('numeric', { name: 'value', nullable: true })
-  value: string
+	@Column('numeric', { name: 'fee' })
+	fee: string
 
-  @Column('numeric', { name: 'fee' })
-  fee: string
+	@OneToMany(() => Post, post => post.parent)
+	children: Post[]
 
-  @ManyToOne(() => User, user => user.posts)
-  sender: User
+	@ManyToOne(() => Post, post => post.children, { nullable: true })
+	@JoinColumn({ name: 'parent_txid' })
+	parent: Post
 
-  @ManyToOne(() => User, user => user.tips, { nullable: true })
-  receipient: User
+	@ManyToOne(() => User, user => user.posts)
+	@JoinColumn({ name: 'sender_address' })
+	sender: User
+
+	@ManyToOne(() => User, user => user.mentions, { nullable: true })
+	@JoinColumn({ name: 'recipient_address' })
+	receipient: User
 }

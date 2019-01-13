@@ -1,17 +1,34 @@
 {
-  "rules": {
-    "space-before-function-paren": true,
-    "trailing-comma": [
-      true,
-      {
-        "multiline": "always",
-        "singleline": "never"
-      }
-    ]
-  },
-  "linterOptions": {
-    "exclude": [
-      "node_modules/**"
-    ]
-  }
+	"rules": {
+		"semicolon": [
+			true,
+			"never"
+		],
+		"whitespace": [
+			true,
+			"check-branch",
+			"check-decl",
+			"check-module",
+			"check-operator",
+			"check-separator",
+			"check-rest-spread",
+			"check-type",
+			"check-typecast",
+			"check-type-operator",
+			"check-preblock",
+			"check-postbrace"
+		],
+		"trailing-comma": [
+			true,
+			{
+				"multiline": "always",
+				"singleline": "never"
+			}
+		]
+	},
+	"linterOptions": {
+		"exclude": [
+			"node_modules"
+		]
+	}
 }
