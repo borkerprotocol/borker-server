@@ -7,9 +7,9 @@ const database: ConnectionOptions = {
   port: 5432,
   username: '',
   password: '',
-  entities: [ 'src/db/entities/*.ts' ],
+  entities: [ 'dist/src/db/entities/*.js' ],
+  migrations: [ 'dist/src/db/migrations/*.js' ],
   logging: true,
-  migrations: [ 'src/db/migrations*.ts' ],
   migrationsRun: false,
 }
 

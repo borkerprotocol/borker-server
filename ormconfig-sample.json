@@ -7,10 +7,10 @@
 	"password": "",
 	"logging": true,
 	"entities": [
-		"dist/db/entities/*.js"
+		"dist/src/db/entities/*.js"
 	],
 	"migrations": [
-		"dist/db/migrations/*.js"
+		"dist/src/db/migrations/*.js"
 	],
 	"cli": {
 		"entitiesDir": "src/db/entities",
