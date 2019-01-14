@@ -14,7 +14,7 @@ export class User {
 	address: string
 
 	@CreateDateColumn({ name: 'created_at' })
-	createdAt: string
+	createdAt: Date
 
 	@Column('text', { name: 'name', nullable: true })
 	name: string
@@ -31,6 +31,15 @@ export class User {
 	@OneToMany(() => Post, post => post.sender)
 	posts: Post[]
 
-	@OneToMany(() => Post, post => post.receipient)
+	@OneToMany(() => Post, post => post.recipient)
 	mentions: Post[]
+}
+
+export interface UserSeed {
+  address: string
+  createdAt?: Date
+  name: string
+  bio: string
+  birthBlock: number
+  avatarLink: string
 }

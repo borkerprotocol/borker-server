@@ -1,8 +1,10 @@
-import { createConnections, getConnection, getManager, Connection } from 'typeorm'
+import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
-import { User } from '../../src/db/entities/user'
 import { UserHandler } from '../../src/api/handlers/user'
 import { config } from '../../src/config/config'
+import { seedUser } from '../util/seeds'
+import { User } from '../../src/db/entities/user'
+import { assertUser } from '../util/assertions'
 
 describe('User Handler', async () => {
   let connections: Connection[]
@@ -21,25 +23,30 @@ describe('User Handler', async () => {
     await Promise.all(connections.map(c => c.close()))
   })
 
-  describe('GET /users', async () => {
+  describe('GET /users && GET /users/:id', async () => {
+    let user1: User
+    let user2: User
 
     beforeEach(async () => {
-      const user1 = getManager().create(User, {
-        address: '3n298y492487n32y4m23y4x8n23',
-        name: 'Matt',
-        birthBlock: 1234,
-      })
-      const user2 = getManager().create(User, {
-        address: '3h423yhtyger9384rxgn238xemj3',
-        name: 'Aiden',
-        birthBlock: 2345,
-      })
-      await getManager().save([user1, user2])
+      user1 = await seedUser()
+      user2 = await seedUser()
     })
 
     it('returns all users', async () => {
       const users = await userHandler.index()
-      assert.equal(users.length, 2)
+
+      assertUser(users[0])
+      assertUser(users[1])
+    })
+
+    it('returns a single user', async () => {
+      const u1 = await userHandler.get(user1.address)
+      const u2 = await userHandler.get(user2.address)
+
+      assertUser(u1)
+      assertUser(u2)
+      assert.deepEqual(u1.address, user1.address)
+      assert.deepEqual(u2.address, user2.address)
     })
   })
 })

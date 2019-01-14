@@ -8,13 +8,13 @@ export class PostHandler {
 
 	@Path('/')
 	@GET
-	async index () {
-		return getManager().find(Post)
+	async index (): Promise<Post[]> {
+    return getManager().find(Post, { relations: ['sender', 'recipient', 'parent'] })
 	}
 
 	@Path('/:txid')
 	@GET
-	async get (@PathParam('txid') txid: string) {
+	async get (@PathParam('txid') txid: string): Promise<Post> {
 		return getManager().findOne(Post, { txid })
 	}
 }

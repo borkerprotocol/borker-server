@@ -10,7 +10,7 @@ import {
 import { User } from "./user"
 
 export enum PostType {
-	user = 'post',
+	post = 'post',
 	reply = 'reply',
 	repost = 'repost',
 	like = 'like',
@@ -24,7 +24,7 @@ export class Post {
 	txid: string
 
 	@CreateDateColumn({ name: 'created_at' })
-	createdAt: string
+	createdAt: Date
 
 	@Column("enum", { name: 'type', enum: PostType })
 	type: PostType
@@ -51,5 +51,14 @@ export class Post {
 
 	@ManyToOne(() => User, user => user.mentions, { nullable: true })
 	@JoinColumn({ name: 'recipient_address' })
-	receipient: User
+	recipient: User
+}
+
+export interface PostSeed {
+  txid: string
+  createdAt?: Date
+  type: PostType
+  content: string
+  value: number
+  fee: number
 }
