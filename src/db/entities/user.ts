@@ -1,45 +1,61 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	OneToMany,
 	PrimaryColumn,
+  JoinTable,
+  ManyToMany,
 } from "typeorm"
-import { Post } from "./post"
+import { Transaction } from "./transaction"
 
-@Entity()
+@Entity({ name: 'users' })
 export class User {
 
 	@PrimaryColumn('text', { name: 'address' })
 	address: string
 
-	@CreateDateColumn({ name: 'created_at' })
-	createdAt: Date
+	@Column('timestamp', { name: 'created_at' })
+  createdAt: Date
 
 	@Column('text', { name: 'name', nullable: true })
-	name: string
+	name: string | null
 
 	@Column('text', { name: 'bio', nullable: true })
-	bio: string
+	bio: string | null
 
 	@Column('int', { name: 'birth_block' })
 	birthBlock: number
 
 	@Column('text', { name: 'avatar_link', nullable: true })
-	avatarLink: string
+  avatarLink: string | null
 
-	@OneToMany(() => Post, post => post.sender)
-	posts: Post[]
+	@OneToMany(() => Transaction, transaction => transaction.sender)
+	sentTransactions: Transaction[]
 
-	@OneToMany(() => Post, post => post.recipient)
-	mentions: Post[]
+	@OneToMany(() => Transaction, transaction => transaction.recipient)
+  receivedTransactions: Transaction[]
+
+  @ManyToMany(() => User, user => user.following)
+  @JoinTable({
+    name: 'follows',
+    joinColumns: [
+      { name: 'followed_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'follower_address' },
+    ],
+  })
+  followers: User[]
+
+  @ManyToMany(() => User, user => user.followers)
+  following: User[]
 }
 
 export interface UserSeed {
   address: string
-  createdAt?: Date
-  name: string
-  bio: string
+  createdAt: Date
   birthBlock: number
-  avatarLink: string
+  name?: string
+  bio?: string
+  avatarLink?: string
 }

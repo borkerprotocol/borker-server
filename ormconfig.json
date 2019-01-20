@@ -5,7 +5,8 @@
 	"database": "borker",
 	"username": "",
 	"password": "",
-	"logging": true,
+  "logging": false,
+  "migrationsRun": true,
 	"entities": [
 		"dist/src/db/entities/*.js"
 	],

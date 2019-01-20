@@ -2,6 +2,3 @@
 
 node_modules/
 dist/
-
-config.ts
-ormconfig.json
