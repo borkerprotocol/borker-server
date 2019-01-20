@@ -1,11 +1,11 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class Init1547997920143 implements MigrationInterface {
+export class Init1548024681641 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
-        await queryRunner.query(`CREATE TABLE "users" ("address" text NOT NULL, "created_at" TIMESTAMP NOT NULL, "name" text, "bio" text, "birth_block" integer NOT NULL, "avatar_link" text, CONSTRAINT "PK_b0ec0293d53a1385955f9834d5c" PRIMARY KEY ("address"))`);
+        await queryRunner.query(`CREATE TABLE "users" ("address" text NOT NULL, "created_at" TIMESTAMP NOT NULL, "name" text, "bio" text, "birth_block" integer NOT NULL, "avatar_link" text, "followers_count" integer, "following_count" integer, CONSTRAINT "PK_b0ec0293d53a1385955f9834d5c" PRIMARY KEY ("address"))`);
         await queryRunner.query(`CREATE TYPE "transactions_type_enum" AS ENUM('bork', 'comment', 'extension', 'follow', 'like', 'rebork', 'set_name', 'set_bio', 'set_avatar', 'unfollow')`);
-        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text NOT NULL, "created_at" TIMESTAMP NOT NULL, "nonce" integer NOT NULL, "type" "transactions_type_enum" NOT NULL, "content" text, "value" numeric, "fee" numeric NOT NULL, "parent_txid" text, "sender_address" text, "recipient_address" text, CONSTRAINT "PK_2e8d69760b288a0321d79427b10" PRIMARY KEY ("txid"))`);
+        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text NOT NULL, "created_at" TIMESTAMP NOT NULL, "nonce" integer NOT NULL, "type" "transactions_type_enum" NOT NULL, "content" text, "value" numeric, "fee" numeric NOT NULL, "comments_count" integer, "likes_count" integer, "reborks_count" integer, "parent_txid" text, "sender_address" text, "recipient_address" text, CONSTRAINT "PK_2e8d69760b288a0321d79427b10" PRIMARY KEY ("txid"))`);
         await queryRunner.query(`CREATE TABLE "follows" ("followed_address" text NOT NULL, "follower_address" text NOT NULL, CONSTRAINT "PK_91708755e05b10e359b4176867e" PRIMARY KEY ("followed_address", "follower_address"))`);
         await queryRunner.query(`ALTER TABLE "transactions" ADD CONSTRAINT "FK_5a45cbd283751f29958e910554f" FOREIGN KEY ("parent_txid") REFERENCES "transactions"("txid")`);
         await queryRunner.query(`ALTER TABLE "transactions" ADD CONSTRAINT "FK_13294bcf3bbb5f82e0ba0961857" FOREIGN KEY ("sender_address") REFERENCES "users"("address")`);

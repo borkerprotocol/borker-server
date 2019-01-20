@@ -11,6 +11,8 @@ import { Transaction } from "./transaction"
 @Entity({ name: 'users' })
 export class User {
 
+  // attributes
+
 	@PrimaryColumn('text', { name: 'address' })
 	address: string
 
@@ -28,6 +30,14 @@ export class User {
 
 	@Column('text', { name: 'avatar_link', nullable: true })
   avatarLink: string | null
+
+	@Column('int', { name: 'followers_count', nullable: true })
+  followersCount: number | null
+
+	@Column('int', { name: 'following_count', nullable: true })
+  followingCount: number | null
+
+  // relations
 
 	@OneToMany(() => Transaction, transaction => transaction.sender)
 	sentTransactions: Transaction[]

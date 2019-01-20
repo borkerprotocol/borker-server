@@ -5,7 +5,6 @@ import {
 	OneToMany,
 	PrimaryColumn,
 	JoinColumn,
-  OneToOne,
 } from "typeorm"
 import { User } from "./user"
 import { BigNumber } from 'bignumber.js'
@@ -50,6 +49,15 @@ export class Transaction {
 	@Column('numeric', { name: 'fee', transformer: BigNumberTransformer })
   fee: BigNumber
 
+	@Column('int', { name: 'comments_count', nullable: true })
+  commentsCount: number | null
+
+	@Column('int', { name: 'likes_count', nullable: true })
+  likesCount: number | null
+
+	@Column('int', { name: 'reborks_count', nullable: true })
+  reborksCount: number | null
+
   // relations
 
   @OneToMany(() => Transaction, transaction => transaction.parent)
@@ -79,22 +87,34 @@ export interface TxSeed {
 
 export interface BorkTxSeed extends TxSeed {
   content: string
+  commentsCount?: number
+  likesCount?: number
+  reborksCount?: number
 }
 
 export interface ExtensionTxSeed extends BorkTxSeed {
   parent: Transaction
+  commentsCount?: number
+  likesCount?: number
+  reborksCount?: number
 }
 
 export interface CommentTxSeed extends TxSeed {
   parent: Transaction
   value: BigNumber
   content: string
+  commentsCount?: number
+  likesCount?: number
+  reborksCount?: number
 }
 
 export interface ReborkTxSeed extends TxSeed {
   parent: Transaction
   value: BigNumber
   content?: string
+  commentsCount?: number
+  likesCount?: number
+  reborksCount?: number
 }
 
 export interface LikeTxSeed extends TxSeed {

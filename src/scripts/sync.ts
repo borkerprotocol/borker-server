@@ -16,10 +16,10 @@ export async function syncChain () {
 	try {
     await processBlocks()
     console.log('sync complete')
-  } 
+  }
   catch (err) {
 		console.error('error syncing: ', err)
-  } 
+  }
   finally {
     config.startBlockSync = blockHeight
     fs.writeFileSync(path, JSON.stringify(config, null, 2), 'utf8')
@@ -104,7 +104,8 @@ async function createTransactions (txs: rpc.MappedTx[], height: number) {
       // follow
       case TransactionType.follow:
         transaction.sender.following = [transaction.recipient]
-        await userRepo.save(transaction.sender)
+        transaction.recipient.followersCount = transaction.recipient.followersCount + 1
+        await userRepo.save([transaction.sender, transaction.recipient])
         break
       // unfollow
       case TransactionType.unfollow:
@@ -113,12 +114,26 @@ async function createTransactions (txs: rpc.MappedTx[], height: number) {
           .relation(User, 'following')
           .of(transaction.sender)
           .remove(transaction.recipient)
+        transaction.recipient.followersCount = transaction.recipient.followersCount - 1
+        await userRepo.save(transaction.recipient)
         break
-      // comment, rebork, like
+      // comment, like, rebork
       case TransactionType.comment:
-      case TransactionType.rebork:
       case TransactionType.like:
-        transaction.parent = await transactionRepo.findOne({ nonce: referenceNonce, sender: transaction.recipient })
+      case TransactionType.rebork:
+        // add the parent no mater what
+        const parent = await transactionRepo.findOne({ nonce: referenceNonce, sender: transaction.recipient })
+        transaction.parent = parent
+        let data: {}
+        // increment the appropriate count
+        if (type === TransactionType.comment) {
+          data = { commentsCount: parent.commentsCount + 1 }
+        } else if (type === TransactionType.like) {
+          data = { likesCount: parent.likesCount + 1 }
+        } else {
+          data = { reborksCount: parent.reborksCount + 1 }
+        }
+        await transactionRepo.update(parent.txid, data)
         break
       // extension
       case TransactionType.extension:

@@ -42,6 +42,9 @@ export function assertLikeTx (tx: Transaction) {
   assert.equal(tx.type, TransactionType.like)
   assert.exists(tx.parent)
   assert.notExists(tx.content)
+  assert.notExists(tx.commentsCount)
+  assert.notExists(tx.likesCount)
+  assert.notExists(tx.reborksCount)
 }
 
 export function assertProfileTx (tx: Transaction) {
@@ -50,6 +53,9 @@ export function assertProfileTx (tx: Transaction) {
   assert.notExists(tx.recipient)
   assert.notExists(tx.parent)
   assert.notExists(tx.value)
+  assert.notExists(tx.commentsCount)
+  assert.notExists(tx.likesCount)
+  assert.notExists(tx.reborksCount)
 }
 
 export function assertNameTx (tx: Transaction) {

@@ -1,14 +1,14 @@
 {
-	"name": "borker-d",
+	"name": "borker",
 	"version": "0.1.0",
 	"description": "Censorship-resistant news sharing on Dogecoin",
 	"main": "dist/index.js",
 	"scripts": {
 		"clean": "rimraf dist/*",
 		"compile": "tsc",
-    "build": "npm run clean && npm run compile",
-    "start": "node dist/src",
-    "test": "mocha -r ts-node/register test/**/*.spec.ts"
+		"build": "npm run clean && npm run compile",
+		"start": "node dist/src",
+		"test": "mocha -r ts-node/register test/**/*.spec.ts"
 	},
 	"author": "MattDHill",
 	"license": "MIT",
