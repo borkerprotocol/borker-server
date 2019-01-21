@@ -5,10 +5,10 @@ import {
 	OneToMany,
 	PrimaryColumn,
 	JoinColumn,
-} from "typeorm"
-import { User } from "./user"
+} from 'typeorm'
+import { User } from './user'
 import { BigNumber } from 'bignumber.js'
-import { BigNumberTransformer } from "../../util/transformers"
+import { BigNumberTransformer } from '../../util/transformers'
 
 export enum TransactionType {
   bork = 'bork',

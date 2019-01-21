@@ -1,42 +1,47 @@
-import { GET, Path, PathParam, QueryParam } from 'typescript-rest'
-import { TransactionHandler } from './transaction'
+import { GET, Path, PathParam, QueryParam, HeaderParam } from 'typescript-rest'
 import { getRepository } from 'typeorm'
 import { User } from '../../db/entities/user'
-import { TransactionType, Transaction } from '../../db/entities/transaction'
+import { iFollow } from '../../util/functions'
 
 @Path('/users')
 export class UserHandler {
-	constructor (
-    public transactionHander = new TransactionHandler(),
-  ) { }
 
 	@Path('/')
 	@GET
 	async index (
+    @HeaderParam('myAddress') myAddress: string,
     @QueryParam('page') page: number = 1,
-    @QueryParam('per_page') perPage: number = 20,
-  ): Promise<User[]> {
-    return getRepository(User).find({
+    @QueryParam('perPage') perPage: number = 20,
+  ): Promise<ApiUser[]> {
+    const users = await getRepository(User).find({
       take: perPage,
       skip: perPage * (page - 1),
       order: { createdAt: 'ASC' },
     })
+
+    return Promise.all(users.map(async user => {
+      return {
+        ...user,
+        iFollow: await iFollow(myAddress, user.address),
+      }
+    }))
 	}
 
 	@Path('/:address')
 	@GET
-	async get (@PathParam('address') address: string): Promise<User> {
-    return getRepository(User).findOne(address)
-  }
-  
-	@Path('/:address/transactions')
-	@GET
-	async indexTransactions (
+	async get (
+    @HeaderParam('myAddress') myAddress: string,
     @PathParam('address') address: string,
-    @QueryParam('types') types?: TransactionType[],
-    @QueryParam('page') page: number = 1,
-    @QueryParam('per_page') perPage: number = 20,
-  ): Promise<Transaction[]> {
-		return this.transactionHander.index(address, types, page, perPage)
-	}
+  ): Promise<ApiUser> {
+    const user = await getRepository(User).findOne(address)
+
+    return {
+      ...user,
+      iFollow: await iFollow(myAddress, address),
+    }
+  }
+}
+
+export interface ApiUser extends User {
+  iFollow: boolean
 }

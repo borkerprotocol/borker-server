@@ -5,8 +5,8 @@ import {
 	PrimaryColumn,
   JoinTable,
   ManyToMany,
-} from "typeorm"
-import { Transaction } from "./transaction"
+} from 'typeorm'
+import { Transaction } from './transaction'
 
 @Entity({ name: 'users' })
 export class User {

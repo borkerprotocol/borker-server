@@ -1,4 +1,5 @@
 import * as express from 'express'
+import * as cors from 'cors'
 import * as bodyParser from 'body-parser'
 import { Server } from 'typescript-rest'
 import handlers from './handlers'
@@ -13,6 +14,7 @@ Server.buildServices(router, ...handlers)
 // middleware
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
+app.use(cors())
 app.use('/', router)
 
 export default app

@@ -1,8 +1,10 @@
-import { GET, Path, PathParam, POST, QueryParam } from 'typescript-rest'
+import { GET, Path, PathParam, POST, QueryParam, HeaderParam } from 'typescript-rest'
 import { Transaction, TransactionType } from '../../db/entities/transaction'
 import { syncChain } from '../../scripts/sync'
-import { In, getRepository, FindManyOptions } from 'typeorm'
+import { getRepository, FindManyOptions, In } from 'typeorm'
 import { User } from '../../db/entities/user'
+import { ApiUser } from './user'
+import { iFollow, iCommentLikeRebork } from '../../util/functions'
 
 @Path('/transactions')
 export class TransactionHandler {
@@ -22,34 +24,48 @@ export class TransactionHandler {
 	@Path('/')
 	@GET
 	async index (
-    @QueryParam('address') address?: string,
+    @HeaderParam('myAddress') myAddress: string,
+    @QueryParam('senderAddress') senderAddress?: string,
+    @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
     @QueryParam('page') page: number = 1,
-    @QueryParam('per_page') perPage: number = 20,
-  ): Promise<Transaction[]> {
+    @QueryParam('perPage') perPage: number = 20,
+  ): Promise<ApiTransaction[]> {
 
-    let options: FindManyOptions = {
+    let options: FindManyOptions<Transaction> = {
       take: perPage,
       skip: perPage * (page - 1),
-      relations: ['sender', 'recipient', 'parent'],
+      relations: ['sender', 'recipient', 'parent', 'parent.sender'],
       order: { createdAt: 'DESC' },
     }
-
+  
     options.where = {}
-
+  
     if (types) { options.where.type = In(types) }
-    if (address) { options.where.sender = { address } }
-
-    return getRepository(Transaction).find(options)
+    if (senderAddress) { options.where.sender = { address: senderAddress } }
+    if (parentTxid) { options.where.parent = { txid: parentTxid } }
+  
+    const txs = await getRepository(Transaction).find(options)
+  
+    return Promise.all(txs.map(async tx => {
+      return {
+        ...tx,
+        ...(await iCommentLikeRebork(myAddress, tx)),
+      }
+    }))
 	}
 
 	@Path('/:txid')
 	@GET
-	async get (@PathParam('txid') txid: string): Promise<TransactionExtended> {
+	async get (
+    @HeaderParam('myAddress') myAddress: string,
+    @PathParam('txid') txid: string,
+  ): Promise<ApiTransactionExtended> {
     const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'recipient', 'parent'] })
 
     return {
       ...tx,
+      ...(await iCommentLikeRebork(myAddress, tx)),
       extensions: await this.getExtensions(tx),
     }
   }
@@ -57,20 +73,28 @@ export class TransactionHandler {
 	@Path('/:txid/users')
 	@GET
 	async getUsers (
+    @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
-    @PathParam('type') type: TransactionType.like | TransactionType.rebork = TransactionType.like,
+    @QueryParam('type') type: TransactionType.like | TransactionType.rebork = TransactionType.like,
     @QueryParam('page') page: number = 1,
-    @QueryParam('per_page') perPage: number = 20,
-  ): Promise<User[]> {
+    @QueryParam('perPage') perPage: number = 20,
+  ): Promise<ApiUser[]> {
 
-    return getRepository(User).createQueryBuilder('users')
-      .leftJoin('user.sentTransactions', 'txs')
+    const users = await getRepository(User).createQueryBuilder('users')
+      .leftJoin('users.sentTransactions', 'txs')
       .where('txs.parent_txid = :txid', { txid })
       .andWhere('txs.type = :type', { type })
-      .orderBy('user.name', 'ASC')
+      .orderBy('users.name', 'ASC')
       .limit(perPage)
       .offset(perPage * page)
       .getMany()
+
+    return Promise.all(users.map(async user => {
+      return {
+        ...user,
+        iFollow: await iFollow(myAddress, user.address),
+      }
+    }))
   }
 
   private async getExtensions (tx: Transaction, extensions: Transaction[] = []): Promise<Transaction[]> {
@@ -81,7 +105,12 @@ export class TransactionHandler {
   }
 }
 
-export interface TransactionExtended extends Transaction {
-  parent: Transaction
+export interface ApiTransaction extends Transaction {
+  iComment: boolean
+  iLike: boolean
+  iRebork: boolean
+}
+
+export interface ApiTransactionExtended extends ApiTransaction {
   extensions: Transaction[]
 }

@@ -39,7 +39,7 @@ describe('Transaction Handler', async () => {
     })
 
     it('returns all txs', async () => {
-      const transactions = await transactionHandler.index()
+      const transactions = await transactionHandler.index(user.address)
 
       assert.equal(transactions.length, 2)
       assertProfileTx(transactions[0])
@@ -48,6 +48,8 @@ describe('Transaction Handler', async () => {
 
     it('returns all BORK txs', async () => {
       const transactions = await transactionHandler.index(
+        user.address,
+        undefined,
         undefined,
         [TransactionType.bork, TransactionType.comment, TransactionType.rebork, TransactionType.like],
       )
@@ -58,6 +60,8 @@ describe('Transaction Handler', async () => {
 
     it('returns all PROFILE txs', async () => {
       const transactions = await transactionHandler.index(
+        user.address,
+        undefined,
         undefined,
         [TransactionType.setName, TransactionType.setBio, TransactionType.setAvatar],
       )
@@ -67,8 +71,8 @@ describe('Transaction Handler', async () => {
     })
 
     it('returns a single tx', async () => {
-      const p1 = await transactionHandler.get(borkTx.txid)
-      const p2 = await transactionHandler.get(profileTx.txid)
+      const p1 = await transactionHandler.get(user.address, borkTx.txid)
+      const p2 = await transactionHandler.get(user.address, profileTx.txid)
 
       assertBorkTx(p1)
       // assertProfileTx(p2)
