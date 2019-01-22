@@ -1,31 +1,4 @@
-import { getManager, getRepository } from "typeorm"
-import { TransactionType, Transaction } from "../db/entities/transaction"
-
-export async function iCommentLikeRebork (myAddress: string, tx: Transaction): Promise<{ iComment: boolean, iLike: boolean, iRebork: boolean }> {
-  const [comment, like, rebork] = await  Promise.all([
-    getRepository(Transaction).findOne({
-      sender: { address: myAddress },
-      parent: { txid: tx.txid },
-      type: TransactionType.comment,
-    }),
-    getRepository(Transaction).findOne({
-      sender: { address: myAddress },
-      parent: { txid: tx.txid },
-      type: TransactionType.like,
-    }),
-    getRepository(Transaction).findOne({
-      sender: { address: myAddress },
-      parent: { txid: tx.txid },
-      type: TransactionType.rebork,
-    }),
-  ])
-
-  return {
-    iComment: !!comment,
-    iLike: !!like,
-    iRebork: !!rebork,
-  }
-}
+import { getManager } from "typeorm"
 
 export async function iFollow (myAddress: string, address: string): Promise<boolean> {
   return (await getManager().query(

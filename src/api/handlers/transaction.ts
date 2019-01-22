@@ -4,7 +4,7 @@ import { syncChain } from '../../scripts/sync'
 import { getRepository, FindManyOptions, In } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
-import { iFollow, iCommentLikeRebork } from '../../util/functions'
+import { iFollow } from '../../util/functions'
 
 @Path('/transactions')
 export class TransactionHandler {
@@ -50,7 +50,7 @@ export class TransactionHandler {
     return Promise.all(txs.map(async tx => {
       return {
         ...tx,
-        ...(await iCommentLikeRebork(myAddress, tx)),
+        ...(await this.iCommentLikeRebork(myAddress, tx)),
       }
     }))
 	}
@@ -65,7 +65,7 @@ export class TransactionHandler {
 
     return {
       ...tx,
-      ...(await iCommentLikeRebork(myAddress, tx)),
+      ...(await this.iCommentLikeRebork(myAddress, tx)),
       extensions: await this.getExtensions(tx),
     }
   }
@@ -102,6 +102,32 @@ export class TransactionHandler {
     if (!ext) { return extensions }
     extensions.push(ext)
     await this.getExtensions(ext, extensions)
+  }
+
+  private async iCommentLikeRebork (myAddress: string, tx: Transaction): Promise<{ iComment: boolean, iLike: boolean, iRebork: boolean }> {
+    const [comment, like, rebork] = await  Promise.all([
+      getRepository(Transaction).findOne({
+        sender: { address: myAddress },
+        parent: { txid: tx.txid },
+        type: TransactionType.comment,
+      }),
+      getRepository(Transaction).findOne({
+        sender: { address: myAddress },
+        parent: { txid: tx.txid },
+        type: TransactionType.like,
+      }),
+      getRepository(Transaction).findOne({
+        sender: { address: myAddress },
+        parent: { txid: tx.txid },
+        type: TransactionType.rebork,
+      }),
+    ])
+  
+    return {
+      iComment: !!comment,
+      iLike: !!like,
+      iRebork: !!rebork,
+    }
   }
 }
 

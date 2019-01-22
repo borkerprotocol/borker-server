@@ -34,10 +34,12 @@ export async function getBlockHash (blockHeight: number): Promise<string> {
   }
 }
 
+// TODO delete once borkerLib implemented
 export async function getTxHash (txid: string): Promise<string> {
   return txid
 }
 
+// TODO delete once borkerLib implemented
 export async function getTx (txHash: string): Promise<MappedTx> {
   return mockTxs.find(t => t.txid === txHash)
 }

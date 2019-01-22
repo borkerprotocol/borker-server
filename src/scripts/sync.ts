@@ -4,7 +4,7 @@ import { getRepository } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 
-let borkerLib: any
+// let borkerLib: any
 
 const path = 'borker-config.json'
 const config = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -36,12 +36,27 @@ async function processBlocks () {
 
   const rawBlock = await rpc.getBlock(blockHash)
 
-  const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
+  // const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
 
-  await createTransactions(txs, blockHeight)
+  // await createTransactions(txs, blockHeight)
+
+  await processTxs(rawBlock)
 
   blockHeight++
   await processBlocks()
+}
+
+// TODO delete once borkerLib implemented
+async function processTxs (block: rpc.Block) {
+  let txs: rpc.MappedTx[] = []
+
+  for (let txid of block.transactions) {
+    const txHash = await rpc.getTxHash(txid)
+    const tx = await rpc.getTx(txHash)
+    txs.push(tx)
+  }
+
+  await createTransactions(txs, block.height)
 }
 
 async function createTransactions (txs: rpc.MappedTx[], height: number) {
