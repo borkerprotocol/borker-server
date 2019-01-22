@@ -81,12 +81,12 @@ export class TransactionHandler {
   ): Promise<ApiUser[]> {
 
     const users = await getRepository(User).createQueryBuilder('users')
-      .leftJoin('users.sentTransactions', 'txs')
+      .leftJoin('transactions', 'txs', 'txs.sender_address = users.address')
       .where('txs.parent_txid = :txid', { txid })
       .andWhere('txs.type = :type', { type })
       .orderBy('users.name', 'ASC')
       .limit(perPage)
-      .offset(perPage * page)
+      .offset(perPage * (page - 1))
       .getMany()
 
     return Promise.all(users.map(async user => {

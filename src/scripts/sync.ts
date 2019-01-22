@@ -4,6 +4,8 @@ import { getRepository } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 
+let borkerLib: any
+
 const path = 'borker-config.json'
 const config = JSON.parse(fs.readFileSync(path, 'utf8'))
 
@@ -32,24 +34,14 @@ async function processBlocks () {
   const blockHash = await rpc.getBlockHash(blockHeight)
   if (!blockHash) return
 
-  const block = await rpc.getBlock(blockHash)
+  const rawBlock = await rpc.getBlock(blockHash)
 
-  await processTxs(block)
+  const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
+
+  await createTransactions(txs, blockHeight)
 
   blockHeight++
   await processBlocks()
-}
-
-async function processTxs (block: rpc.Block) {
-  let txs: rpc.MappedTx[] = []
-
-  for (let txid of block.transactions) {
-    const txHash = await rpc.getTxHash(txid)
-    const tx = await rpc.getTx(txHash)
-    txs.push(tx)
-  }
-
-  await createTransactions(txs, block.height)
 }
 
 async function createTransactions (txs: rpc.MappedTx[], height: number) {
@@ -104,6 +96,7 @@ async function createTransactions (txs: rpc.MappedTx[], height: number) {
       // follow
       case TransactionType.follow:
         transaction.sender.following = [transaction.recipient]
+        transaction.sender.followingCount = transaction.sender.followingCount + 1
         transaction.recipient.followersCount = transaction.recipient.followersCount + 1
         await userRepo.save([transaction.sender, transaction.recipient])
         break
@@ -114,8 +107,9 @@ async function createTransactions (txs: rpc.MappedTx[], height: number) {
           .relation(User, 'following')
           .of(transaction.sender)
           .remove(transaction.recipient)
+        transaction.sender.followingCount = transaction.sender.followingCount - 1
         transaction.recipient.followersCount = transaction.recipient.followersCount - 1
-        await userRepo.save(transaction.recipient)
+        await userRepo.save([transaction.sender, transaction.recipient])
         break
       // comment, like, rebork
       case TransactionType.comment:
