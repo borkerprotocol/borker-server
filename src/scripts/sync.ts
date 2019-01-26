@@ -3,10 +3,11 @@ import * as fs from 'fs'
 import { getRepository } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
+import { mockTxs1, mockTxs2, mockTxs3, MappedTx } from '../util/mocks'
 
 // let borkerLib: any
 
-const path = 'borker-config.json'
+const path = 'borkerconfig.json'
 const config = JSON.parse(fs.readFileSync(path, 'utf8'))
 
 let blockHeight: number
@@ -37,29 +38,26 @@ async function processBlocks () {
   const rawBlock = await rpc.getBlock(blockHash)
 
   // const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
+  const txs: MappedTx[] = getTxs(rawBlock)
 
-  // await createTransactions(txs, blockHeight)
-
-  await processTxs(rawBlock)
+  await createTransactions(txs)
 
   blockHeight++
   await processBlocks()
 }
 
-// TODO delete once borkerLib implemented
-async function processTxs (block: rpc.Block) {
-  let txs: rpc.MappedTx[] = []
-
-  for (let txid of block.transactions) {
-    const txHash = await rpc.getTxHash(txid)
-    const tx = await rpc.getTx(txHash)
-    txs.push(tx)
+function getTxs (rawBlock: string) {
+  console.log(`returning txs for block hash ${rawBlock}`)
+  if (blockHeight === 17903) {
+    return mockTxs1
+  } else if (blockHeight === 17904) {
+    return mockTxs2
+  } else {
+    return mockTxs3
   }
-
-  await createTransactions(txs, block.height)
 }
 
-async function createTransactions (txs: rpc.MappedTx[], height: number) {
+async function createTransactions (txs: MappedTx[]) {
   for (let tx of txs) {
     const { txid, timestamp, nonce, referenceNonce, type, content, value, fee, senderAddress, recipientAddress } = tx
     const transactionRepo = getRepository(Transaction)
@@ -85,7 +83,7 @@ async function createTransactions (txs: rpc.MappedTx[], height: number) {
       const user = await userRepo.create({
         address: senderAddress,
         createdAt: new Date(timestamp),
-        birthBlock: height,
+        birthBlock: blockHeight,
       })
       transaction.sender = await userRepo.save(user)
     }

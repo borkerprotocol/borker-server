@@ -1,6 +1,6 @@
 {
   "externalip": "",
-  "rpcusername": "",
+  "rpcuser": "",
   "rpcpassword": "",
-  "startBlockSync": 2444900
+  "startBlockSync": 17903
 }

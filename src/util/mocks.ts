@@ -1,7 +1,19 @@
 import { TransactionType } from '../db/entities/transaction'
-import { Block, MappedTx } from './rpc-requests'
 
-export const mockTxs: MappedTx[] = [
+export interface MappedTx {
+  timestamp: number
+  txid: string
+  type: TransactionType
+  nonce: number
+  referenceNonce: number | null
+  content: string | null
+  value: string | null
+  fee: string
+  senderAddress: string
+  recipientAddress: string | null
+}
+
+export const mockTxs1: MappedTx[] = [
   {
     timestamp: 1412177231,
     txid: '39128e8edacce1ada4e1df9aa5fc91431302ef951df06a78e13f4fbc3759e752',
@@ -50,6 +62,9 @@ export const mockTxs: MappedTx[] = [
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     recipientAddress: null,
   },
+]
+
+export const mockTxs2: MappedTx[] = [
   {
     timestamp: 1424167335,
     txid: '069aa2f138cbdc6ebd379b1e6d1cb7f86c8770ad58be27006671d528a75ba0e3',
@@ -122,6 +137,9 @@ export const mockTxs: MappedTx[] = [
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
   },
+]
+
+export const mockTxs3: MappedTx[] = [
   {
     timestamp: 1425287522,
     txid: '4cb6f18366e4a32ff69e681d192aec89a4d8721af544725fe6a02ecde4311605',
@@ -147,31 +165,3 @@ export const mockTxs: MappedTx[] = [
     recipientAddress: null,
   },
 ]
-
-const mockBlock1: Block = {
-  hash: 'u8r2hunf2onfio3n2ion23f',
-  height: 2444900,
-  transactions: [
-    '39128e8edacce1ada4e1df9aa5fc91431302ef951df06a78e13f4fbc3759e752',
-  ],
-}
-
-const mockBlock2: Block = {
-  hash: 'ubd23ndioqnwduy8b23iondxqwojabc',
-  height: 2444901,
-  transactions: [
-    '8b5ab18a8593ba3f1abae61c07bf02169487c58b0e244922b6c4578eaf6e0d35',
-    '774bef2197e6394112e1ee18246f1a0137ddb19a4d2d4464c1e25217977a0460',
-    '43873bcc83d6d811df6bff1909a5cd3fc98eb84bbaded5a44443fc86f9ef0e3b',
-    '069aa2f138cbdc6ebd379b1e6d1cb7f86c8770ad58be27006671d528a75ba0e3',
-    '41266e19b39dbba35128f3af72299b4636cb9250d81741b5db1987716043a7af',
-    '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
-    '164af924f859c9936f3bda737a986a1a85b3708c9b2fd150b36b964b11c858a6',
-    'e3b3a8bf7e3796d908b731c0d16baba0f1e161b97d917e00cde81ff0f1452fd1',
-    '3ffa42642f6dfd718562b8a6d04c403b20b59fe873eadd1960e402769cee1318',
-    '4cb6f18366e4a32ff69e681d192aec89a4d8721af544725fe6a02ecde4311605',
-    '8a3e0fe9ebc5e2fec31b12e7880f0dc184b56fd2d0541fcc3e6c0a1530826913',
-  ],
-}
-
-export const mockBlocks: Block[] = [mockBlock1, mockBlock2]
