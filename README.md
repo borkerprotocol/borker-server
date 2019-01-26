@@ -4,20 +4,6 @@ Censorship-resistant news sharing on Degecoin.
 
 ## Installation Instructions:
 
-### Clone the repository
-```git clone git@github.com:MattDHill/borker-server.git```
-#### or
-```git clone https://github.com/MattDHill/borker-server.git```
-
-### Go into the directory
-```cd borker```
-
-### Install dependencies
-```npm install```
-
-### Build it
-```npm run build```
-
 ### Install PostgreSQL if not installed
 https://www.postgresql.org/download
 
@@ -27,6 +13,23 @@ https://www.postgresql.org/download
 ```CREATE DATABASE borker;```
 
 ```\q```
+
+### Clone the repository
+```git clone https://github.com/MattDHill/borker-server.git```
+
+### Go into the directory
+```cd borker```
+
+### Copy borkerconfig.json from default
+```cp borker-config.json borkerconfig.json```
+
+### Edit borkerconfig.json to contain your own values and starting block preference
+
+### Install packages
+```npm install```
+
+### Build Borker
+```npm run build```
 
 ### Start the server and Bork on
 ```npm run start```
