@@ -40,6 +40,45 @@ export class UserHandler {
       iFollow: await iFollow(myAddress, address),
     }
   }
+
+	@Path('/:address/users')
+	@GET
+	async indexFollows (
+    @HeaderParam('myAddress') myAddress: string,
+    @PathParam('address') address: string,
+    @QueryParam('type') type: 'following' | 'followers',
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
+  ): Promise<ApiUser[]> {
+
+    let users: User[] = []
+
+    const query = await getRepository(User).createQueryBuilder('users')
+    if (type === 'following') {
+      users = await query
+        .innerJoin('follows', 'follows', 'follows.followed_address = users.address')
+        .where('follows.follower_address = :address', { address })
+        .orderBy('users.name', 'ASC')
+        .limit(perPage)
+        .offset(perPage * (page - 1))
+        .getMany()
+    } else {
+      users = await query
+        .innerJoin('follows', 'follows', 'follows.follower_address = users.address')
+        .where('follows.followed_address = :address', { address })
+        .orderBy('users.name', 'ASC')
+        .limit(perPage)
+        .offset(perPage * (page - 1))
+        .getMany()
+    }
+
+    return Promise.all(users.map(async user => {
+      return {
+        ...user,
+        iFollow: await iFollow(myAddress, user.address),
+      }
+    }))
+  }
 }
 
 export interface ApiUser extends User {

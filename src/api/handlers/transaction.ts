@@ -72,10 +72,10 @@ export class TransactionHandler {
 
 	@Path('/:txid/users')
 	@GET
-	async getUsers (
+	async indexTxUsers (
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
-    @QueryParam('type') type: TransactionType.like | TransactionType.rebork = TransactionType.like,
+    @QueryParam('type') type: TransactionType.like | TransactionType.rebork,
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
