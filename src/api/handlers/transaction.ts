@@ -4,7 +4,7 @@ import { syncChain } from '../../scripts/sync'
 import { getRepository, FindManyOptions, In } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
-import { iFollow } from '../../util/functions'
+import { checkFollowing } from '../../util/functions'
 
 @Path('/transactions')
 export class TransactionHandler {
@@ -35,7 +35,7 @@ export class TransactionHandler {
     let options: FindManyOptions<Transaction> = {
       take: perPage,
       skip: perPage * (page - 1),
-      relations: ['sender', 'recipient', 'parent', 'parent.sender'],
+      relations: ['sender', 'parent', 'parent.sender'],
       order: { createdAt: 'DESC' },
     }
   
@@ -61,7 +61,7 @@ export class TransactionHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
-    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'recipient', 'parent'] })
+    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent'] })
 
     return {
       ...tx,
@@ -92,7 +92,7 @@ export class TransactionHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await iFollow(myAddress, user.address),
+        iFollow: await checkFollowing(myAddress, user.address),
       }
     }))
   }

@@ -1,6 +1,6 @@
 import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed } from '../../src/db/entities/transaction'
+import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
 import BigNumber from 'bignumber.js'
 
@@ -67,13 +67,14 @@ export async function seedEntensionTx (sender: User, parent: Transaction, attrib
   return getManager().save(transaction)
 }
 
-export async function seedCommentTx (sender: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedCommentTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
   const seed: CommentTxSeed = {
     ...getTxSeed(),
     type: TransactionType.comment,
     content: 'comment content',
     value: new BigNumber(10),
     parent,
+    recipient,
     sender,
   }
 
@@ -81,13 +82,14 @@ export async function seedCommentTx (sender: User, parent: Transaction, attribut
   return getManager().save(transaction)
 }
 
-export async function seedReborkTx (sender: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedReborkTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
   const seed: ReborkTxSeed = {
     ...getTxSeed(),
     type: TransactionType.rebork,
     content: null,
     value: new BigNumber(10),
     parent,
+    recipient,
     sender,
   }
 
@@ -95,12 +97,37 @@ export async function seedReborkTx (sender: User, parent: Transaction, attribute
   return getManager().save(transaction)
 }
 
-export async function seedLikeTx (sender: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedLikeTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
   const seed: LikeTxSeed = {
     ...getTxSeed(),
-    type: TransactionType.rebork,
+    type: TransactionType.like,
     value: new BigNumber(10),
     parent,
+    recipient,
+    sender,
+  }
+
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+  return getManager().save(transaction)
+}
+
+export async function seedFollowTx (sender: User, followed: User, attributes: Partial<UserSeed> = {}) {
+  const seed: FollowTxSeed = {
+    ...getTxSeed(),
+    type: TransactionType.follow,
+    content: followed.address,
+    sender,
+  }
+
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+  return getManager().save(transaction)
+}
+
+export async function seedUnfollowTx (sender: User, unfollowed: User, attributes: Partial<UserSeed> = {}) {
+  const seed: FollowTxSeed = {
+    ...getTxSeed(),
+    type: TransactionType.unfollow,
+    content: unfollowed.address,
     sender,
   }
 

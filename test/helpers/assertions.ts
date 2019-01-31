@@ -27,6 +27,7 @@ export function assertExtensionTx (tx: Transaction) {
 export function assertCommentTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.comment)
+  assert.exists(tx.recipient)
   assert.exists(tx.parent)
   assert.exists(tx.content)
 }
@@ -34,14 +35,38 @@ export function assertCommentTx (tx: Transaction) {
 export function assertReborkTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.rebork)
+  assert.exists(tx.recipient)
   assert.exists(tx.parent)
 }
 
 export function assertLikeTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.like)
+  assert.exists(tx.recipient)
   assert.exists(tx.parent)
   assert.notExists(tx.content)
+  assert.notExists(tx.commentsCount)
+  assert.notExists(tx.likesCount)
+  assert.notExists(tx.reborksCount)
+}
+
+export function assertFollowTx (tx: Transaction) {
+  assertBaseTx(tx)
+  assert.equal(tx.type, TransactionType.follow)
+  assert.exists(tx.content)
+  assert.notExists(tx.recipient)
+  assert.notExists(tx.parent)
+  assert.notExists(tx.commentsCount)
+  assert.notExists(tx.likesCount)
+  assert.notExists(tx.reborksCount)
+}
+
+export function assertUnfollowTx (tx: Transaction) {
+  assertBaseTx(tx)
+  assert.equal(tx.type, TransactionType.unfollow)
+  assert.exists(tx.content)
+  assert.notExists(tx.recipient)
+  assert.notExists(tx.parent)
   assert.notExists(tx.commentsCount)
   assert.notExists(tx.likesCount)
   assert.notExists(tx.reborksCount)

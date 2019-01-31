@@ -1,7 +1,13 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam } from 'typescript-rest'
-import { getRepository } from 'typeorm'
+import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
-import { iFollow } from '../../util/functions'
+import { checkFollowing } from '../../util/functions'
+
+export enum UserFilter {
+  birth = 'birth',
+  earnings = 'earnings',
+  followers = 'followers',
+}
 
 @Path('/users')
 export class UserHandler {
@@ -10,19 +16,34 @@ export class UserHandler {
 	@GET
 	async index (
     @HeaderParam('myAddress') myAddress: string,
+    @QueryParam('filter') filter: UserFilter = UserFilter.birth,
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
-    const users = await getRepository(User).find({
+
+    let options: FindManyOptions<User> = {
       take: perPage,
       skip: perPage * (page - 1),
-      order: { createdAt: 'ASC' },
-    })
+    }
+
+    switch (filter) {
+      case UserFilter.birth:
+        options.order = { birthBlock: 'ASC' }
+        break
+      case UserFilter.earnings:
+        options.order = { earnings: 'DESC' }
+        break
+      case UserFilter.followers:
+        options.order = { followersCount: 'DESC' }
+        break
+    }
+
+    const users = await getRepository(User).find(options)
 
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await iFollow(myAddress, user.address),
+        iFollow: await checkFollowing(myAddress, user.address),
       }
     }))
 	}
@@ -33,11 +54,12 @@ export class UserHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
+    
     const user = await getRepository(User).findOne(address)
 
     return {
       ...user,
-      iFollow: await iFollow(myAddress, address),
+      iFollow: await checkFollowing(myAddress, address),
     }
   }
 
@@ -75,7 +97,7 @@ export class UserHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await iFollow(myAddress, user.address),
+        iFollow: await checkFollowing(myAddress, user.address),
       }
     }))
   }

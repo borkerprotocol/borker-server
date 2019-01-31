@@ -4,12 +4,11 @@ import { getRepository } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 import { mockTxs1, mockTxs2, mockTxs3, MappedTx } from '../util/mocks'
+import BigNumber from 'bignumber.js'
 
 // let borkerLib: any
 
-const path = 'borkerconfig.json'
-const config = JSON.parse(fs.readFileSync(path, 'utf8'))
-
+const config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
 
 export async function syncChain () {
@@ -25,7 +24,8 @@ export async function syncChain () {
   }
   finally {
     config.startBlockSync = blockHeight
-    fs.writeFileSync(path, JSON.stringify(config, null, 2), 'utf8')
+    fs.writeFileSync('borkerconfig.json', JSON.stringify(config, null, 2), 'utf8')
+    setTimeout(syncChain, 4000)
   }
 }
 
@@ -38,7 +38,7 @@ async function processBlocks () {
   const rawBlock = await rpc.getBlock(blockHash)
 
   // const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
-  const txs: MappedTx[] = getTxs(rawBlock)
+  const txs: MappedTx[] = getTxs()
 
   await createTransactions(txs)
 
@@ -46,8 +46,8 @@ async function processBlocks () {
   await processBlocks()
 }
 
-function getTxs (rawBlock: string) {
-  console.log(`returning txs for block hash ${rawBlock}`)
+// TODO delete this function once borkerLib is available
+function getTxs () {
   if (blockHeight === 17903) {
     return mockTxs1
   } else if (blockHeight === 17904) {
@@ -57,16 +57,18 @@ function getTxs (rawBlock: string) {
   }
 }
 
-async function createTransactions (txs: MappedTx[]) {
-  for (let tx of txs) {
-    const { txid, timestamp, nonce, referenceNonce, type, content, value, fee, senderAddress, recipientAddress } = tx
-    const transactionRepo = getRepository(Transaction)
+async function createTransactions (mappedTxs: MappedTx[]) {
+
+  for (let mappedTx of mappedTxs) {
+
+    const { txid, timestamp, nonce, referenceNonce, type, content, value, fee, senderAddress, recipientAddress } = mappedTx
+    const txRepo = getRepository(Transaction)
     const userRepo = getRepository(User)
 
     // continue if we've already seen this txid
-    if (await transactionRepo.findOne(txid)) continue
+    if (await txRepo.findOne(txid)) continue
 
-    let transaction = transactionRepo.create({
+    let tx = txRepo.create({
       txid,
       createdAt: new Date(timestamp),
       nonce,
@@ -77,80 +79,76 @@ async function createTransactions (txs: MappedTx[]) {
     })
 
     // attach sender
-    transaction.sender = await userRepo.findOne(senderAddress)
+    tx.sender = await userRepo.findOne(senderAddress)
     // create sender if not exists
-    if (!transaction.sender) {
-      const user = await userRepo.create({
+    if (!tx.sender) {
+      tx.sender = userRepo.create({
         address: senderAddress,
         createdAt: new Date(timestamp),
         birthBlock: blockHeight,
       })
-      transaction.sender = await userRepo.save(user)
     }
 
-    // attach recipient
+    // attach recipient and update earnings
     if (recipientAddress) {
-      transaction.recipient = await userRepo.findOne(recipientAddress)
+      tx.recipient = await userRepo.findOne(recipientAddress)
+      tx.recipient.earnings = (tx.recipient.earnings).plus(tx.value)
     }
 
     switch (type) {
       // set name
       case TransactionType.setName:
-        userRepo.update(senderAddress, { name: content })
+        tx.sender.name = content
         break
       // set bio
       case TransactionType.setBio:
-        userRepo.update(senderAddress, { bio: content })
+        tx.sender.bio = content
         break
       // set avatar
       case TransactionType.setAvatar:
-        userRepo.update(senderAddress, { avatarLink: content })
+        tx.sender.avatarLink = content
         break
       // follow
       case TransactionType.follow:
-        transaction.sender.following = [transaction.recipient]
-        transaction.sender.followingCount = transaction.sender.followingCount + 1
-        transaction.recipient.followersCount = transaction.recipient.followersCount + 1
-        await userRepo.save([transaction.sender, transaction.recipient])
+        tx.sender.following = [tx.recipient]
+        tx.sender.followingCount = tx.sender.followingCount + 1
+        tx.recipient.followersCount = tx.recipient.followersCount + 1
         break
       // unfollow
       case TransactionType.unfollow:
         await userRepo
           .createQueryBuilder()
           .relation(User, 'following')
-          .of(transaction.sender)
-          .remove(transaction.recipient)
-        transaction.sender.followingCount = transaction.sender.followingCount - 1
-        transaction.recipient.followersCount = transaction.recipient.followersCount - 1
-        await userRepo.save([transaction.sender, transaction.recipient])
+          .of(tx.sender)
+          .remove(tx.recipient)
+        tx.sender.followingCount = tx.sender.followingCount - 1
+        tx.recipient.followersCount = tx.recipient.followersCount - 1
         break
       // comment, like, rebork
       case TransactionType.comment:
       case TransactionType.like:
       case TransactionType.rebork:
         // add the parent no mater what
-        const parent = await transactionRepo.findOne({ nonce: referenceNonce, sender: transaction.recipient })
-        transaction.parent = parent
-        let data: {}
+        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.recipient })
+        tx.parent.earnings = tx.parent.earnings.plus(tx.value)
         // increment the appropriate count
         if (type === TransactionType.comment) {
-          data = { commentsCount: parent.commentsCount + 1 }
+          tx.parent.commentsCount = tx.parent.commentsCount + 1
         } else if (type === TransactionType.like) {
-          data = { likesCount: parent.likesCount + 1 }
+          tx.parent.likesCount = tx.parent.likesCount + 1
         } else {
-          data = { reborksCount: parent.reborksCount + 1 }
+          tx.parent.reborksCount = tx.parent.reborksCount + 1
         }
-        await transactionRepo.update(parent.txid, data)
         break
       // extension
       case TransactionType.extension:
-        transaction.parent = await transactionRepo.findOne({ nonce: referenceNonce, sender: transaction.sender })
+        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.sender })
         break
       // bork
       default:
         break
     }
 
-    await transactionRepo.save(transaction)
+    await txRepo.save(tx)
   }
 }

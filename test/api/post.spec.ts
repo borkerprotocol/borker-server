@@ -34,7 +34,6 @@ describe('Transaction Handler', async () => {
     beforeEach(async () => {
       user = await seedBaseUser()
       borkTx = await seedBorkTx(user)
-      console.log(borkTx)
       profileTx = await seedProfileTx(user)
     })
 
@@ -46,7 +45,7 @@ describe('Transaction Handler', async () => {
       assertBorkTx(transactions[1])
     })
 
-    it('returns all BORK txs', async () => {
+    it('returns all POST txs', async () => {
       const transactions = await transactionHandler.index(
         user.address,
         undefined,
@@ -75,7 +74,6 @@ describe('Transaction Handler', async () => {
       const p2 = await transactionHandler.get(user.address, profileTx.txid)
 
       assertBorkTx(p1)
-      // assertProfileTx(p2)
       assert.equal(p1.txid, borkTx.txid)
       assert.equal(p2.txid, profileTx.txid)
     })

@@ -7,6 +7,8 @@ import {
   ManyToMany,
 } from 'typeorm'
 import { Transaction } from './transaction'
+import { BigNumberTransformer } from '../../util/transformers'
+import BigNumber from 'bignumber.js'
 
 @Entity({ name: 'users' })
 export class User {
@@ -28,14 +30,17 @@ export class User {
 	@Column('int', { name: 'birth_block' })
 	birthBlock: number
 
-	@Column('text', { name: 'avatar_link', nullable: true })
+	@Column('text', { name: 'avatar_link', default: 0 })
   avatarLink: string | null
 
-	@Column('int', { name: 'followers_count', nullable: true })
+	@Column('int', { name: 'followers_count', default: 0  })
   followersCount: number | null
 
-	@Column('int', { name: 'following_count', nullable: true })
+	@Column('int', { name: 'following_count', default: 0  })
   followingCount: number | null
+
+	@Column('numeric', { name: 'earnings', transformer: BigNumberTransformer, default: 0 })
+  earnings: BigNumber | null
 
   // relations
 

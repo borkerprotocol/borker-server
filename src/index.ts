@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000
 createConnection()
 	.then(() => {
 		app.listen(PORT, () => {
-      console.log(`borkerd listening on port ${ PORT }`)
+      console.log(`borker listening on port ${ PORT }`)
       syncChain()
 		})
 	})

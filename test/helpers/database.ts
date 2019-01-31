@@ -9,5 +9,5 @@ export const database: ConnectionOptions = {
   password: '',
   entities: [ 'src/db/entities/*.ts' ],
   migrations: [ 'src/db/migrations/*.ts' ],
-  logging: true,
+  logging: false,
 }
