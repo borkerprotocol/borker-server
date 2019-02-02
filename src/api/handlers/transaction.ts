@@ -28,26 +28,49 @@ export class TransactionHandler {
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
+    @QueryParam('isFeed') isFeed: boolean = false,
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiTransaction[]> {
 
-    let options: FindManyOptions<Transaction> = {
-      take: perPage,
-      skip: perPage * (page - 1),
-      relations: ['sender', 'parent', 'parent.sender'],
-      order: { createdAt: 'DESC' },
+    let txs: Transaction[]
+
+    if (isFeed) {
+
+      txs = await getRepository(Transaction)
+        .createQueryBuilder('tx')
+        .leftJoinAndSelect('tx.sender', 'sender')
+        .leftJoinAndSelect('tx.parent', 'parent')
+        .leftJoinAndSelect('parent.sender', 'parentSender')
+        .where('tx.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
+        .andWhere('tx.type IN (:...types)', { types })
+        .orderBy('tx.created_at', 'DESC')
+        .limit(perPage)
+        .skip(perPage * (page - 1))
+        .getMany()
+
+    } else {
+
+      let options: FindManyOptions<Transaction> = {
+        take: perPage,
+        skip: perPage * (page - 1),
+        relations: ['sender', 'parent', 'parent.sender'],
+        order: { createdAt: 'DESC' },
+      }
+
+      options.where = {}
+  
+      if (types) { options.where.type = In(types) }
+      if (senderAddress) { options.where.sender = { address: senderAddress } }
+      if (parentTxid) { options.where.parent = { txid: parentTxid } }
+  
+      txs = await getRepository(Transaction).find(options)
     }
-  
-    options.where = {}
-  
-    if (types) { options.where.type = In(types) }
-    if (senderAddress) { options.where.sender = { address: senderAddress } }
-    if (parentTxid) { options.where.parent = { txid: parentTxid } }
-  
-    const txs = await getRepository(Transaction).find(options)
-  
+
     return Promise.all(txs.map(async tx => {
+      if (tx.parent) {
+        Object.assign(tx.parent, { ...await this.iCommentLikeRebork(myAddress, tx.parent) })
+      }
       return {
         ...tx,
         ...(await this.iCommentLikeRebork(myAddress, tx)),

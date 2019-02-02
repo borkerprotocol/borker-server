@@ -37,7 +37,7 @@ export class Transaction {
 	@Column('int', { name: 'nonce' })
 	nonce: number
 
-	@Column("enum", { name: 'type', enum: TransactionType })
+	@Column('enum', { name: 'type', enum: TransactionType })
   type: TransactionType
 
 	@Column('text', { name: 'content', nullable: true })
