@@ -4,7 +4,7 @@ import app from './api/app'
 import { syncChain } from "./scripts/sync"
 
 // create connection and initialize app
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 4422
 
 createConnection()
 	.then(() => {
