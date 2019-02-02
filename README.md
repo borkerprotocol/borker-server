@@ -4,15 +4,21 @@ Censorship-resistant news sharing on Degecoin.
 
 ## Installation Instructions:
 
+### Install Node.js if not installed
+https://github.com/nodesource/distributions/blob/master/README.md
+
+* confirm installation with:
+```node -v```
+```npm -v```
+
+### Install typescript if not installed
+npm install -g typescript
+
 ### Install PostgreSQL if not installed
 https://www.postgresql.org/download
 
 ### Create the database
-```psql postgres```
-
-```CREATE DATABASE borker;```
-
-```\q```
+```sudo -u postgres createdb borker```
 
 ### Clone the repository
 ```git clone https://github.com/MattDHill/borker-server.git```
@@ -37,11 +43,7 @@ https://www.postgresql.org/download
 ## * To develop and run tests *
 
 ### Create the test database
-```psql postgres```
-
-```CREATE DATABASE borker_test;```
-
-```\q```
+```sudo -u postgres createdb borker```
 
 ### Run the test suite
 ```npm run test```
