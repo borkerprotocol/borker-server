@@ -8,7 +8,9 @@ Censorship-resistant news sharing on Degecoin.
 https://github.com/nodesource/distributions/blob/master/README.md
 
 * confirm installation with:
+
 ```node -v```
+
 ```npm -v```
 
 ### Install typescript if not installed
@@ -18,7 +20,13 @@ npm install -g typescript
 https://www.postgresql.org/download
 
 ### Create the database
-```sudo -u postgres createdb borker```
+```sudo -u postgres psql```
+
+```CREATE USER <user> WITH PASSWORD <password>;```
+
+```CREATE DATABASE borker;```
+
+```\q```
 
 ### Clone the repository
 ```git clone https://github.com/MattDHill/borker-server.git```
@@ -29,7 +37,9 @@ https://www.postgresql.org/download
 ### Copy borkerconfig.json from default
 ```cp borker-config.json borkerconfig.json```
 
-### Edit borkerconfig.json to contain your own values and starting block preference
+### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
+
+### Edit ormconfig.json to contain your own psotgreSQL values
 
 ### Install packages
 ```npm install```
@@ -43,7 +53,11 @@ https://www.postgresql.org/download
 ## * To develop and run tests *
 
 ### Create the test database
-```sudo -u postgres createdb borker```
+```sudo -u postgres psql```
+
+```CREATE DATABASE borker_test;```
+
+```\q```
 
 ### Run the test suite
 ```npm run test```
