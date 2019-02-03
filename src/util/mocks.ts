@@ -1,5 +1,10 @@
 import { TransactionType } from '../db/entities/transaction'
 
+export interface Output {
+  address: string
+  value: string
+}
+
 export interface MappedTx {
   timestamp: number
   txid: string
@@ -7,10 +12,9 @@ export interface MappedTx {
   nonce: number
   referenceNonce: number | null
   content: string | null
-  value: string | null
   fee: string
   senderAddress: string
-  recipientAddress: string | null
+  outputs: Output[]
 }
 
 export const mockTxs1: MappedTx[] = [
@@ -21,10 +25,9 @@ export const mockTxs1: MappedTx[] = [
     nonce: 0,
     referenceNonce: null,
     content: 'MattHill',
-    value: '0',
     fee: '1',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: null,
+    outputs: [],
   },
   {
     timestamp: 1422182926,
@@ -33,10 +36,9 @@ export const mockTxs1: MappedTx[] = [
     nonce: 1,
     referenceNonce: null,
     content: 'I like to bork. I like to bork',
-    value: '0',
     fee: '1',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: null,
+    outputs: [],
   },
   {
     timestamp: 1422184977,
@@ -45,10 +47,14 @@ export const mockTxs1: MappedTx[] = [
     nonce: 0,
     referenceNonce: 1,
     content: null,
-    value: '20',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+    outputs: [
+      {
+        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+        value: '20',
+      },
+    ],
   },
   {
     timestamp: 1423181711,
@@ -56,11 +62,10 @@ export const mockTxs1: MappedTx[] = [
     type: TransactionType.bork,
     nonce: 1,
     referenceNonce: null,
-    content: 'Bork some more. Bork some more.',
-    value: '0',
+    content: 'Bork some more. Bork some more. #Tomorrow',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: null,
+    outputs: [],
   },
 ]
 
@@ -71,11 +76,10 @@ export const mockTxs2: MappedTx[] = [
     type: TransactionType.bork,
     nonce: 2,
     referenceNonce: null,
-    content: 'Borking like there aint no tomorrow',
-    value: '0',
+    content: 'Borking like there aint no #tomorrow',
     fee: '1',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: null,
+    outputs: [],
   },
   {
     timestamp: 1424169440,
@@ -84,10 +88,14 @@ export const mockTxs2: MappedTx[] = [
     nonce: 2,
     referenceNonce: 2,
     content: null,
-    value: '10',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+    outputs: [
+      {
+        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+        value: '10',
+      },
+    ],
   },
   {
     timestamp: 1424561124,
@@ -96,10 +104,14 @@ export const mockTxs2: MappedTx[] = [
     nonce: 3,
     referenceNonce: 1,
     content: 'And some more!',
-    value: '100',
     fee: '1',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    outputs: [
+      {
+        address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+        value: '100',
+      },
+    ],
   },
   {
     timestamp: 1424967992,
@@ -108,10 +120,9 @@ export const mockTxs2: MappedTx[] = [
     nonce: 3,
     referenceNonce: null,
     content: 'This is a long bork that will take up two whole transactions. I will write',
-    value: '0',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: null,
+    outputs: [],
   },
   {
     timestamp: 1425167583,
@@ -120,10 +131,12 @@ export const mockTxs2: MappedTx[] = [
     nonce: 4,
     referenceNonce: 3,
     content: 'just a little more. See, I told you. Bork on.',
-    value: '0',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: null,
+    outputs: [{
+      address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+      value: '70',
+    }],
   },
   {
     timestamp: 1425188584,
@@ -132,10 +145,14 @@ export const mockTxs2: MappedTx[] = [
     nonce: 5,
     referenceNonce: null,
     content: null,
-    value: '200',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+    outputs: [
+      {
+        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+        value: '200',
+      },
+    ],
   },
 ]
 
@@ -147,10 +164,9 @@ export const mockTxs3: MappedTx[] = [
     nonce: 6,
     referenceNonce: null,
     content: 'Aiden McClelland',
-    value: '0',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: null,
+    outputs: [],
   },
   {
     timestamp: 1425399510,
@@ -159,9 +175,8 @@ export const mockTxs3: MappedTx[] = [
     nonce: 7,
     referenceNonce: null,
     content: 'I am a Bork Master',
-    value: '0',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: null,
+    outputs: [],
   },
 ]

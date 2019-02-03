@@ -42,6 +42,7 @@ export class TransactionHandler {
         .leftJoinAndSelect('tx.sender', 'sender')
         .leftJoinAndSelect('tx.parent', 'parent')
         .leftJoinAndSelect('parent.sender', 'parentSender')
+        .leftJoinAndSelect('tx.mentions', 'mentions')
         .where('tx.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
         .andWhere('tx.type IN (:...types)', { types })
         .orderBy('tx.created_at', 'DESC')
@@ -54,7 +55,7 @@ export class TransactionHandler {
       let options: FindManyOptions<Transaction> = {
         take: perPage,
         skip: perPage * (page - 1),
-        relations: ['sender', 'parent', 'parent.sender'],
+        relations: ['sender', 'parent', 'parent.sender', 'mentions'],
         order: { createdAt: 'DESC' },
       }
 
@@ -84,7 +85,7 @@ export class TransactionHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
-    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent'] })
+    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
 
     return {
       ...tx,

@@ -4,6 +4,8 @@ import { getRepository } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 import { mockTxs1, mockTxs2, mockTxs3, MappedTx } from '../util/mocks'
+import { Tag } from '../db/entities/tag'
+import { Mention } from '../db/entities/mention'
 import BigNumber from 'bignumber.js'
 
 // let borkerLib: any
@@ -40,7 +42,7 @@ async function processBlocks () {
   // const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
   const txs: MappedTx[] = getTxs()
 
-  await createTransactions(txs)
+  await processTransactions(txs)
 
   blockHeight++
   await processBlocks()
@@ -57,11 +59,11 @@ function getTxs () {
   }
 }
 
-async function createTransactions (mappedTxs: MappedTx[]) {
+async function processTransactions (mappedTxs: MappedTx[]) {
 
   for (let mappedTx of mappedTxs) {
 
-    const { txid, timestamp, nonce, referenceNonce, type, content, value, fee, senderAddress, recipientAddress } = mappedTx
+    const { txid, timestamp, nonce, referenceNonce, type, content, fee, senderAddress, outputs } = mappedTx
     const txRepo = getRepository(Transaction)
     const userRepo = getRepository(User)
 
@@ -74,7 +76,6 @@ async function createTransactions (mappedTxs: MappedTx[]) {
       nonce,
       type,
       content,
-      value,
       fee,
     })
 
@@ -89,12 +90,22 @@ async function createTransactions (mappedTxs: MappedTx[]) {
       })
     }
 
-    // attach recipient and update earnings
-    if (recipientAddress) {
-      tx.recipient = await userRepo.findOne(recipientAddress)
-      tx.recipient.earnings = (tx.recipient.earnings).plus(tx.value)
+    // attach mentions and update recipient earnings
+    tx.mentions = []
+    for (let output of outputs) {
+      let user = await userRepo.findOne(output.address)
+      if (!user) { continue }
+
+      user.earnings = user.earnings.plus(output.value)
+      // create the mention and add it o the tx
+      tx.mentions.push(getRepository(Mention).create({
+        createdAt: tx.createdAt,
+        value: new BigNumber(output.value),
+        user,
+      }))
     }
 
+    // case on the transaction type
     switch (type) {
       // set name
       case TransactionType.setName:
@@ -110,9 +121,9 @@ async function createTransactions (mappedTxs: MappedTx[]) {
         break
       // follow
       case TransactionType.follow:
-        tx.sender.following = [tx.recipient]
+        tx.sender.following = [tx.mentions[0].user]
         tx.sender.followingCount = tx.sender.followingCount + 1
-        tx.recipient.followersCount = tx.recipient.followersCount + 1
+        tx.mentions[0].user.followersCount = tx.mentions[0].user.followersCount + 1
         break
       // unfollow
       case TransactionType.unfollow:
@@ -120,17 +131,17 @@ async function createTransactions (mappedTxs: MappedTx[]) {
           .createQueryBuilder()
           .relation(User, 'following')
           .of(tx.sender)
-          .remove(tx.recipient)
+          .remove(tx.mentions[0].user)
         tx.sender.followingCount = tx.sender.followingCount - 1
-        tx.recipient.followersCount = tx.recipient.followersCount - 1
+        tx.mentions[0].user.followersCount = tx.mentions[0].user.followersCount - 1
         break
       // comment, like, rebork
       case TransactionType.comment:
       case TransactionType.like:
       case TransactionType.rebork:
         // add the parent no mater what
-        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.recipient })
-        tx.parent.earnings = tx.parent.earnings.plus(tx.value)
+        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.mentions[0].user })
+        tx.parent.earnings = tx.parent.earnings.plus(tx.mentions[0].value)
         // increment the appropriate count
         if (type === TransactionType.comment) {
           tx.parent.commentsCount = tx.parent.commentsCount + 1
@@ -149,6 +160,32 @@ async function createTransactions (mappedTxs: MappedTx[]) {
         break
     }
 
+    if (
+      type === TransactionType.bork ||
+      type === TransactionType.extension ||
+      type === TransactionType.rebork ||
+      type === TransactionType.comment
+    ) {
+      tx.tags = await getTags(tx)
+    }
+
     await txRepo.save(tx)
   }
+}
+
+async function getTags(tx: Transaction): Promise<Tag[]> {  
+  const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
+  let tags: Tag[] = []
+  let match: RegExpExecArray
+
+  while ((match = regex.exec(tx.content))) {
+    const name = match[1].toLowerCase()
+    const tag = await getRepository(Tag).findOne(name) || getRepository(Tag).create({
+      name,
+      createdAt: new Date(tx.createdAt),
+    })
+    tags.push(tag)
+  }
+
+  return tags
 }

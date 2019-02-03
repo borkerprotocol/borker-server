@@ -1,17 +1,22 @@
-import { getManager } from 'typeorm'
+import { getManager, getRepository } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed } from '../../src/db/entities/transaction'
+import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
 import BigNumber from 'bignumber.js'
+import { Mention } from '../../src/db/entities/mention'
+import { Output } from '../../src/util/mocks'
 
-function getTxSeed (): TxSeed {
+function getTxSeed (type: TransactionType, sender: User, outputs: Output[] = []): TxSeed {
+
+  const mentions = seedMentions(outputs)
+
   return {
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     nonce: 0,
-    type: undefined,
-    fee: new BigNumber(1),
-    sender: undefined,
+    type,
+    sender,
+    mentions,
   }
 }
 
@@ -42,96 +47,81 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}) {
   return getManager().save(user)
 }
 
-export async function seedBorkTx (sender: User, attributes: Partial<BorkTxSeed> = {}) {
+export async function seedBorkTx (sender: User, outputs: Output[] = [], attributes: Partial<BorkTxSeed> = {}) {
   const seed: BorkTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.bork,
+    ...getTxSeed(TransactionType.bork, sender, outputs),
     content: 'bork content',
-    sender,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedEntensionTx (sender: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedEntensionTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
   const seed: ExtensionTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.extension,
+    ...getTxSeed(TransactionType.extension, sender, outputs),
     content: 'child content',
     parent,
-    sender,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedCommentTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedCommentTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
   const seed: CommentTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.comment,
+    ...getTxSeed(TransactionType.comment, sender, outputs),
     content: 'comment content',
-    value: new BigNumber(10),
     parent,
-    recipient,
-    sender,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedReborkTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedReborkTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
   const seed: ReborkTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.rebork,
+    ...getTxSeed(TransactionType.rebork, sender, outputs),
     content: null,
-    value: new BigNumber(10),
     parent,
-    recipient,
-    sender,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedLikeTx (sender: User, recipient: User, parent: Transaction, attributes: Partial<UserSeed> = {}) {
+export async function seedLikeTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
   const seed: LikeTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.like,
-    value: new BigNumber(10),
+    ...getTxSeed(TransactionType.like, sender, outputs),
     parent,
-    recipient,
-    sender,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedFollowTx (sender: User, followed: User, attributes: Partial<UserSeed> = {}) {
+export async function seedFollowTx (sender: User, output: Output, attributes: Partial<UserSeed> = {}) {
   const seed: FollowTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.follow,
-    content: followed.address,
-    sender,
+    ...getTxSeed(TransactionType.follow, sender, [output]),
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
-export async function seedUnfollowTx (sender: User, unfollowed: User, attributes: Partial<UserSeed> = {}) {
-  const seed: FollowTxSeed = {
-    ...getTxSeed(),
-    type: TransactionType.unfollow,
-    content: unfollowed.address,
-    sender,
+export async function seedUnfollowTx (sender: User, output: Output, attributes: Partial<UserSeed> = {}) {
+  const seed: UnfollowTxSeed = {
+    ...getTxSeed(TransactionType.unfollow, sender, [output]),
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
 }
 
@@ -149,14 +139,21 @@ export async function seedProfileTx (sender: User, type: TransactionType = Trans
       break
   }
 
-  const extended: ProfileTxSeed = {
-    ...getTxSeed(),
-    type,
+  const seed: ProfileTxSeed = {
+    ...getTxSeed(type, sender),
     content,
-    sender,
   }
-  const seed = Object.assign(extended, attributes)
 
-  const transaction = getManager().create(Transaction, seed)
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
   return getManager().save(transaction)
+}
+
+export function seedMentions (outputs: Output[]): Mention[] {
+  return outputs.map(output => {
+    return getRepository(Mention).create({
+      user: { address: output.address },
+      value: new BigNumber(output.value),
+    })
+  })
 }

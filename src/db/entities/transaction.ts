@@ -5,10 +5,13 @@ import {
 	OneToMany,
 	PrimaryColumn,
 	JoinColumn,
+  ManyToMany,
 } from 'typeorm'
 import { User } from './user'
+import { Tag } from './tag'
 import { BigNumber } from 'bignumber.js'
 import { BigNumberTransformer } from '../../util/transformers'
+import { Mention } from './mention'
 
 export enum TransactionType {
   bork = 'bork',
@@ -43,9 +46,6 @@ export class Transaction {
 	@Column('text', { name: 'content', nullable: true })
 	content: string | null
 
-	@Column('numeric', { name: 'value', transformer: BigNumberTransformer, default: 0 })
-	value: BigNumber | null
-
 	@Column('numeric', { name: 'fee', transformer: BigNumberTransformer })
   fee: BigNumber
 
@@ -74,9 +74,11 @@ export class Transaction {
 	@JoinColumn({ name: 'sender_address' })
 	sender: User
 
-	@ManyToOne(() => User, user => user.receivedTransactions, { cascade: ['update'], nullable: true })
-	@JoinColumn({ name: 'recipient_address' })
-  recipient: User | null
+  @OneToMany(() => Mention, mention => mention.transaction, { cascade: ['insert', 'update'] })
+  mentions: Mention[]
+
+  @ManyToMany(() => Tag, tag => tag.transactions, { cascade: ['insert'] })
+  tags: Tag[]
 }
 
 export interface TxSeed {
@@ -84,12 +86,13 @@ export interface TxSeed {
   createdAt: Date
   nonce: number
   type: TransactionType
-  fee: BigNumber
   sender: User
+  mentions: Mention[]
 }
 
 export interface BorkTxSeed extends TxSeed {
   content: string
+  tags?: Tag[]
   commentsCount?: number
   likesCount?: number
   reborksCount?: number
@@ -97,25 +100,20 @@ export interface BorkTxSeed extends TxSeed {
 
 export interface ExtensionTxSeed extends BorkTxSeed {
   parent: Transaction
-  commentsCount?: number
-  likesCount?: number
-  reborksCount?: number
 }
 
 export interface CommentTxSeed extends TxSeed {
-  recipient: User
   parent: Transaction
-  value: BigNumber
   content: string
+  tags?: Tag[]
   commentsCount?: number
   likesCount?: number
   reborksCount?: number
 }
 
 export interface ReborkTxSeed extends TxSeed {
-  recipient: User
   parent: Transaction
-  value: BigNumber
+  tags?: Tag[]
   content?: string
   commentsCount?: number
   likesCount?: number
@@ -123,17 +121,13 @@ export interface ReborkTxSeed extends TxSeed {
 }
 
 export interface LikeTxSeed extends TxSeed {
-  recipient: User
   parent: Transaction
-  value: BigNumber
 }
 
 export interface ProfileTxSeed extends TxSeed {
   content: string
 }
 
-export interface FollowTxSeed extends TxSeed {
-  content: string
-}
+export interface FollowTxSeed extends TxSeed {}
 
-export type UnfollowTxSeed = FollowTxSeed
+export interface UnfollowTxSeed extends TxSeed {}

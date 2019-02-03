@@ -15,7 +15,7 @@ export function assertBorkTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.bork)
   assert.exists(tx.content)
-  assert.notExists(tx.value)
+  assert.isEmpty(tx.mentions)
 }
 
 export function assertExtensionTx (tx: Transaction) {
@@ -27,7 +27,7 @@ export function assertExtensionTx (tx: Transaction) {
 export function assertCommentTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.comment)
-  assert.exists(tx.recipient)
+  assert.isNotEmpty(tx.mentions)
   assert.exists(tx.parent)
   assert.exists(tx.content)
 }
@@ -35,15 +35,15 @@ export function assertCommentTx (tx: Transaction) {
 export function assertReborkTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.rebork)
-  assert.exists(tx.recipient)
+  assert.isNotEmpty(tx.mentions)
   assert.exists(tx.parent)
 }
 
 export function assertLikeTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.like)
-  assert.exists(tx.recipient)
   assert.exists(tx.parent)
+  assert.isNotEmpty(tx.mentions)
   assert.notExists(tx.content)
   assert.notExists(tx.commentsCount)
   assert.notExists(tx.likesCount)
@@ -54,7 +54,7 @@ export function assertFollowTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.follow)
   assert.exists(tx.content)
-  assert.notExists(tx.recipient)
+  assert.isNotEmpty(tx.mentions)
   assert.notExists(tx.parent)
   assert.notExists(tx.commentsCount)
   assert.notExists(tx.likesCount)
@@ -65,7 +65,7 @@ export function assertUnfollowTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.equal(tx.type, TransactionType.unfollow)
   assert.exists(tx.content)
-  assert.notExists(tx.recipient)
+  assert.isNotEmpty(tx.mentions)
   assert.notExists(tx.parent)
   assert.notExists(tx.commentsCount)
   assert.notExists(tx.likesCount)
@@ -75,9 +75,8 @@ export function assertUnfollowTx (tx: Transaction) {
 export function assertProfileTx (tx: Transaction) {
   assertBaseTx(tx)
   assert.exists(tx.content)
-  assert.notExists(tx.recipient)
+  assert.isEmpty(tx.mentions)
   assert.notExists(tx.parent)
-  assert.notExists(tx.value)
   assert.notExists(tx.commentsCount)
   assert.notExists(tx.likesCount)
   assert.notExists(tx.reborksCount)

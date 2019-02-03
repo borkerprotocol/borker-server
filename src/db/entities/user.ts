@@ -9,6 +9,7 @@ import {
 import { Transaction } from './transaction'
 import { BigNumberTransformer } from '../../util/transformers'
 import BigNumber from 'bignumber.js'
+import { Mention } from './mention'
 
 @Entity({ name: 'users' })
 export class User {
@@ -47,8 +48,8 @@ export class User {
 	@OneToMany(() => Transaction, transaction => transaction.sender)
 	sentTransactions: Transaction[]
 
-	@OneToMany(() => Transaction, transaction => transaction.recipient)
-  receivedTransactions: Transaction[]
+  @OneToMany(() => Mention, mention => mention.user)
+  mentions: Mention[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({
