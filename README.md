@@ -14,7 +14,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```npm -v```
 
 ### Install typescript if not installed
-npm install -g typescript
+```npm install -g typescript```
 
 ### Install PostgreSQL if not installed
 https://www.postgresql.org/download
