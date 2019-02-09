@@ -15,7 +15,7 @@ export class Tag {
 	@PrimaryColumn('text', { name: 'name', unique: true })
 	name: string
 
-	@Column('timestamp', { name: 'created_at' })
+	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
   // relations

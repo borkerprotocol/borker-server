@@ -1,9 +1,9 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getRepository } from 'typeorm'
+import { getRepository, getManager, EntityManager } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
-import { mockTxs1, mockTxs2, mockTxs3, MappedTx } from '../util/mocks'
+import { mockTxs1, mockTxs2, mockTxs3, MappedTx, mockTxs4 } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
 import { Mention } from '../db/entities/mention'
 import BigNumber from 'bignumber.js'
@@ -54,8 +54,10 @@ function getTxs () {
     return mockTxs1
   } else if (blockHeight === 17904) {
     return mockTxs2
-  } else {
+  } else if (blockHeight === 17905) {
     return mockTxs3
+  } else {
+    return mockTxs4
   }
 }
 
@@ -64,123 +66,167 @@ async function processTransactions (mappedTxs: MappedTx[]) {
   for (let mappedTx of mappedTxs) {
 
     const { txid, timestamp, nonce, referenceNonce, type, content, fee, senderAddress, outputs } = mappedTx
-    const txRepo = getRepository(Transaction)
-    const userRepo = getRepository(User)
 
     // continue if we've already seen this txid
-    if (await txRepo.findOne(txid)) continue
+    if (await getManager().findOne(Transaction, txid)) { continue }
 
-    let tx = txRepo.create({
-      txid,
-      createdAt: new Date(timestamp),
-      nonce,
-      type,
-      content,
-      fee,
-    })
+    await getManager().transaction(async manager => {
 
-    // attach sender
-    tx.sender = await userRepo.findOne(senderAddress)
-    // create sender if not exists
-    if (!tx.sender) {
-      tx.sender = userRepo.create({
-        address: senderAddress,
+      // create tx
+      let tx = manager.create(Transaction, {
+        txid,
         createdAt: new Date(timestamp),
-        birthBlock: blockHeight,
+        nonce,
+        type,
+        content,
+        fee,
       })
-    }
 
-    // attach mentions and update recipient earnings
-    tx.mentions = []
-    for (let output of outputs) {
-      let user = await userRepo.findOne(output.address)
-      if (!user) { continue }
+      // attach sender
+      tx.sender = await manager.findOne(User, senderAddress)
+      // create sender if not exists
+      if (!tx.sender) {
+        tx.sender = manager.create(User, {
+          address: senderAddress,
+          createdAt: new Date(timestamp),
+          birthBlock: blockHeight,
+          name: senderAddress.substr(0, 11),
+        })
+      }
 
-      user.earnings = user.earnings.plus(output.value)
-      // create the mention and add it o the tx
-      tx.mentions.push(getRepository(Mention).create({
-        createdAt: tx.createdAt,
-        value: new BigNumber(output.value),
-        user,
-      }))
-    }
+      // attach mentions and update recipient earnings
+      tx.mentions = []
+      for (let output of outputs) {
+        let recipient = await manager.findOne(User, output.address)
+        if (!recipient) { continue }
 
-    // case on the transaction type
-    switch (type) {
-      // set name
-      case TransactionType.setName:
-        tx.sender.name = content
-        break
-      // set bio
-      case TransactionType.setBio:
-        tx.sender.bio = content
-        break
-      // set avatar
-      case TransactionType.setAvatar:
-        tx.sender.avatarLink = content
-        break
-      // follow
-      case TransactionType.follow:
-        tx.sender.following = [tx.mentions[0].user]
-        tx.sender.followingCount = tx.sender.followingCount + 1
-        tx.mentions[0].user.followersCount = tx.mentions[0].user.followersCount + 1
-        break
-      // unfollow
-      case TransactionType.unfollow:
-        await userRepo
-          .createQueryBuilder()
-          .relation(User, 'following')
-          .of(tx.sender)
-          .remove(tx.mentions[0].user)
-        tx.sender.followingCount = tx.sender.followingCount - 1
-        tx.mentions[0].user.followersCount = tx.mentions[0].user.followersCount - 1
-        break
-      // comment, like, rebork
-      case TransactionType.comment:
-      case TransactionType.like:
-      case TransactionType.rebork:
-        // add the parent no mater what
-        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.mentions[0].user })
-        tx.parent.earnings = tx.parent.earnings.plus(tx.mentions[0].value)
-        // increment the appropriate count
-        if (type === TransactionType.comment) {
-          tx.parent.commentsCount = tx.parent.commentsCount + 1
-        } else if (type === TransactionType.like) {
-          tx.parent.likesCount = tx.parent.likesCount + 1
-        } else {
-          tx.parent.reborksCount = tx.parent.reborksCount + 1
-        }
-        break
-      // extension
-      case TransactionType.extension:
-        tx.parent = await txRepo.findOne({ nonce: referenceNonce, sender: tx.sender })
-        break
-      // bork
-      default:
-        break
-    }
+        recipient.earnings = recipient.earnings.plus(output.value)
+        // create the mention and add it to the tx
+        tx.mentions.push(manager.create(Mention, {
+          createdAt: tx.createdAt,
+          value: new BigNumber(output.value),
+          user: recipient,
+        }))
+      }
 
-    if (
-      type === TransactionType.bork ||
-      type === TransactionType.extension ||
-      type === TransactionType.rebork ||
-      type === TransactionType.comment
-    ) {
-      tx.tags = await getTags(tx)
-    }
+      // case on the transaction type
+      switch (type) {
+        // set name
+        case TransactionType.setName:
+          tx.sender.name = content
+          break
+        // set bio
+        case TransactionType.setBio:
+          tx.sender.bio = content
+          break
+        // set avatar
+        case TransactionType.setAvatar:
+          tx.sender.avatarLink = content
+          break
+        // follow
+        case TransactionType.follow:
+        case TransactionType.unfollow:
+        case TransactionType.block:
+        case TransactionType.unblock:
+          await handleFUBU(manager, tx)
+          break
+        // comment, like, rebork
+        case TransactionType.comment:
+        case TransactionType.like:
+        case TransactionType.rebork:
+          await handleCLR(manager, tx, referenceNonce)
+          break
+        // extension
+        case TransactionType.extension:
+          tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.sender })
+          break
+        // bork
+        default:
+          break
+      }
 
-    await txRepo.save(tx)
+      // attach tags if taggable type
+      if (
+        type === TransactionType.bork ||
+        type === TransactionType.extension ||
+        type === TransactionType.rebork ||
+        type === TransactionType.comment
+      ) {
+        tx.tags = await attachTags(manager, tx)
+      }
+
+      await manager.save(tx)
+    })
   }
 }
 
-async function getTags(tx: Transaction): Promise<Tag[]> {  
+async function handleFUBU (manager: EntityManager, tx: Transaction) {
+  // get the user from the content of the post
+  const recipient = await manager.findOne(User, tx.content)
+  if (!recipient) { return }
+
+  switch (tx.type) {
+    // follow
+    case TransactionType.follow:
+      tx.sender.following = [recipient]
+      tx.sender.followingCount = tx.sender.followingCount + 1
+      await manager.update(User, recipient.address, { followersCount: recipient.followersCount + 1 })
+      break
+    // unfollow
+    case TransactionType.unfollow:
+      await manager
+        .createQueryBuilder()
+        .relation(User, 'following')
+        .of(tx.sender)
+        .remove(recipient)
+      tx.sender.followingCount = tx.sender.followingCount - 1
+      await manager.update(User, recipient.address, { followersCount: recipient.followersCount - 1 })
+      break
+    // block
+    case TransactionType.block:
+      tx.sender.blocking = [recipient]
+      tx.sender.blockingCount = tx.sender.blockingCount + 1
+      await manager.update(User, recipient.address, { blockersCount: recipient.blockersCount + 1 })
+      break
+    // unblock
+    case TransactionType.unblock:
+      await manager
+        .createQueryBuilder()
+        .relation(User, 'blocking')
+        .of(tx.sender)
+        .remove(recipient)
+      tx.sender.blockingCount = tx.sender.blockingCount - 1
+      await manager.update(User, recipient.address, { blockersCount: recipient.blockersCount - 1 })
+      break
+  }
+}
+
+async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonce: number) {
+  // attach the parent and update tx earnings
+  tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.mentions[0].user })
+  tx.parent.earnings = tx.parent.earnings.plus(tx.mentions[0].value)
+  // increment the appropriate count
+  switch (tx.type) {
+    case TransactionType.comment:
+      tx.parent.commentsCount = tx.parent.commentsCount + 1
+      break
+    case TransactionType.like:
+      tx.parent.likesCount = tx.parent.likesCount + 1
+      break
+    case TransactionType.rebork:
+      tx.parent.reborksCount = tx.parent.reborksCount + 1
+      break
+  }
+}
+
+async function attachTags(manager: EntityManager, tx: Transaction): Promise<Tag[]> {  
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
   let tags: Tag[] = []
   let match: RegExpExecArray
 
   while ((match = regex.exec(tx.content))) {
     const name = match[1].toLowerCase()
-    const tag = await getRepository(Tag).findOne(name) || getRepository(Tag).create({
+    const tag = await manager.findOne(Tag, name) || manager.create(Tag, {
       name,
       createdAt: new Date(tx.createdAt),
     })

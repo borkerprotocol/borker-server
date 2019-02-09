@@ -135,7 +135,7 @@ export const mockTxs2: MappedTx[] = [
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     outputs: [{
       address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-      value: '70',
+      value: '50',
     }],
   },
   {
@@ -144,15 +144,10 @@ export const mockTxs2: MappedTx[] = [
     type: TransactionType.follow,
     nonce: 5,
     referenceNonce: null,
-    content: null,
+    content: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [
-      {
-        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-        value: '200',
-      },
-    ],
+    outputs: [],
   },
 ]
 
@@ -169,6 +164,20 @@ export const mockTxs3: MappedTx[] = [
     outputs: [],
   },
   {
+    timestamp: 1426287533,
+    txid: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
+    type: TransactionType.comment,
+    nonce: 0,
+    referenceNonce: 4,
+    content: 'Wow that was so borking cool',
+    fee: '1',
+    senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+    outputs: [{
+      address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+      value: '90',
+    }],
+  },
+  {
     timestamp: 1425399510,
     txid: '8a3e0fe9ebc5e2fec31b12e7880f0dc184b56fd2d0541fcc3e6c0a1530826913',
     type: TransactionType.setBio,
@@ -178,5 +187,80 @@ export const mockTxs3: MappedTx[] = [
     fee: '1',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     outputs: [],
+  },
+  {
+    timestamp: 1426287533,
+    txid: 'c7c4e2977cc67cc16ee8fec757a61219deddcc8edfb6e20ab818af29f4be9373',
+    type: TransactionType.follow,
+    nonce: 0,
+    referenceNonce: null,
+    content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    fee: '1',
+    senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+    outputs: [],
+  },
+  {
+    timestamp: 1426287533,
+    txid: 'fa98bb524af15f8c336e3a1824e1e80ff97a7be9677db7843a77d132ee4a7f0a',
+    type: TransactionType.rebork,
+    nonce: 0,
+    referenceNonce: 0,
+    content: null,
+    fee: '2',
+    senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
+    outputs: [{
+      address: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+      value: '1000',
+    }],
+  },
+]
+
+export const mockTxs4: MappedTx[] = [
+  {
+    timestamp: 1425287522,
+    txid: '0b692b4e683a3ea47f0b3b6a6f30e8cca6efcc78f1c2eb6e35430af9b9415eb5',
+    type: TransactionType.setBio,
+    nonce: 1,
+    referenceNonce: null,
+    content: 'I am the unknown Borker who shall someday be known',
+    fee: '1',
+    senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
+    outputs: [],
+  },
+  {
+    timestamp: 1426287533,
+    txid: '3a7f46861703322b75fed4594cd94eb9c04c5a6edb0c1e4ecd1eb91ba2fc4304',
+    type: TransactionType.block,
+    nonce: 1,
+    referenceNonce: null,
+    content: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
+    fee: '1',
+    senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+    outputs: [],
+  },
+  {
+    timestamp: 1425399510,
+    txid: '20d721480d0450a1b9666618ee618bfbacde74a4bade40908063c6c344bc7214',
+    type: TransactionType.unfollow,
+    nonce: 2,
+    referenceNonce: null,
+    content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    fee: '1',
+    senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+    outputs: [],
+  },
+  {
+    timestamp: 1426287533,
+    txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
+    type: TransactionType.like,
+    nonce: 2,
+    referenceNonce: 4,
+    content: null,
+    fee: '1',
+    senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
+    outputs: [{
+      address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+      value: '25',
+    }],
   },
 ]

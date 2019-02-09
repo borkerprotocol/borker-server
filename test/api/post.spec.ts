@@ -1,4 +1,4 @@
-import { createConnections, getConnection, Connection, getRepository } from 'typeorm'
+import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { TransactionHandler } from '../../src/api/handlers/transaction'
 import { seedBaseUser, seedBorkTx, seedProfileTx } from '../helpers/seeds'

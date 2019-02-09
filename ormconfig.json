@@ -1,10 +1,6 @@
 {
-	"type": "postgres",
-	"host": "localhost",
-	"port": 5432,
-	"database": "borker",
-	"username": "",
-	"password": "",
+	"type": "sqlite",
+	"database": "borkerdb.sql",
   "logging": false,
   "migrationsRun": true,
 	"entities": [

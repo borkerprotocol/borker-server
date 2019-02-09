@@ -15,13 +15,13 @@ export class Mention {
 
   // attributes
 
-  @PrimaryColumn({ name: 'transaction_txid' })
+  @PrimaryColumn('text', { name: 'transaction_txid' })
   transactionTxid: string
 
-  @PrimaryColumn({ name: 'user_address' })
+  @PrimaryColumn('text', { name: 'user_address' })
   userAddress: string
 
-	@Column('timestamp', { name: 'created_at' })
+	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
 	@Column('numeric', { name: 'value', transformer: BigNumberTransformer })

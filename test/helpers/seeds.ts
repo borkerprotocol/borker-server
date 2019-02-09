@@ -1,6 +1,6 @@
 import { getManager, getRepository } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed } from '../../src/db/entities/transaction'
+import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
 import BigNumber from 'bignumber.js'
 import { Mention } from '../../src/db/entities/mention'
@@ -15,6 +15,7 @@ function getTxSeed (type: TransactionType, sender: User, outputs: Output[] = [])
     txid: randomAddressOrTxid(false),
     nonce: 0,
     type,
+    fee: new BigNumber(1),
     sender,
     mentions,
   }
@@ -105,9 +106,10 @@ export async function seedLikeTx (sender: User, parent: Transaction, outputs: Ou
   return getManager().save(transaction)
 }
 
-export async function seedFollowTx (sender: User, output: Output, attributes: Partial<UserSeed> = {}) {
+export async function seedFollowTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
   const seed: FollowTxSeed = {
-    ...getTxSeed(TransactionType.follow, sender, [output]),
+    ...getTxSeed(TransactionType.follow, sender),
+    content: user.address,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
@@ -115,9 +117,32 @@ export async function seedFollowTx (sender: User, output: Output, attributes: Pa
   return getManager().save(transaction)
 }
 
-export async function seedUnfollowTx (sender: User, output: Output, attributes: Partial<UserSeed> = {}) {
+export async function seedUnfollowTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
   const seed: UnfollowTxSeed = {
-    ...getTxSeed(TransactionType.unfollow, sender, [output]),
+    ...getTxSeed(TransactionType.unfollow, sender),
+    content: user.address,
+  }
+
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
+  return getManager().save(transaction)
+}
+
+export async function seedBlockTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+  const seed: BlockTxSeed = {
+    ...getTxSeed(TransactionType.block, sender),
+    content: user.address,
+  }
+
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
+  return getManager().save(transaction)
+}
+
+export async function seedUnblockTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+  const seed: UnblockTxSeed = {
+    ...getTxSeed(TransactionType.unblock, sender),
+    content: user.address,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))

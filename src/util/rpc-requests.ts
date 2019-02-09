@@ -8,7 +8,7 @@ export interface Response {
 }
 
 export async function getBlockHash (blockHeight: number): Promise<string> {
-  if (blockHeight <= 17905) {
+  if (blockHeight <= 17906) {
     return request('getblockhash', `${blockHeight}`, [blockHeight])
   }
 }

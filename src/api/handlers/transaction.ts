@@ -1,10 +1,10 @@
-import { GET, Path, PathParam, POST, QueryParam, HeaderParam } from 'typescript-rest'
+import { GET, Path, PathParam, POST, QueryParam, HeaderParam, Errors } from 'typescript-rest'
 import { Transaction, TransactionType } from '../../db/entities/transaction'
 import { syncChain } from '../../scripts/sync'
-import { getRepository, FindManyOptions, In } from 'typeorm'
+import { getRepository } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
-import { checkFollowing } from '../../util/functions'
+import { checkFollowing, checkBlocked } from '../../util/functions'
 
 @Path('/transactions')
 export class TransactionHandler {
@@ -28,45 +28,37 @@ export class TransactionHandler {
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
-    @QueryParam('isFeed') isFeed: boolean = false,
+    @QueryParam('filterFollowing') filterFollowing: boolean = false,
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiTransaction[]> {
 
-    let txs: Transaction[]
+    let query = getRepository(Transaction)
+      .createQueryBuilder('tx')
+      .leftJoinAndSelect('tx.sender', 'sender')
+      .leftJoinAndSelect('tx.parent', 'parent')
+      .leftJoinAndSelect('parent.sender', 'parentSender')
+      .leftJoinAndSelect('tx.mentions', 'mentions')
+      .where('tx.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
+      .andWhere('tx.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
+      .orderBy('tx.created_at', 'DESC')
+      .limit(perPage)
+      .skip(perPage * (page - 1))
 
-    if (isFeed) {
-
-      txs = await getRepository(Transaction)
-        .createQueryBuilder('tx')
-        .leftJoinAndSelect('tx.sender', 'sender')
-        .leftJoinAndSelect('tx.parent', 'parent')
-        .leftJoinAndSelect('parent.sender', 'parentSender')
-        .leftJoinAndSelect('tx.mentions', 'mentions')
-        .where('tx.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
-        .andWhere('tx.type IN (:...types)', { types })
-        .orderBy('tx.created_at', 'DESC')
-        .limit(perPage)
-        .skip(perPage * (page - 1))
-        .getMany()
-
-    } else {
-
-      let options: FindManyOptions<Transaction> = {
-        take: perPage,
-        skip: perPage * (page - 1),
-        relations: ['sender', 'parent', 'parent.sender', 'mentions'],
-        order: { createdAt: 'DESC' },
-      }
-
-      options.where = {}
-  
-      if (types) { options.where.type = In(types) }
-      if (senderAddress) { options.where.sender = { address: senderAddress } }
-      if (parentTxid) { options.where.parent = { txid: parentTxid } }
-  
-      txs = await getRepository(Transaction).find(options)
+    if (types) {
+      query.andWhere('tx.type IN (:...types)', { types })
     }
+    if (filterFollowing) {
+      query.andWhere('tx.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
+    }
+    if (senderAddress) {
+      query.andWhere('tx.sender_address = :senderAddress', { senderAddress })
+    }
+    if (parentTxid) {
+      query.andWhere('tx.parent_txid = :parentTxid', { parentTxid })
+    }
+
+    const txs = await query.getMany()
 
     return Promise.all(txs.map(async tx => {
       if (tx.parent) {
@@ -85,7 +77,13 @@ export class TransactionHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
-    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
+    
+    const tx = await getRepository(Transaction)
+      .findOneOrFail(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
+
+    if (await checkBlocked(myAddress, tx.sender.address)) {
+      throw new Errors.NotAcceptableError('blocked')
+    }
 
     return {
       ...tx,
@@ -99,19 +97,24 @@ export class TransactionHandler {
 	async indexTxUsers (
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
-    @QueryParam('type') type: TransactionType.like | TransactionType.rebork,
+    @QueryParam('type') type?: TransactionType.like | TransactionType.rebork,
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
 
-    const users = await getRepository(User).createQueryBuilder('users')
+    let query = getRepository(User)
+      .createQueryBuilder('users')
       .leftJoin('transactions', 'txs', 'txs.sender_address = users.address')
       .where('txs.parent_txid = :txid', { txid })
-      .andWhere('txs.type = :type', { type })
       .orderBy('users.name', 'ASC')
       .limit(perPage)
       .offset(perPage * (page - 1))
-      .getMany()
+
+    if (type) {
+      query.andWhere('txs.type = :type', { type })
+    }
+
+    const users = await query.getMany()
 
     return Promise.all(users.map(async user => {
       return {
@@ -129,18 +132,19 @@ export class TransactionHandler {
   }
 
   private async iCommentLikeRebork (myAddress: string, tx: Transaction): Promise<{ iComment: boolean, iLike: boolean, iRebork: boolean }> {
+    const repo = getRepository(Transaction)
     const [comment, like, rebork] = await  Promise.all([
-      getRepository(Transaction).findOne({
+      repo.findOne({
         sender: { address: myAddress },
         parent: { txid: tx.txid },
         type: TransactionType.comment,
       }),
-      getRepository(Transaction).findOne({
+      repo.findOne({
         sender: { address: myAddress },
         parent: { txid: tx.txid },
         type: TransactionType.like,
       }),
-      getRepository(Transaction).findOne({
+      repo.findOne({
         sender: { address: myAddress },
         parent: { txid: tx.txid },
         type: TransactionType.rebork,

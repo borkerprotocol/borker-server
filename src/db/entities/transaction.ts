@@ -14,6 +14,7 @@ import { BigNumberTransformer } from '../../util/transformers'
 import { Mention } from './mention'
 
 export enum TransactionType {
+  block = 'block',
   bork = 'bork',
   comment = 'comment',
   extension = 'extension',
@@ -23,6 +24,7 @@ export enum TransactionType {
   setName = 'set_name',
   setBio = 'set_bio',
   setAvatar = 'set_avatar',
+  unblock = 'unblock',
   unfollow = 'unfollow',
 }
 
@@ -34,13 +36,13 @@ export class Transaction {
 	@PrimaryColumn('text', { name: 'txid' })
 	txid: string
 
-	@Column('timestamp', { name: 'created_at' })
+	@Column('datetime', { name: 'created_at' })
   createdAt: Date
   
 	@Column('int', { name: 'nonce' })
 	nonce: number
 
-	@Column('enum', { name: 'type', enum: TransactionType })
+	@Column('text', { name: 'type' })
   type: TransactionType
 
 	@Column('text', { name: 'content', nullable: true })
@@ -50,16 +52,16 @@ export class Transaction {
   fee: BigNumber
 
 	@Column('int', { name: 'comments_count', default: 0 })
-  commentsCount: number | null
+  commentsCount: number
 
 	@Column('int', { name: 'likes_count', default: 0 })
-  likesCount: number | null
+  likesCount: number
 
 	@Column('int', { name: 'reborks_count', default: 0 })
-  reborksCount: number | null
+  reborksCount: number
 
 	@Column('numeric', { name: 'earnings', transformer: BigNumberTransformer, default: 0 })
-  earnings: BigNumber | null
+  earnings: BigNumber
 
   // relations
 
@@ -86,6 +88,7 @@ export interface TxSeed {
   createdAt: Date
   nonce: number
   type: TransactionType
+  fee: BigNumber
   sender: User
   mentions: Mention[]
 }
@@ -128,6 +131,18 @@ export interface ProfileTxSeed extends TxSeed {
   content: string
 }
 
-export interface FollowTxSeed extends TxSeed {}
+export interface FollowTxSeed extends TxSeed {
+  content: string
+}
 
-export interface UnfollowTxSeed extends TxSeed {}
+export interface UnfollowTxSeed extends TxSeed {
+  content: string
+}
+
+export interface BlockTxSeed extends TxSeed {
+  content: string
+}
+
+export interface UnblockTxSeed extends TxSeed {
+  content: string
+}
