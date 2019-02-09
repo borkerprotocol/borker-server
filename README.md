@@ -16,26 +16,16 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ### Install typescript if not installed
 ```npm install -g typescript```
 
-### Install PostgreSQL if not installed
-https://www.postgresql.org/download
-
-### Create the database
-```sudo -u postgres psql```
-
-```CREATE USER <user> WITH PASSWORD <password>;```
-
-```CREATE DATABASE borker;```
-
-```\q```
-
 ### Clone the repository
 ```git clone https://github.com/MattDHill/borker-server.git```
 
 ### Go into the directory
 ```cd borker```
 
-### Copy borkerconfig.json from default
-```cp borker-config.json borkerconfig.json```
+### Copy borkerconfig.json and ormconfig.json from samples
+```cp borkerconfig-sample.json borkerconfig.json```
+
+```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
 
@@ -50,14 +40,5 @@ https://www.postgresql.org/download
 ### Start the server and Bork on
 ```npm run start```
 
-## * To develop and run tests *
-
-### Create the test database
-```sudo -u postgres psql```
-
-```CREATE DATABASE borker_test;```
-
-```\q```
-
-### Run the test suite
+## * To run tests *
 ```npm run test```

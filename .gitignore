@@ -6,3 +6,5 @@ dist/
 borkerconfig.json
 borkerdb.sql
 borker_testdb.sql
+
+ormconfig.json
