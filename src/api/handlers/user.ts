@@ -17,13 +17,16 @@ export class UserHandler {
 	async index (
     @HeaderParam('myAddress') myAddress: string,
     @QueryParam('filter') filter: UserFilter = UserFilter.birthBlock,
-    @QueryParam('page') page: number = 1,
-    @QueryParam('perPage') perPage: number = 20,
+    @QueryParam('page') page: string = '1',
+    @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
 
+    const pageNum = Number(page)
+    const perPageNum = Number(perPage)
+
     let options: FindManyOptions<User> = {
-      take: perPage,
-      skip: perPage * (page - 1),
+      take: perPageNum,
+      skip: perPageNum * (pageNum - 1),
       order: { [filter]: filter === UserFilter.birthBlock ? 'ASC' : 'DESC' },
     }
 
@@ -62,9 +65,12 @@ export class UserHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
-    @QueryParam('page') page: number = 1,
-    @QueryParam('perPage') perPage: number = 20,
+    @QueryParam('page') page: string = '1',
+    @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
+
+    const pageNum = Number(page)
+    const perPageNum = Number(perPage)
 
     if (await checkBlocked(myAddress, address)) {
       throw new Errors.NotAcceptableError('blocked')
@@ -73,8 +79,8 @@ export class UserHandler {
     let query = await getRepository(User)
       .createQueryBuilder('users')
       .orderBy('users.name', 'ASC')
-      .limit(perPage)
-      .offset(perPage * (page - 1))
+      .take(perPageNum)
+      .offset(perPageNum * (pageNum - 1))
 
     if (type === 'following') {
       query

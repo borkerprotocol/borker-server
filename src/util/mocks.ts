@@ -263,4 +263,18 @@ export const mockTxs4: MappedTx[] = [
       value: '25',
     }],
   },
+  {
+    timestamp: 1426287533,
+    txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
+    type: TransactionType.like,
+    nonce: 4,
+    referenceNonce: 0,
+    content: null,
+    fee: '1',
+    senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
+    outputs: [{
+      address: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+      value: '44',
+    }],
+  },
 ]

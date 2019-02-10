@@ -29,9 +29,12 @@ export class TransactionHandler {
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
-    @QueryParam('page') page: number = 1,
-    @QueryParam('perPage') perPage: number = 20,
+    @QueryParam('page') page: string = '1',
+    @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiTransaction[]> {
+
+    const pageNum = Number(page)
+    const perPageNum = Number(perPage)
 
     let query = getRepository(Transaction)
       .createQueryBuilder('tx')
@@ -41,9 +44,9 @@ export class TransactionHandler {
       .leftJoinAndSelect('tx.mentions', 'mentions')
       .where('tx.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
       .andWhere('tx.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
-      .orderBy('tx.created_at', 'DESC')
-      .limit(perPage)
-      .skip(perPage * (page - 1))
+      .orderBy('tx.createdAt', 'DESC')
+      .take(perPageNum)
+      .skip(perPageNum * (pageNum - 1))
 
     if (types) {
       query.andWhere('tx.type IN (:...types)', { types })
@@ -85,10 +88,14 @@ export class TransactionHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
+    // TODO fix this...just hideous
+    const extensions: Transaction[] = []
+    await this.getExtensions(tx, extensions)
+
     return {
       ...tx,
       ...(await this.iCommentLikeRebork(myAddress, tx)),
-      extensions: await this.getExtensions(tx),
+      extensions,
     }
   }
 
@@ -98,17 +105,20 @@ export class TransactionHandler {
     @HeaderParam('myAddress') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('type') type?: TransactionType.like | TransactionType.rebork,
-    @QueryParam('page') page: number = 1,
-    @QueryParam('perPage') perPage: number = 20,
+    @QueryParam('page') page: string = '1',
+    @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
+
+    const pageNum = Number(page)
+    const perPageNum = Number(perPage)
 
     let query = getRepository(User)
       .createQueryBuilder('users')
       .leftJoin('transactions', 'txs', 'txs.sender_address = users.address')
       .where('txs.parent_txid = :txid', { txid })
       .orderBy('users.name', 'ASC')
-      .limit(perPage)
-      .offset(perPage * (page - 1))
+      .take(perPageNum)
+      .offset(perPageNum * (pageNum - 1))
 
     if (type) {
       query.andWhere('txs.type = :type', { type })
@@ -124,16 +134,31 @@ export class TransactionHandler {
     }))
   }
 
-  private async getExtensions (tx: Transaction, extensions: Transaction[] = []): Promise<Transaction[]> {
-    const ext = await getRepository(Transaction).findOne({ parent: { txid: tx.txid }, type: TransactionType.extension })
-    if (!ext) { return extensions }
-    extensions.push(ext)
+  private async getExtensions (tx: Transaction, extensions: Transaction[]): Promise<Transaction[]> {
+    // get the next extension
+    const ext = await getRepository(Transaction)
+      .findOne({
+        parent: tx,
+        type: TransactionType.extension,
+      }, {
+        relations: ['sender', 'mentions'],
+      })
+
+    // if no more extensions, return
+    if (!ext) { return }
+
+    // add it to the list, along with the current tx as it's parent
+    extensions.push({
+      ...ext,
+      parent: tx,
+    })
+    // do it again
     await this.getExtensions(ext, extensions)
   }
 
   private async iCommentLikeRebork (myAddress: string, tx: Transaction): Promise<{ iComment: boolean, iLike: boolean, iRebork: boolean }> {
     const repo = getRepository(Transaction)
-    const [comment, like, rebork] = await  Promise.all([
+    const [comment, like, rebork] = await Promise.all([
       repo.findOne({
         sender: { address: myAddress },
         parent: { txid: tx.txid },
