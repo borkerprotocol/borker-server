@@ -7,8 +7,6 @@ import {
   ManyToMany,
 } from 'typeorm'
 import { Transaction } from './transaction'
-import { BigNumberTransformer } from '../../util/transformers'
-import BigNumber from 'bignumber.js'
 import { Mention } from './mention'
 
 @Entity({ name: 'users' })
@@ -45,9 +43,6 @@ export class User {
 
 	@Column('int', { name: 'blocking_count', default: 0  })
   blockingCount: number
-
-	@Column('numeric', { name: 'earnings', transformer: BigNumberTransformer, default: 0 })
-  earnings: BigNumber | null
 
   // relations
 

@@ -24,7 +24,7 @@ export class TransactionHandler {
 	@Path('/')
 	@GET
 	async index (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
@@ -77,12 +77,14 @@ export class TransactionHandler {
 	@Path('/:txid')
 	@GET
 	async get (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
     
-    const tx = await getRepository(Transaction)
-      .findOneOrFail(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
+    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
+    if (!tx) {
+      throw new Errors.NotFoundError('tx not found')
+    }
 
     if (await checkBlocked(myAddress, tx.sender.address)) {
       throw new Errors.NotAcceptableError('blocked')
@@ -102,7 +104,7 @@ export class TransactionHandler {
 	@Path('/:txid/users')
 	@GET
 	async indexTxUsers (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('type') type?: TransactionType.like | TransactionType.rebork,
     @QueryParam('page') page: string = '1',

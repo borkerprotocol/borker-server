@@ -2,10 +2,10 @@ import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescrip
 import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkFollowing, checkBlocked } from '../../util/functions'
+import { Utxo, mockUtxos } from '../../util/mocks'
 
 export enum UserFilter {
   birthBlock = 'birthBlock',
-  earnings = 'earnings',
   followersCount = 'followersCount',
 }
 
@@ -15,7 +15,7 @@ export class UserHandler {
 	@Path('/')
 	@GET
 	async index (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @QueryParam('filter') filter: UserFilter = UserFilter.birthBlock,
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
@@ -38,12 +38,30 @@ export class UserHandler {
         iFollow: await checkFollowing(myAddress, user.address),
       }
     }))
-	}
+  }
+  
+	@Path('/me/utxos')
+	@GET
+	async getUtxos (
+    @HeaderParam('my-address') myAddress: string,
+  ): Promise<Utxo[]> {
+
+    return mockUtxos
+  }
+
+	@Path('/me/balance')
+	@GET
+	async getBalance (
+    @HeaderParam('my-address') myAddress: string,
+  ): Promise<string> {
+
+    return '100'
+  }
 
 	@Path('/:address')
 	@GET
 	async get (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
 
@@ -51,7 +69,10 @@ export class UserHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
     
-    const user = await getRepository(User).findOneOrFail(address)
+    const user = await getRepository(User).findOne(address)
+    if (!user) {
+      throw new Errors.NotFoundError('user not found')
+    }
 
     return {
       ...user,
@@ -62,7 +83,7 @@ export class UserHandler {
 	@Path('/:address/users')
 	@GET
 	async indexFollows (
-    @HeaderParam('myAddress') myAddress: string,
+    @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
     @QueryParam('page') page: string = '1',

@@ -60,9 +60,6 @@ export class Transaction {
 	@Column('int', { name: 'reborks_count', default: 0 })
   reborksCount: number
 
-	@Column('numeric', { name: 'earnings', transformer: BigNumberTransformer, default: 0 })
-  earnings: BigNumber
-
   // relations
 
   @OneToMany(() => Transaction, transaction => transaction.parent)

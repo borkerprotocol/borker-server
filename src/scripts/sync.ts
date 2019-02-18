@@ -94,18 +94,14 @@ async function processTransactions (mappedTxs: MappedTx[]) {
         })
       }
 
-      // attach mentions and update recipient earnings
+      // attach mentions
       tx.mentions = []
       for (let output of outputs) {
-        let recipient = await manager.findOne(User, output.address)
-        if (!recipient) { continue }
-
-        recipient.earnings = recipient.earnings.plus(output.value)
         // create the mention and add it to the tx
         tx.mentions.push(manager.create(Mention, {
           createdAt: tx.createdAt,
           value: new BigNumber(output.value),
-          user: recipient,
+          user: { address: output.address },
         }))
       }
 
@@ -202,9 +198,8 @@ async function handleFUBU (manager: EntityManager, tx: Transaction) {
 }
 
 async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonce: number) {
-  // attach the parent and update tx earnings
+  // attach the parent
   tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.mentions[0].user })
-  tx.parent.earnings = tx.parent.earnings.plus(tx.mentions[0].value)
   // increment the appropriate count
   switch (tx.type) {
     // comment

@@ -17,6 +17,12 @@ export interface MappedTx {
   outputs: Output[]
 }
 
+export interface Utxo {
+  txid: string
+  index: number
+  value: string
+}
+
 export const mockTxs1: MappedTx[] = [
   {
     timestamp: 1412177231,
@@ -276,5 +282,33 @@ export const mockTxs4: MappedTx[] = [
       address: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
       value: '44',
     }],
+  },
+]
+
+export const mockUtxos: Utxo[] = [
+  {
+    txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
+    index: 1,
+    value: '10',
+  },
+  {
+    txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
+    index: 2,
+    value: '100',
+  },
+  {
+    txid: '20d721480d0450a1b9666618ee618bfbacde74a4bade40908063c6c344bc7214',
+    index: 1,
+    value: '20',
+  },
+  {
+    txid: '0b692b4e683a3ea47f0b3b6a6f30e8cca6efcc78f1c2eb6e35430af9b9415eb5',
+    index: 1,
+    value: '40',
+  },
+  {
+    txid: 'fa98bb524af15f8c336e3a1824e1e80ff97a7be9677db7843a77d132ee4a7f0a',
+    index: 3,
+    value: '22',
   },
 ]

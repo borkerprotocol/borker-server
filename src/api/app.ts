@@ -8,13 +8,19 @@ import handlers from './handlers'
 const app: express.Application = express()
 const router: express.Router = express.Router()
 
-// api
-Server.buildServices(router, ...handlers)
-
 // middleware
+router.use('/', (req, res, next) => {
+  if (!req.headers['my-address']) {
+    return res.status(403).json({ error: 'missing "my-address" header' })
+  }
+  next()
+})
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(cors())
+
+// api
+Server.buildServices(router, ...handlers)
 app.use('/', router)
 
 export default app
