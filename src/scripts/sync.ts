@@ -1,6 +1,6 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getRepository, getManager, EntityManager } from 'typeorm'
+import { getManager, EntityManager } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 import { mockTxs1, mockTxs2, mockTxs3, MappedTx, mockTxs4 } from '../util/mocks'
@@ -37,9 +37,9 @@ async function processBlocks () {
   const blockHash = await rpc.getBlockHash(blockHeight)
   if (!blockHash) return
 
-  const rawBlock = await rpc.getBlock(blockHash)
+  const serializedBlock = await rpc.getBlock(blockHash)
 
-  // const txs: rpc.MappedTx[] = borkerLib.processBlock(rawBlock)
+  // const txs: rpc.MappedTx[] = borkerLib.processBlock(serializedBlock)
   const txs: MappedTx[] = getTxs()
 
   await processTransactions(txs)
@@ -90,7 +90,7 @@ async function processTransactions (mappedTxs: MappedTx[]) {
           address: senderAddress,
           createdAt: new Date(timestamp),
           birthBlock: blockHeight,
-          name: senderAddress.substr(0, 11),
+          name: senderAddress.substr(0, 9),
         })
       }
 
@@ -207,12 +207,15 @@ async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonc
   tx.parent.earnings = tx.parent.earnings.plus(tx.mentions[0].value)
   // increment the appropriate count
   switch (tx.type) {
+    // comment
     case TransactionType.comment:
       tx.parent.commentsCount = tx.parent.commentsCount + 1
       break
+    // like
     case TransactionType.like:
       tx.parent.likesCount = tx.parent.likesCount + 1
       break
+    // rebork
     case TransactionType.rebork:
       tx.parent.reborksCount = tx.parent.reborksCount + 1
       break
