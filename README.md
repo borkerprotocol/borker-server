@@ -29,8 +29,6 @@ https://github.com/nodesource/distributions/blob/master/README.md
 
 ### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
 
-### Edit ormconfig.json to contain your own psotgreSQL values
-
 ### Install packages
 ```npm install```
 
