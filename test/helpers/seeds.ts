@@ -121,9 +121,8 @@ export async function seedFollowTx (followed: User, follower: User, attributes: 
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-  followed.followers = [follower]
 
-  return getManager().save([transaction, followed])
+  return getManager().save(transaction)
 }
 
 export async function seedUnfollowTx (sender: User, user: User, attributes: Partial<UnfollowTxSeed> = {}) {

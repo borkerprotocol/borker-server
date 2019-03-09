@@ -1,4 +1,4 @@
-import { createConnections, getConnection, Connection } from 'typeorm'
+import { createConnections, getConnection, Connection, getManager } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
 import { seedBaseUser, seedFullUser, seedFollowTx } from '../helpers/seeds'
@@ -58,6 +58,8 @@ describe('User Handler', async () => {
       user1 = await seedBaseUser()
       user2 = await seedBaseUser()
       await seedFollowTx(user1, user2)
+      user1.followers = [user2]
+      await getManager().save(user1)
     })
 
     it('returns all followers', async () => {
