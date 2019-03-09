@@ -1,4 +1,4 @@
-# borker
+# borker  - UNRELEASED
 
 Censorship-resistant news sharing on Degecoin.
 
@@ -28,8 +28,6 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
-
-### Edit ormconfig.json to contain your own psotgreSQL values
 
 ### Install packages
 ```npm install```
