@@ -126,11 +126,12 @@ async function processTransactions (mappedTxs: MappedTx[]) {
         case TransactionType.unblock:
           await handleFUBU(manager, tx)
           break
-        // comment, like, rebork
+        // comment, like, rebork, flag
         case TransactionType.comment:
         case TransactionType.like:
         case TransactionType.rebork:
-          await handleCLR(manager, tx, referenceNonce)
+        case TransactionType.flag:
+          await handleCLRF(manager, tx, referenceNonce)
           break
         // extension
         case TransactionType.extension:
@@ -181,8 +182,6 @@ async function handleFUBU (manager: EntityManager, tx: Transaction) {
     // block
     case TransactionType.block:
       tx.sender.blocking = [recipient]
-      tx.sender.blockingCount = tx.sender.blockingCount + 1
-      await manager.update(User, recipient.address, { blockersCount: recipient.blockersCount + 1 })
       break
     // unblock
     case TransactionType.unblock:
@@ -191,13 +190,11 @@ async function handleFUBU (manager: EntityManager, tx: Transaction) {
         .relation(User, 'blocking')
         .of(tx.sender)
         .remove(recipient)
-      tx.sender.blockingCount = tx.sender.blockingCount - 1
-      await manager.update(User, recipient.address, { blockersCount: recipient.blockersCount - 1 })
       break
   }
 }
 
-async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonce: number) {
+async function handleCLRF (manager: EntityManager, tx: Transaction, referenceNonce: number) {
   // attach the parent
   tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.mentions[0].user })
   // increment the appropriate count
@@ -213,6 +210,10 @@ async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonc
     // rebork
     case TransactionType.rebork:
       tx.parent.reborksCount = tx.parent.reborksCount + 1
+      break
+    // flag
+    case TransactionType.flag:
+      tx.parent.flagsCount = tx.parent.flagsCount + 1
       break
   }
 }

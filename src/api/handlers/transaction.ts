@@ -28,6 +28,7 @@ export class TransactionHandler {
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
+    @QueryParam('tags') tags?: string[],
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
@@ -50,6 +51,9 @@ export class TransactionHandler {
 
     if (types) {
       query.andWhere('tx.type IN (:...types)', { types })
+    }
+    if (tags) {
+      query.andWhere('tx.txid IN (SELECT transaction_txid FROM tags WHERE tag_name IN (:...tags))', { tags })
     }
     if (filterFollowing) {
       query.andWhere('tx.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })

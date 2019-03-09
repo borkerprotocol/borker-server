@@ -18,6 +18,7 @@ export enum TransactionType {
   bork = 'bork',
   comment = 'comment',
   extension = 'extension',
+  flag = 'flag',
   follow = 'follow',
   like = 'like',
   rebork = 'rebork',
@@ -60,6 +61,9 @@ export class Transaction {
 	@Column('int', { name: 'reborks_count', default: 0 })
   reborksCount: number
 
+	@Column('int', { name: 'flags_count', default: 0 })
+  flagsCount: number
+
   // relations
 
   @OneToMany(() => Transaction, transaction => transaction.parent)
@@ -96,6 +100,7 @@ export interface BorkTxSeed extends TxSeed {
   commentsCount?: number
   likesCount?: number
   reborksCount?: number
+  flagsCount?: number
 }
 
 export interface ExtensionTxSeed extends BorkTxSeed {
@@ -109,6 +114,7 @@ export interface CommentTxSeed extends TxSeed {
   commentsCount?: number
   likesCount?: number
   reborksCount?: number
+  flagsCount?: number
 }
 
 export interface ReborkTxSeed extends TxSeed {
@@ -118,9 +124,14 @@ export interface ReborkTxSeed extends TxSeed {
   commentsCount?: number
   likesCount?: number
   reborksCount?: number
+  flagsCount?: number
 }
 
 export interface LikeTxSeed extends TxSeed {
+  parent: Transaction
+}
+
+export interface FlagTxSeed extends TxSeed {
   parent: Transaction
 }
 

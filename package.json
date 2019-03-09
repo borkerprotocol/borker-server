@@ -13,32 +13,32 @@
 	"author": "MattDHill",
 	"license": "MIT",
 	"dependencies": {
-		"bignumber.js": "^8.0.2",
+		"bignumber.js": "^8.1.1",
 		"cors": "^2.8.5",
 		"express": "^4.16.4",
-		"moment": "^2.23.0",
-		"reflect-metadata": "^0.1.12",
+		"moment": "^2.24.0",
+		"reflect-metadata": "^0.1.13",
 		"request": "^2.88.0",
-		"request-promise": "^4.2.2",
+		"request-promise": "^4.2.4",
 		"sqlite3": "^4.0.6",
-		"typeorm": "0.2.11",
-		"typescript-rest": "^1.8.1"
+		"typeorm": "^0.2.14",
+		"typescript-rest": "^2.0.0"
 	},
 	"devDependencies": {
 		"@types/chai": "^4.1.7",
 		"@types/cors": "^2.8.4",
-		"@types/express": "^4.16.0",
-		"@types/mocha": "^5.2.5",
+		"@types/express": "^4.16.1",
+		"@types/mocha": "^5.2.6",
 		"@types/moment": "^2.13.0",
-		"@types/node": "^8.10.39",
+		"@types/node": "^11.11.0",
 		"@types/request-promise": "^4.1.40",
-		"@types/sinon": "^7.0.3",
-		"@types/sqlite3": "^3.1.3",
+		"@types/sinon": "^7.0.9",
+		"@types/sqlite3": "^3.1.5",
 		"chai": "^4.2.0",
-		"mocha": "^5.2.0",
+		"mocha": "^6.0.2",
 		"rimraf": "^2.6.3",
-		"sinon": "^7.2.2",
-		"ts-node": "^3.3.0",
-		"typescript": "3.2.4"
+		"sinon": "^7.2.7",
+		"ts-node": "^8.0.3",
+		"typescript": "^3.3.3333"
 	}
 }

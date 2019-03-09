@@ -39,24 +39,6 @@ export class UserHandler {
       }
     }))
   }
-  
-	@Path('/me/utxos')
-	@GET
-	async getUtxos (
-    @HeaderParam('my-address') myAddress: string,
-  ): Promise<Utxo[]> {
-
-    return mockUtxos
-  }
-
-	@Path('/me/balance')
-	@GET
-	async getBalance (
-    @HeaderParam('my-address') myAddress: string,
-  ): Promise<string> {
-
-    return '100'
-  }
 
 	@Path('/:address')
 	@GET
@@ -78,6 +60,26 @@ export class UserHandler {
       ...user,
       iFollow: await checkFollowing(myAddress, address),
     }
+  }
+
+	@Path('/:address/balance')
+	@GET
+	async getBalance (
+    @PathParam('address') address: string,
+  ): Promise<string> {
+
+    console.log(address)
+    return '100'
+  }
+
+	@Path('/:address/utxos')
+	@GET
+	async getUtxos (
+    @PathParam('address') address: string,
+  ): Promise<Utxo[]> {
+
+    console.log(address)
+    return mockUtxos
   }
 
 	@Path('/:address/users')

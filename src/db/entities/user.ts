@@ -20,14 +20,14 @@ export class User {
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
+	@Column('int', { name: 'birth_block' })
+	birthBlock: number
+
 	@Column('text', { name: 'name', nullable: true })
 	name: string | null
 
 	@Column('text', { name: 'bio', nullable: true })
 	bio: string | null
-
-	@Column('int', { name: 'birth_block' })
-	birthBlock: number
 
 	@Column('text', { name: 'avatar_link', nullable: true })
   avatarLink: string | null
@@ -37,12 +37,6 @@ export class User {
 
 	@Column('int', { name: 'following_count', default: 0  })
   followingCount: number
-
-	@Column('int', { name: 'blockers_count', default: 0  })
-  blockersCount: number
-
-	@Column('int', { name: 'blocking_count', default: 0  })
-  blockingCount: number
 
   // relations
 

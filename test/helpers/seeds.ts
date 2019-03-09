@@ -1,6 +1,6 @@
 import { getManager, getRepository } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed } from '../../src/db/entities/transaction'
+import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed, FlagTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
 import BigNumber from 'bignumber.js'
 import { Mention } from '../../src/db/entities/mention'
@@ -98,6 +98,17 @@ export async function seedReborkTx (sender: User, parent: Transaction, outputs: 
 export async function seedLikeTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
   const seed: LikeTxSeed = {
     ...getTxSeed(TransactionType.like, sender, outputs),
+    parent,
+  }
+
+  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+
+  return getManager().save(transaction)
+}
+
+export async function seedFlagTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+  const seed: FlagTxSeed = {
+    ...getTxSeed(TransactionType.flag, sender, outputs),
     parent,
   }
 
