@@ -6,9 +6,7 @@ import BigNumber from 'bignumber.js'
 import { Mention } from '../../src/db/entities/mention'
 import { Output } from '../../src/util/mocks'
 
-function getTxSeed (type: TransactionType, sender: User, outputs: Output[] = []): TxSeed {
-
-  const mentions = seedMentions(outputs)
+function getTxSeed (type: TransactionType, sender: User): TxSeed {
 
   return {
     createdAt: new Date(),
@@ -17,7 +15,6 @@ function getTxSeed (type: TransactionType, sender: User, outputs: Output[] = [])
     type,
     fee: new BigNumber(1),
     sender,
-    mentions,
   }
 }
 
@@ -48,9 +45,9 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}) {
   return getManager().save(user)
 }
 
-export async function seedBorkTx (sender: User, outputs: Output[] = [], attributes: Partial<BorkTxSeed> = {}) {
+export async function seedBorkTx (sender: User, attributes: Partial<BorkTxSeed> = {}) {
   const seed: BorkTxSeed = {
-    ...getTxSeed(TransactionType.bork, sender, outputs),
+    ...getTxSeed(TransactionType.bork, sender),
     content: 'bork content',
   }
 
@@ -59,9 +56,9 @@ export async function seedBorkTx (sender: User, outputs: Output[] = [], attribut
   return getManager().save(transaction)
 }
 
-export async function seedEntensionTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+export async function seedEntensionTx (sender: User, parent: Transaction, attributes: Partial<ExtensionTxSeed> = {}) {
   const seed: ExtensionTxSeed = {
-    ...getTxSeed(TransactionType.extension, sender, outputs),
+    ...getTxSeed(TransactionType.extension, sender),
     content: 'child content',
     parent,
   }
@@ -71,9 +68,9 @@ export async function seedEntensionTx (sender: User, parent: Transaction, output
   return getManager().save(transaction)
 }
 
-export async function seedCommentTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+export async function seedCommentTx (sender: User, parent: Transaction, attributes: Partial<CommentTxSeed> = {}) {
   const seed: CommentTxSeed = {
-    ...getTxSeed(TransactionType.comment, sender, outputs),
+    ...getTxSeed(TransactionType.comment, sender),
     content: 'comment content',
     parent,
   }
@@ -83,9 +80,9 @@ export async function seedCommentTx (sender: User, parent: Transaction, outputs:
   return getManager().save(transaction)
 }
 
-export async function seedReborkTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+export async function seedReborkTx (sender: User, parent: Transaction, attributes: Partial<ReborkTxSeed> = {}) {
   const seed: ReborkTxSeed = {
-    ...getTxSeed(TransactionType.rebork, sender, outputs),
+    ...getTxSeed(TransactionType.rebork, sender),
     content: null,
     parent,
   }
@@ -95,9 +92,9 @@ export async function seedReborkTx (sender: User, parent: Transaction, outputs: 
   return getManager().save(transaction)
 }
 
-export async function seedLikeTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+export async function seedLikeTx (sender: User, parent: Transaction, attributes: Partial<LikeTxSeed> = {}) {
   const seed: LikeTxSeed = {
-    ...getTxSeed(TransactionType.like, sender, outputs),
+    ...getTxSeed(TransactionType.like, sender),
     parent,
   }
 
@@ -106,9 +103,9 @@ export async function seedLikeTx (sender: User, parent: Transaction, outputs: Ou
   return getManager().save(transaction)
 }
 
-export async function seedFlagTx (sender: User, parent: Transaction, outputs: Output[], attributes: Partial<UserSeed> = {}) {
+export async function seedFlagTx (sender: User, parent: Transaction, attributes: Partial<FlagTxSeed> = {}) {
   const seed: FlagTxSeed = {
-    ...getTxSeed(TransactionType.flag, sender, outputs),
+    ...getTxSeed(TransactionType.flag, sender),
     parent,
   }
 
@@ -117,18 +114,19 @@ export async function seedFlagTx (sender: User, parent: Transaction, outputs: Ou
   return getManager().save(transaction)
 }
 
-export async function seedFollowTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+export async function seedFollowTx (followed: User, follower: User, attributes: Partial<FollowTxSeed> = {}) {
   const seed: FollowTxSeed = {
-    ...getTxSeed(TransactionType.follow, sender),
-    content: user.address,
+    ...getTxSeed(TransactionType.follow, follower),
+    content: followed.address,
   }
 
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+  followed.followers = [follower]
 
-  return getManager().save(transaction)
+  return getManager().save([transaction, followed])
 }
 
-export async function seedUnfollowTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+export async function seedUnfollowTx (sender: User, user: User, attributes: Partial<UnfollowTxSeed> = {}) {
   const seed: UnfollowTxSeed = {
     ...getTxSeed(TransactionType.unfollow, sender),
     content: user.address,
@@ -139,7 +137,7 @@ export async function seedUnfollowTx (sender: User, user: User, attributes: Part
   return getManager().save(transaction)
 }
 
-export async function seedBlockTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+export async function seedBlockTx (sender: User, user: User, attributes: Partial<BlockTxSeed> = {}) {
   const seed: BlockTxSeed = {
     ...getTxSeed(TransactionType.block, sender),
     content: user.address,
@@ -150,7 +148,7 @@ export async function seedBlockTx (sender: User, user: User, attributes: Partial
   return getManager().save(transaction)
 }
 
-export async function seedUnblockTx (sender: User, user: User, attributes: Partial<UserSeed> = {}) {
+export async function seedUnblockTx (sender: User, user: User, attributes: Partial<UnblockTxSeed> = {}) {
   const seed: UnblockTxSeed = {
     ...getTxSeed(TransactionType.unblock, sender),
     content: user.address,
@@ -161,7 +159,7 @@ export async function seedUnblockTx (sender: User, user: User, attributes: Parti
   return getManager().save(transaction)
 }
 
-export async function seedProfileTx (sender: User, type: TransactionType = TransactionType.setName, attributes: Partial<UserSeed> = {}) {
+export async function seedProfileTx (sender: User, type: TransactionType = TransactionType.setName, attributes: Partial<ProfileTxSeed> = {}) {
   let content: string
   switch (type) {
     case TransactionType.setName:

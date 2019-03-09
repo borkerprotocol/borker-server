@@ -9,14 +9,14 @@ export interface Response {
 
 export async function getBlockHash (blockHeight: number): Promise<string> {
   if (blockHeight <= 17906) {
-    // return blockHeight.toString()
-    return request('getblockhash', `${blockHeight}`, [blockHeight])
+    return blockHeight.toString()
+    // return request('getblockhash', `${blockHeight}`, [blockHeight])
   }
 }
 
 export async function getBlock (blockHash: string): Promise<string> {
-  // return blockHash
-  return request('getblock', `${blockHash}`, [blockHash, false])
+  return blockHash
+  // return request('getblock', `${blockHash}`, [blockHash, false])
 }
 
 // private

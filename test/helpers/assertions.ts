@@ -48,6 +48,19 @@ export function assertLikeTx (tx: Transaction) {
   assert.equal(tx.commentsCount, 0)
   assert.equal(tx.likesCount, 0)
   assert.equal(tx.reborksCount, 0)
+  assert.equal(tx.flagsCount, 0)
+}
+
+export function assertFlagTx (tx: Transaction) {
+  assertBaseTx(tx)
+  assert.equal(tx.type, TransactionType.flag)
+  assert.exists(tx.parent)
+  assert.isEmpty(tx.mentions)
+  assert.exists(tx.content)
+  assert.equal(tx.commentsCount, 0)
+  assert.equal(tx.likesCount, 0)
+  assert.equal(tx.reborksCount, 0)
+  assert.equal(tx.flagsCount, 0)
 }
 
 export function assertFollowTx (tx: Transaction) {
@@ -59,6 +72,7 @@ export function assertFollowTx (tx: Transaction) {
   assert.equal(tx.commentsCount, 0)
   assert.equal(tx.likesCount, 0)
   assert.equal(tx.reborksCount, 0)
+  assert.equal(tx.flagsCount, 0)
 }
 
 export function assertUnfollowTx (tx: Transaction) {
@@ -70,6 +84,7 @@ export function assertUnfollowTx (tx: Transaction) {
   assert.equal(tx.commentsCount, 0)
   assert.equal(tx.likesCount, 0)
   assert.equal(tx.reborksCount, 0)
+  assert.equal(tx.flagsCount, 0)
 }
 
 export function assertProfileTx (tx: Transaction) {
@@ -80,6 +95,7 @@ export function assertProfileTx (tx: Transaction) {
   assert.equal(tx.commentsCount, 0)
   assert.equal(tx.likesCount, 0)
   assert.equal(tx.reborksCount, 0)
+  assert.equal(tx.flagsCount, 0)
 }
 
 export function assertNameTx (tx: Transaction) {

@@ -1,12 +1,11 @@
 import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { TransactionHandler } from '../../src/api/handlers/transaction'
-import { seedBaseUser, seedBorkTx, seedProfileTx } from '../helpers/seeds'
+import { seedBaseUser, seedBorkTx, seedProfileTx, seedLikeTx } from '../helpers/seeds'
 import { Transaction, TransactionType } from '../../src/db/entities/transaction'
 import { User } from '../../src/db/entities/user'
 import { assertBorkTx, assertProfileTx } from '../helpers/assertions'
 import { database } from '../helpers/database'
-
 
 describe('Transaction Handler', async () => {
   let connections: Connection[]
@@ -76,6 +75,28 @@ describe('Transaction Handler', async () => {
       assertBorkTx(p1)
       assert.equal(p1.txid, borkTx.txid)
       assert.equal(p2.txid, profileTx.txid)
+    })
+  })
+
+  describe('GET /transactions/:id/users', async () => {
+    let user: User
+    let user2: User
+    let borkTx: Transaction
+    let likeTx: Transaction
+
+    beforeEach(async () => {
+      user = await seedBaseUser()
+      user2 = await seedBaseUser()
+      await seedBaseUser()
+      borkTx = await seedBorkTx(user)
+      likeTx = await seedLikeTx(user2, borkTx)
+    })
+
+    it('returns all tx likers', async () => {
+      const users = await transactionHandler.indexTxUsers(user.address, borkTx.txid, TransactionType.like)
+
+      assert.equal(users.length, 1)
+      assert.equal(users[0].address, user2.address)
     })
   })
 })

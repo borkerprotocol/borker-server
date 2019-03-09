@@ -283,6 +283,17 @@ export const mockTxs4: MappedTx[] = [
       value: '44',
     }],
   },
+  {
+    timestamp: 1426287677,
+    txid: '59a6a9cd14fb864a048b87ef006d168c345943edc1bc54e462694ac42c90cd04',
+    type: TransactionType.flag,
+    nonce: 3,
+    referenceNonce: null,
+    content: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
+    fee: '1',
+    senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
+    outputs: [],
+  },
 ]
 
 export const mockUtxos: Utxo[] = [

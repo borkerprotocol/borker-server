@@ -1,25 +1,13 @@
-import { GET, Path, PathParam, POST, QueryParam, HeaderParam, Errors } from 'typescript-rest'
+import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
 import { Transaction, TransactionType } from '../../db/entities/transaction'
-import { syncChain } from '../../scripts/sync'
 import { getRepository } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
-import { checkFollowing, checkBlocked } from '../../util/functions'
+import { checkBlocked, iFollowBlock } from '../../util/functions'
+import { OrderBy } from '../../util/misc-types'
 
 @Path('/transactions')
 export class TransactionHandler {
-
-	@Path('/sync')
-	@POST
-	async sync (): Promise<void> {
-		syncChain()
-  }
-
-	// @Path('/stopSync')
-	// @POST
-	// async stopSync (): Promise<void> {
-	// 	stopSyncChain()
-  // }
 
 	@Path('/')
 	@GET
@@ -29,6 +17,7 @@ export class TransactionHandler {
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: TransactionType[],
     @QueryParam('tags') tags?: string[],
+    @QueryParam('order') order: OrderBy<Transaction> = { createdAt: 'DESC' },
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
@@ -36,6 +25,12 @@ export class TransactionHandler {
 
     const pageNum = Number(page)
     const perPageNum = Number(perPage)
+
+    Object.keys(order).forEach(key => {
+      const newkey = `tx.${key}`
+      order[newkey] = order[key]
+      delete order[key]
+    })
 
     let query = getRepository(Transaction)
       .createQueryBuilder('tx')
@@ -45,7 +40,7 @@ export class TransactionHandler {
       .leftJoinAndSelect('tx.mentions', 'mentions')
       .where('tx.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
       .andWhere('tx.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
-      .orderBy('tx.createdAt', 'DESC')
+      .orderBy(order)
       .take(perPageNum)
       .skip(perPageNum * (pageNum - 1))
 
@@ -69,11 +64,11 @@ export class TransactionHandler {
 
     return Promise.all(txs.map(async tx => {
       if (tx.parent) {
-        Object.assign(tx.parent, { ...await this.iCommentLikeRebork(myAddress, tx.parent) })
+        Object.assign(tx.parent, { ...await this.iCommentLikeReborkFlag(myAddress, tx.parent.txid) })
       }
       return {
         ...tx,
-        ...(await this.iCommentLikeRebork(myAddress, tx)),
+        ...(await this.iCommentLikeReborkFlag(myAddress, tx.txid)),
       }
     }))
 	}
@@ -100,7 +95,7 @@ export class TransactionHandler {
 
     return {
       ...tx,
-      ...(await this.iCommentLikeRebork(myAddress, tx)),
+      ...(await this.iCommentLikeReborkFlag(myAddress, tx.txid)),
       extensions,
     }
   }
@@ -110,7 +105,8 @@ export class TransactionHandler {
 	async indexTxUsers (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
-    @QueryParam('type') type?: TransactionType.like | TransactionType.rebork,
+    @QueryParam('type') type: TransactionType.like | TransactionType.rebork | TransactionType.flag,
+    @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
@@ -118,24 +114,32 @@ export class TransactionHandler {
     const pageNum = Number(page)
     const perPageNum = Number(perPage)
 
-    let query = getRepository(User)
+    Object.keys(order).forEach(key => {
+      const newkey = `users.${key}`
+      order[newkey] = order[key]
+      delete order[key]
+    })
+
+    const users = await getRepository(User)
       .createQueryBuilder('users')
-      .leftJoin('transactions', 'txs', 'txs.sender_address = users.address')
-      .where('txs.parent_txid = :txid', { txid })
-      .orderBy('users.name', 'ASC')
+      .where(qb => {
+        const subQuery = qb.subQuery()
+          .select('sender_address')
+          .from(Transaction, 'txs')
+          .where('parent_txid = :txid', { txid })
+          .andWhere('type = :type', { type })
+          .getQuery()
+        return `address IN ${subQuery}`
+      })
+      .orderBy(order)
       .take(perPageNum)
       .offset(perPageNum * (pageNum - 1))
-
-    if (type) {
-      query.andWhere('txs.type = :type', { type })
-    }
-
-    const users = await query.getMany()
+      .getMany()
 
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await checkFollowing(myAddress, user.address),
+        ...(await iFollowBlock(myAddress, user.address)),
       }
     }))
   }
@@ -162,23 +166,36 @@ export class TransactionHandler {
     await this.getExtensions(ext, extensions)
   }
 
-  private async iCommentLikeRebork (myAddress: string, tx: Transaction): Promise<{ iComment: boolean, iLike: boolean, iRebork: boolean }> {
+  private async iCommentLikeReborkFlag (myAddress: string, txid: string): Promise<{
+    iComment: boolean,
+    iLike: boolean,
+    iRebork: boolean,
+    iFlag: boolean,
+  }> {
+
     const repo = getRepository(Transaction)
-    const [comment, like, rebork] = await Promise.all([
+
+    const conditions = {
+      sender: { address: myAddress },
+      parent: { txid },
+    }
+
+    const [comment, like, rebork, flag] = await Promise.all([
       repo.findOne({
-        sender: { address: myAddress },
-        parent: { txid: tx.txid },
+        ...conditions,
         type: TransactionType.comment,
       }),
       repo.findOne({
-        sender: { address: myAddress },
-        parent: { txid: tx.txid },
+        ...conditions,
         type: TransactionType.like,
       }),
       repo.findOne({
-        sender: { address: myAddress },
-        parent: { txid: tx.txid },
+        ...conditions,
         type: TransactionType.rebork,
+      }),
+      repo.findOne({
+        ...conditions,
+        type: TransactionType.flag,
       }),
     ])
   
@@ -186,6 +203,7 @@ export class TransactionHandler {
       iComment: !!comment,
       iLike: !!like,
       iRebork: !!rebork,
+      iFlag: !!flag,
     }
   }
 }
@@ -194,6 +212,7 @@ export interface ApiTransaction extends Transaction {
   iComment: boolean
   iLike: boolean
   iRebork: boolean
+  iFlag: boolean
 }
 
 export interface ApiTransactionExtended extends ApiTransaction {

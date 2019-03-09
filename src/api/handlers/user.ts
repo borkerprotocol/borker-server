@@ -1,13 +1,9 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
 import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
-import { checkFollowing, checkBlocked } from '../../util/functions'
+import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { Utxo, mockUtxos } from '../../util/mocks'
-
-export enum UserFilter {
-  birthBlock = 'birthBlock',
-  followersCount = 'followersCount',
-}
+import { OrderBy } from '../../util/misc-types'
 
 @Path('/users')
 export class UserHandler {
@@ -16,7 +12,7 @@ export class UserHandler {
 	@GET
 	async index (
     @HeaderParam('my-address') myAddress: string,
-    @QueryParam('filter') filter: UserFilter = UserFilter.birthBlock,
+    @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
@@ -27,15 +23,14 @@ export class UserHandler {
     let options: FindManyOptions<User> = {
       take: perPageNum,
       skip: perPageNum * (pageNum - 1),
-      order: { [filter]: filter === UserFilter.birthBlock ? 'ASC' : 'DESC' },
+      order,
     }
-
     const users = await getRepository(User).find(options)
 
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await checkFollowing(myAddress, user.address),
+        ...(await iFollowBlock(myAddress, user.address)),
       }
     }))
   }
@@ -58,7 +53,7 @@ export class UserHandler {
 
     return {
       ...user,
-      iFollow: await checkFollowing(myAddress, address),
+      ...(await iFollowBlock(myAddress, user.address)),
     }
   }
 
@@ -88,31 +83,34 @@ export class UserHandler {
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
+    @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
     @QueryParam('page') page: string = '1',
     @QueryParam('perPage') perPage: string = '20',
   ): Promise<ApiUser[]> {
-
-    const pageNum = Number(page)
-    const perPageNum = Number(perPage)
 
     if (await checkBlocked(myAddress, address)) {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    let query = await getRepository(User)
+    const pageNum = Number(page)
+    const perPageNum = Number(perPage)
+
+    Object.keys(order).forEach(key => {
+      const newkey = `users.${key}`
+      order[newkey] = order[key]
+      delete order[key]
+    })
+
+    let query = getRepository(User)
       .createQueryBuilder('users')
-      .orderBy('users.name', 'ASC')
+      .orderBy(order)
       .take(perPageNum)
       .offset(perPageNum * (pageNum - 1))
 
     if (type === 'following') {
-      query
-        .innerJoin('follows', 'follows', 'follows.followed_address = users.address')
-        .where('follows.follower_address = :address', { address })
+      query.where('address IN (SELECT followed_address FROM follows WHERE follower_address = :address)', { address })
     } else {
-      query
-        .innerJoin('follows', 'follows', 'follows.follower_address = users.address')
-        .where('follows.followed_address = :address', { address })
+      query.where('address IN (SELECT follower_address FROM follows WHERE followed_address = :address)', { address })
     }
 
     const users = await query.getMany()
@@ -120,7 +118,7 @@ export class UserHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        iFollow: await checkFollowing(myAddress, user.address),
+        ...(await iFollowBlock(myAddress, user.address)),
       }
     }))
   }
@@ -128,4 +126,5 @@ export class UserHandler {
 
 export interface ApiUser extends User {
   iFollow: boolean
+  iBlock: boolean
 }

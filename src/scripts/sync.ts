@@ -126,12 +126,17 @@ async function processTransactions (mappedTxs: MappedTx[]) {
         case TransactionType.unblock:
           await handleFUBU(manager, tx)
           break
-        // comment, like, rebork, flag
+        // comment, like, rebork
         case TransactionType.comment:
         case TransactionType.like:
         case TransactionType.rebork:
+          await handleCLR(manager, tx, referenceNonce)
+          break
+        // flag
         case TransactionType.flag:
-          await handleCLRF(manager, tx, referenceNonce)
+          tx.parent = await manager.findOne(Transaction, tx.content)
+          if (!tx.parent) { break }
+          tx.parent.flagsCount = tx.parent.flagsCount + 1
           break
         // extension
         case TransactionType.extension:
@@ -194,9 +199,11 @@ async function handleFUBU (manager: EntityManager, tx: Transaction) {
   }
 }
 
-async function handleCLRF (manager: EntityManager, tx: Transaction, referenceNonce: number) {
+async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonce: number) {
   // attach the parent
   tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.mentions[0].user })
+  // return if parent not found
+  if (!tx.parent) { return }
   // increment the appropriate count
   switch (tx.type) {
     // comment
@@ -210,10 +217,6 @@ async function handleCLRF (manager: EntityManager, tx: Transaction, referenceNon
     // rebork
     case TransactionType.rebork:
       tx.parent.reborksCount = tx.parent.reborksCount + 1
-      break
-    // flag
-    case TransactionType.flag:
-      tx.parent.flagsCount = tx.parent.flagsCount + 1
       break
   }
 }

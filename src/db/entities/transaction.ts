@@ -91,7 +91,7 @@ export interface TxSeed {
   type: TransactionType
   fee: BigNumber
   sender: User
-  mentions: Mention[]
+  mentions?: Mention[]
 }
 
 export interface BorkTxSeed extends TxSeed {
