@@ -23,4 +23,6 @@ app.use(cors())
 Server.buildServices(router, ...handlers)
 app.use('/', router)
 
+Server.ignoreNextMiddlewares(true)
+
 export default app

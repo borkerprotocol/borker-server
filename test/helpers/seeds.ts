@@ -1,10 +1,8 @@
-import { getManager, getRepository } from 'typeorm'
+import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
 import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed, FlagTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
 import BigNumber from 'bignumber.js'
-import { Mention } from '../../src/db/entities/mention'
-import { Output } from '../../src/util/mocks'
 
 function getTxSeed (type: TransactionType, sender: User): TxSeed {
 
@@ -14,6 +12,7 @@ function getTxSeed (type: TransactionType, sender: User): TxSeed {
     nonce: 0,
     type,
     fee: new BigNumber(1),
+    value: new BigNumber(0),
     sender,
   }
 }
@@ -180,13 +179,4 @@ export async function seedProfileTx (sender: User, type: TransactionType = Trans
   const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
 
   return getManager().save(transaction)
-}
-
-export function seedMentions (outputs: Output[]): Mention[] {
-  return outputs.map(output => {
-    return getRepository(Mention).create({
-      user: { address: output.address },
-      value: new BigNumber(output.value),
-    })
-  })
 }

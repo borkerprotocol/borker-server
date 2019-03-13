@@ -5,8 +5,6 @@ import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
 import { mockTxs1, mockTxs2, mockTxs3, MappedTx, mockTxs4 } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
-import { Mention } from '../db/entities/mention'
-import BigNumber from 'bignumber.js'
 
 // let borkerLib: any
 
@@ -65,7 +63,7 @@ async function processTransactions (mappedTxs: MappedTx[]) {
 
   for (let mappedTx of mappedTxs) {
 
-    const { txid, timestamp, nonce, referenceNonce, type, content, fee, senderAddress, outputs } = mappedTx
+    const { txid, timestamp, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress } = mappedTx
 
     // continue if we've already seen this txid
     if (await getManager().findOne(Transaction, txid)) { continue }
@@ -80,6 +78,7 @@ async function processTransactions (mappedTxs: MappedTx[]) {
         type,
         content,
         fee,
+        value,
       })
 
       // attach sender
@@ -92,17 +91,6 @@ async function processTransactions (mappedTxs: MappedTx[]) {
           birthBlock: blockHeight,
           name: senderAddress.substr(0, 9),
         })
-      }
-
-      // attach mentions
-      tx.mentions = []
-      for (let output of outputs) {
-        // create the mention and add it to the tx
-        tx.mentions.push(manager.create(Mention, {
-          createdAt: tx.createdAt,
-          value: new BigNumber(output.value),
-          user: { address: output.address },
-        }))
       }
 
       // case on the transaction type
@@ -130,7 +118,7 @@ async function processTransactions (mappedTxs: MappedTx[]) {
         case TransactionType.comment:
         case TransactionType.like:
         case TransactionType.rebork:
-          await handleCLR(manager, tx, referenceNonce)
+          await handleCLR(manager, tx, recipientAddress, referenceNonce)
           break
         // flag
         case TransactionType.flag:
@@ -147,14 +135,19 @@ async function processTransactions (mappedTxs: MappedTx[]) {
           break
       }
 
-      // attach tags if taggable type
+      // attach tags and mentions if post type
       if (
         type === TransactionType.bork ||
         type === TransactionType.extension ||
         type === TransactionType.rebork ||
         type === TransactionType.comment
       ) {
-        tx.tags = await attachTags(manager, tx)
+        const [tags, mentions] = await Promise.all([
+          attachTags(manager, tx),
+          attachMentions(manager, tx),
+        ])
+        tx.tags = tags
+        tx.mentions = mentions
       }
 
       await manager.save(tx)
@@ -199,9 +192,9 @@ async function handleFUBU (manager: EntityManager, tx: Transaction) {
   }
 }
 
-async function handleCLR (manager: EntityManager, tx: Transaction, referenceNonce: number) {
+async function handleCLR (manager: EntityManager, tx: Transaction, recipientAddress: string, referenceNonce: number) {
   // attach the parent
-  tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.mentions[0].user })
+  tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: { address: recipientAddress } })
   // return if parent not found
   if (!tx.parent) { return }
   // increment the appropriate count
@@ -236,4 +229,19 @@ async function attachTags(manager: EntityManager, tx: Transaction): Promise<Tag[
   }
 
   return tags
+}
+
+async function attachMentions(manager: EntityManager, tx: Transaction): Promise<User[]> {  
+  const regex = /(?:^|\s)(?:@)([a-zA-Z0-9_\d]+)/gm
+  let mentions: User[] = []
+  let match: RegExpExecArray
+
+  while ((match = regex.exec(tx.content))) {
+    const name = match[1]
+    const user = await manager.findOne(User, { name })
+    if (!user) { return }
+    mentions.push(user)
+  }
+
+  return mentions
 }

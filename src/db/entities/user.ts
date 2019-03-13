@@ -7,7 +7,6 @@ import {
   ManyToMany,
 } from 'typeorm'
 import { Transaction } from './transaction'
-import { Mention } from './mention'
 
 @Entity({ name: 'users' })
 export class User {
@@ -23,7 +22,7 @@ export class User {
 	@Column('int', { name: 'birth_block' })
 	birthBlock: number
 
-	@Column('text', { name: 'name', nullable: true })
+	@Column('text', { name: 'name' })
 	name: string | null
 
 	@Column('text', { name: 'bio', nullable: true })
@@ -42,9 +41,6 @@ export class User {
 
 	@OneToMany(() => Transaction, transaction => transaction.sender)
 	sentTransactions: Transaction[]
-
-  @OneToMany(() => Mention, mention => mention.user)
-  mentions: Mention[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({
@@ -75,6 +71,18 @@ export class User {
 
   @ManyToMany(() => User, user => user.blockers)
   blocking: User[]
+
+  @ManyToMany(() => Transaction, transaction => transaction.mentions)
+  @JoinTable({
+    name: 'mentions',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'transaction_txid' },
+    ],
+  })
+  mentions: Transaction[]
 }
 
 export interface UserSeed {

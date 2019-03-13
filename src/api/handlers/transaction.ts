@@ -1,10 +1,12 @@
-import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
+import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
 import { Transaction, TransactionType } from '../../db/entities/transaction'
 import { getRepository } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
+import { Utxo, mockUtxos, Output } from '../../util/mocks'
+import * as rpc from '../../util/rpc-requests'
 
 @Path('/transactions')
 export class TransactionHandler {
@@ -35,15 +37,17 @@ export class TransactionHandler {
     let query = getRepository(Transaction)
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.sender', 'sender')
-      .leftJoinAndSelect('tx.parent', 'parent')
-      .leftJoinAndSelect('parent.sender', 'parentSender')
-      .leftJoinAndSelect('tx.mentions', 'mentions')
       .where('tx.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
       .andWhere('tx.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
       .orderBy(order)
       .take(perPageNum)
       .skip(perPageNum * (pageNum - 1))
-
+    
+    if (!parentTxid) {
+      query
+        .leftJoinAndSelect('tx.parent', 'parent')
+        .leftJoinAndSelect('parent.sender', 'parentSender')
+    }
     if (types) {
       query.andWhere('tx.type IN (:...types)', { types })
     }
@@ -71,7 +75,39 @@ export class TransactionHandler {
         ...(await this.iCommentLikeReborkFlag(myAddress, tx.txid)),
       }
     }))
-	}
+  }
+
+	@Path('/construct')
+	@POST
+	async construct (
+    @HeaderParam('my-address') myAddress: string,
+    body: ConstructRequest,
+  ): Promise<TxData[]> {
+
+    return [
+      {
+        inputs: mockUtxos.filter(utxo => {
+          return utxo.address === myAddress
+        }),
+        outputs: [
+          {
+            address: '',
+            value: '',
+            content: body.content,
+          },
+        ],
+        fee: '1',
+        txHash: '123456789',
+      },
+    ]
+  }
+
+	@Path('/broadcast')
+	@POST
+	async broadcast (txs: string[]): Promise<string[]> {
+
+    return Promise.all(txs.map(rpc.broadcast))
+  }
 
 	@Path('/:txid')
 	@GET
@@ -80,7 +116,7 @@ export class TransactionHandler {
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
     
-    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender', 'mentions'] })
+    const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender'] })
     if (!tx) {
       throw new Errors.NotFoundError('tx not found')
     }
@@ -151,7 +187,7 @@ export class TransactionHandler {
         parent: tx,
         type: TransactionType.extension,
       }, {
-        relations: ['sender', 'mentions'],
+        relations: ['sender'],
       })
 
     // if no more extensions, return
@@ -167,9 +203,9 @@ export class TransactionHandler {
   }
 
   private async iCommentLikeReborkFlag (myAddress: string, txid: string): Promise<{
-    iComment: boolean,
-    iLike: boolean,
-    iRebork: boolean,
+    iComment: boolean
+    iLike: boolean
+    iRebork: boolean
     iFlag: boolean,
   }> {
 
@@ -208,6 +244,15 @@ export class TransactionHandler {
   }
 }
 
+export interface ConstructRequest {
+  type: TransactionType
+  content?: string
+  parent?: {
+    txid: string
+    tip: string,
+  },
+}
+
 export interface ApiTransaction extends Transaction {
   iComment: boolean
   iLike: boolean
@@ -217,4 +262,11 @@ export interface ApiTransaction extends Transaction {
 
 export interface ApiTransactionExtended extends ApiTransaction {
   extensions: Transaction[]
+}
+
+export interface TxData {
+  inputs: Utxo[]
+  outputs: Output[]
+  fee: string
+  txHash: string
 }

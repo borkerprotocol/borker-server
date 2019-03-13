@@ -3,6 +3,7 @@ import { TransactionType } from '../db/entities/transaction'
 export interface Output {
   address: string
   value: string
+  content: string
 }
 
 export interface MappedTx {
@@ -13,11 +14,13 @@ export interface MappedTx {
   referenceNonce: number | null
   content: string | null
   fee: string
+  value: string
   senderAddress: string
-  outputs: Output[]
+  recipientAddress: string
 }
 
 export interface Utxo {
+  address: string
   txid: string
   index: number
   value: string
@@ -32,8 +35,9 @@ export const mockTxs1: MappedTx[] = [
     referenceNonce: null,
     content: 'MattHill',
     fee: '1',
+    value: '0',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1422182926,
@@ -43,8 +47,9 @@ export const mockTxs1: MappedTx[] = [
     referenceNonce: null,
     content: 'I like to bork. I like to bork',
     fee: '1',
+    value: '0',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1422184977,
@@ -54,13 +59,9 @@ export const mockTxs1: MappedTx[] = [
     referenceNonce: 1,
     content: null,
     fee: '1',
+    value: '20',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [
-      {
-        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-        value: '20',
-      },
-    ],
+    recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
   },
   {
     timestamp: 1423181711,
@@ -69,9 +70,10 @@ export const mockTxs1: MappedTx[] = [
     nonce: 1,
     referenceNonce: null,
     content: 'Bork some more. Bork some more. #Tomorrow',
-    fee: '1',
+    fee: '2',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [],
+    recipientAddress: null,
   },
 ]
 
@@ -84,8 +86,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: null,
     content: 'Borking like there aint no #tomorrow',
     fee: '1',
+    value: '0',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1424169440,
@@ -95,13 +98,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: 2,
     content: null,
     fee: '1',
+    value: '10',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [
-      {
-        address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-        value: '10',
-      },
-    ],
+    recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
   },
   {
     timestamp: 1424561124,
@@ -111,13 +110,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: 1,
     content: 'And some more!',
     fee: '1',
+    value: '100',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    outputs: [
-      {
-        address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-        value: '100',
-      },
-    ],
+    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
   },
   {
     timestamp: 1424967992,
@@ -127,8 +122,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: null,
     content: 'This is a long bork that will take up two whole transactions. I will write',
     fee: '1',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1425167583,
@@ -138,11 +134,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: 3,
     content: 'just a little more. See, I told you. Bork on.',
     fee: '1',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [{
-      address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-      value: '50',
-    }],
+    recipientAddress: null,
   },
   {
     timestamp: 1425188584,
@@ -152,8 +146,9 @@ export const mockTxs2: MappedTx[] = [
     referenceNonce: null,
     content: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     fee: '1',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [],
+    recipientAddress: null,
   },
 ]
 
@@ -164,10 +159,11 @@ export const mockTxs3: MappedTx[] = [
     type: TransactionType.setName,
     nonce: 6,
     referenceNonce: null,
-    content: 'Aiden McClelland',
+    content: 'aiden_mcclelland',
     fee: '1',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1426287533,
@@ -175,13 +171,11 @@ export const mockTxs3: MappedTx[] = [
     type: TransactionType.comment,
     nonce: 0,
     referenceNonce: 4,
-    content: 'Wow that was so borking cool',
-    fee: '1',
+    content: 'Wow @aiden_mcclelland that was so borking cool',
+    fee: '2.23',
+    value: '90.5',
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-    outputs: [{
-      address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-      value: '90',
-    }],
+    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
   },
   {
     timestamp: 1425399510,
@@ -191,8 +185,9 @@ export const mockTxs3: MappedTx[] = [
     referenceNonce: null,
     content: 'I am a Bork Master',
     fee: '1',
+    value: '0',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1426287533,
@@ -202,8 +197,9 @@ export const mockTxs3: MappedTx[] = [
     referenceNonce: null,
     content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     fee: '1',
+    value: '0',
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1426287533,
@@ -212,12 +208,10 @@ export const mockTxs3: MappedTx[] = [
     nonce: 0,
     referenceNonce: 0,
     content: null,
-    fee: '2',
+    fee: '1',
+    value: '1000',
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
-    outputs: [{
-      address: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-      value: '1000',
-    }],
+    recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
   },
 ]
 
@@ -230,8 +224,9 @@ export const mockTxs4: MappedTx[] = [
     referenceNonce: null,
     content: 'I am the unknown Borker who shall someday be known',
     fee: '1',
+    value: '0',
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1426287533,
@@ -240,9 +235,10 @@ export const mockTxs4: MappedTx[] = [
     nonce: 1,
     referenceNonce: null,
     content: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
-    fee: '1',
+    fee: '2',
+    value: '0',
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1425399510,
@@ -252,8 +248,9 @@ export const mockTxs4: MappedTx[] = [
     referenceNonce: null,
     content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     fee: '1',
+    value: '0',
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-    outputs: [],
+    recipientAddress: null,
   },
   {
     timestamp: 1426287533,
@@ -263,11 +260,9 @@ export const mockTxs4: MappedTx[] = [
     referenceNonce: 4,
     content: null,
     fee: '1',
+    value: '25',
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
-    outputs: [{
-      address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-      value: '25',
-    }],
+    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
   },
   {
     timestamp: 1426287533,
@@ -277,11 +272,9 @@ export const mockTxs4: MappedTx[] = [
     referenceNonce: 0,
     content: null,
     fee: '1',
+    value: '44',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    outputs: [{
-      address: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-      value: '44',
-    }],
+    recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
   },
   {
     timestamp: 1426287677,
@@ -291,33 +284,39 @@ export const mockTxs4: MappedTx[] = [
     referenceNonce: null,
     content: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
     fee: '1',
+    value: '0',
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
-    outputs: [],
+    recipientAddress: null,
   },
 ]
 
 export const mockUtxos: Utxo[] = [
   {
+    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
     index: 1,
     value: '10',
   },
   {
+    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
     index: 2,
     value: '100',
   },
   {
+    address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     txid: '20d721480d0450a1b9666618ee618bfbacde74a4bade40908063c6c344bc7214',
     index: 1,
     value: '20',
   },
   {
+    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     txid: '0b692b4e683a3ea47f0b3b6a6f30e8cca6efcc78f1c2eb6e35430af9b9415eb5',
     index: 1,
     value: '40',
   },
   {
+    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     txid: 'fa98bb524af15f8c336e3a1824e1e80ff97a7be9677db7843a77d132ee4a7f0a',
     index: 3,
     value: '22',

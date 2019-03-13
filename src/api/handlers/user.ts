@@ -2,7 +2,6 @@ import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescrip
 import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { Utxo, mockUtxos } from '../../util/mocks'
 import { OrderBy } from '../../util/misc-types'
 
 @Path('/users')
@@ -65,16 +64,6 @@ export class UserHandler {
 
     console.log(address)
     return '100'
-  }
-
-	@Path('/:address/utxos')
-	@GET
-	async getUtxos (
-    @PathParam('address') address: string,
-  ): Promise<Utxo[]> {
-
-    console.log(address)
-    return mockUtxos
   }
 
 	@Path('/:address/users')

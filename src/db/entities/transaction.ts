@@ -11,7 +11,6 @@ import { User } from './user'
 import { Tag } from './tag'
 import { BigNumber } from 'bignumber.js'
 import { BigNumberTransformer } from '../../util/transformers'
-import { Mention } from './mention'
 
 export enum TransactionType {
   block = 'block',
@@ -52,6 +51,9 @@ export class Transaction {
 	@Column('numeric', { name: 'fee', transformer: BigNumberTransformer })
   fee: BigNumber
 
+	@Column('numeric', { name: 'value', transformer: BigNumberTransformer })
+  value: BigNumber
+
 	@Column('int', { name: 'comments_count', default: 0 })
   commentsCount: number
 
@@ -77,8 +79,8 @@ export class Transaction {
 	@JoinColumn({ name: 'sender_address' })
 	sender: User
 
-  @OneToMany(() => Mention, mention => mention.transaction, { cascade: ['insert', 'update'] })
-  mentions: Mention[]
+  @ManyToMany(() => User, user => user.mentions, { cascade: ['insert'] })
+  mentions: User[]
 
   @ManyToMany(() => Tag, tag => tag.transactions, { cascade: ['insert'] })
   tags: Tag[]
@@ -90,8 +92,8 @@ export interface TxSeed {
   nonce: number
   type: TransactionType
   fee: BigNumber
+  value: BigNumber
   sender: User
-  mentions?: Mention[]
 }
 
 export interface BorkTxSeed extends TxSeed {
