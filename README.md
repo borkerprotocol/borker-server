@@ -28,6 +28,9 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
+If you are connecting to a remote Dogecoin node, make sure the node is configured to allow your local IP in dogecoin.conf
+
+```rpcallowip=```
 
 ### Install packages
 ```npm install```
