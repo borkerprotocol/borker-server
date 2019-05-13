@@ -1,4 +1,4 @@
-# borker  - UNRELEASED
+# borker-server  - UNRELEASED
 
 Censorship-resistant news sharing on Degecoin.
 
@@ -20,7 +20,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```git clone https://github.com/MattDHill/borker-server.git```
 
 ### Go into the directory
-```cd borker```
+```cd borker-server```
 
 ### Copy borkerconfig.json and ormconfig.json from samples
 ```cp borkerconfig-sample.json borkerconfig.json```
