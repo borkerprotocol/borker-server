@@ -1,16 +1,18 @@
 import { MigrationInterface, QueryRunner } from "typeorm"
 
-export class Init1552254724602 implements MigrationInterface {
+export class Init1557806442114 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "users" ("address" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "birth_block" integer NOT NULL, "name" text NOT NULL, "bio" text, "avatar_link" text, "followers_count" integer NOT NULL DEFAULT (0), "following_count" integer NOT NULL DEFAULT (0))`)
-        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" numeric NOT NULL, "value" numeric NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text)`)
+        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" bigint NOT NULL, "value" bigint NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text)`)
         await queryRunner.query(`CREATE TABLE "tags" ("name" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL)`)
+        await queryRunner.query(`CREATE TABLE "utxos" ("txid" text NOT NULL, "index" integer NOT NULL, "created_at" datetime NOT NULL, "address" text NOT NULL, "value" bigint NOT NULL, "raw" text NOT NULL, PRIMARY KEY ("txid", "index"))`)
+        await queryRunner.query(`CREATE INDEX "IDX_7ee003620e5c4dc41c8020c3a4" ON "utxos" ("address") `)
         await queryRunner.query(`CREATE TABLE "follows" ("followed_address" text NOT NULL, "follower_address" text NOT NULL, PRIMARY KEY ("followed_address", "follower_address"))`)
         await queryRunner.query(`CREATE TABLE "blocks" ("blocked_address" text NOT NULL, "blocker_address" text NOT NULL, PRIMARY KEY ("blocked_address", "blocker_address"))`)
         await queryRunner.query(`CREATE TABLE "mentions" ("user_address" text NOT NULL, "transaction_txid" text NOT NULL, PRIMARY KEY ("user_address", "transaction_txid"))`)
         await queryRunner.query(`CREATE TABLE "tx_tags" ("tag_name" text NOT NULL, "transaction_txid" text NOT NULL, PRIMARY KEY ("tag_name", "transaction_txid"))`)
-        await queryRunner.query(`CREATE TABLE "temporary_transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" numeric NOT NULL, "value" numeric NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text, CONSTRAINT "FK_5a45cbd283751f29958e910554f" FOREIGN KEY ("parent_txid") REFERENCES "transactions" ("txid"), CONSTRAINT "FK_13294bcf3bbb5f82e0ba0961857" FOREIGN KEY ("sender_address") REFERENCES "users" ("address"))`)
+        await queryRunner.query(`CREATE TABLE "temporary_transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" bigint NOT NULL, "value" bigint NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text, CONSTRAINT "FK_5a45cbd283751f29958e910554f" FOREIGN KEY ("parent_txid") REFERENCES "transactions" ("txid"), CONSTRAINT "FK_13294bcf3bbb5f82e0ba0961857" FOREIGN KEY ("sender_address") REFERENCES "users" ("address"))`)
         await queryRunner.query(`INSERT INTO "temporary_transactions"("txid", "created_at", "nonce", "type", "content", "fee", "value", "comments_count", "likes_count", "reborks_count", "flags_count", "parent_txid", "sender_address") SELECT "txid", "created_at", "nonce", "type", "content", "fee", "value", "comments_count", "likes_count", "reborks_count", "flags_count", "parent_txid", "sender_address" FROM "transactions"`)
         await queryRunner.query(`DROP TABLE "transactions"`)
         await queryRunner.query(`ALTER TABLE "temporary_transactions" RENAME TO "transactions"`)
@@ -50,13 +52,15 @@ export class Init1552254724602 implements MigrationInterface {
         await queryRunner.query(`INSERT INTO "follows"("followed_address", "follower_address") SELECT "followed_address", "follower_address" FROM "temporary_follows"`)
         await queryRunner.query(`DROP TABLE "temporary_follows"`)
         await queryRunner.query(`ALTER TABLE "transactions" RENAME TO "temporary_transactions"`)
-        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" numeric NOT NULL, "value" numeric NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text)`)
+        await queryRunner.query(`CREATE TABLE "transactions" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "fee" bigint NOT NULL, "value" bigint NOT NULL, "comments_count" integer NOT NULL DEFAULT (0), "likes_count" integer NOT NULL DEFAULT (0), "reborks_count" integer NOT NULL DEFAULT (0), "flags_count" integer NOT NULL DEFAULT (0), "parent_txid" text, "sender_address" text)`)
         await queryRunner.query(`INSERT INTO "transactions"("txid", "created_at", "nonce", "type", "content", "fee", "value", "comments_count", "likes_count", "reborks_count", "flags_count", "parent_txid", "sender_address") SELECT "txid", "created_at", "nonce", "type", "content", "fee", "value", "comments_count", "likes_count", "reborks_count", "flags_count", "parent_txid", "sender_address" FROM "temporary_transactions"`)
         await queryRunner.query(`DROP TABLE "temporary_transactions"`)
         await queryRunner.query(`DROP TABLE "tx_tags"`)
         await queryRunner.query(`DROP TABLE "mentions"`)
         await queryRunner.query(`DROP TABLE "blocks"`)
         await queryRunner.query(`DROP TABLE "follows"`)
+        await queryRunner.query(`DROP INDEX "IDX_7ee003620e5c4dc41c8020c3a4"`)
+        await queryRunner.query(`DROP TABLE "utxos"`)
         await queryRunner.query(`DROP TABLE "tags"`)
         await queryRunner.query(`DROP TABLE "transactions"`)
         await queryRunner.query(`DROP TABLE "users"`)

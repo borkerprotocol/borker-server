@@ -1,4 +1,4 @@
-export function randomAddressOrTxid(address: boolean = true) {
+export function randomAddressOrTxid(address: boolean) {
   let text = address ? 'D' : ''
   const base58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
   const size = address ? 33 : 64

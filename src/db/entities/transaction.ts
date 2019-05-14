@@ -9,8 +9,6 @@ import {
 } from 'typeorm'
 import { User } from './user'
 import { Tag } from './tag'
-import { BigNumber } from 'bignumber.js'
-import { BigNumberTransformer } from '../../util/transformers'
 
 export enum TransactionType {
   block = 'block',
@@ -48,11 +46,11 @@ export class Transaction {
 	@Column('text', { name: 'content', nullable: true })
 	content: string | null
 
-	@Column('numeric', { name: 'fee', transformer: BigNumberTransformer })
-  fee: BigNumber
+	@Column('bigint', { name: 'fee' })
+  fee: number
 
-	@Column('numeric', { name: 'value', transformer: BigNumberTransformer })
-  value: BigNumber
+	@Column('bigint', { name: 'value' })
+  value: number
 
 	@Column('int', { name: 'comments_count', default: 0 })
   commentsCount: number
@@ -91,8 +89,8 @@ export interface TxSeed {
   createdAt: Date
   nonce: number
   type: TransactionType
-  fee: BigNumber
-  value: BigNumber
+  fee: number
+  value: number
   sender: User
 }
 

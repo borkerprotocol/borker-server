@@ -12,7 +12,7 @@ export class Tag {
 
   // attributes
 
-	@PrimaryColumn('text', { name: 'name', unique: true })
+	@PrimaryColumn('text', { name: 'name' })
 	name: string
 
 	@Column('datetime', { name: 'created_at' })

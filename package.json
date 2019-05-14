@@ -2,6 +2,12 @@
 	"name": "borker",
 	"version": "0.1.0",
 	"description": "Censorship-resistant news sharing on Dogecoin",
+	"author": "MattDHill",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:MattDHill/borker-server.git"
+	},
 	"main": "dist/index.js",
 	"scripts": {
 		"clean": "rimraf dist/*",
@@ -10,18 +16,14 @@
 		"start": "node dist/src",
 		"test": "mocha -r ts-node/register test/**/*.spec.ts"
 	},
-	"author": "MattDHill",
-	"license": "MIT",
 	"dependencies": {
-		"bignumber.js": "^8.1.1",
 		"cors": "^2.8.5",
 		"express": "^4.16.4",
-		"moment": "^2.24.0",
 		"reflect-metadata": "^0.1.13",
 		"request": "^2.88.0",
 		"request-promise": "^4.2.4",
-		"sqlite3": "^4.0.6",
-		"typeorm": "^0.2.16",
+		"sqlite3": "^4.0.8",
+		"typeorm": "^0.2.17",
 		"typescript-rest": "^2.0.0"
 	},
 	"devDependencies": {
@@ -29,8 +31,7 @@
 		"@types/cors": "^2.8.5",
 		"@types/express": "^4.16.1",
 		"@types/mocha": "^5.2.6",
-		"@types/moment": "^2.13.0",
-		"@types/node": "^11.13.8",
+		"@types/node": "^12.0.1",
 		"@types/request-promise": "^4.1.43",
 		"@types/sinon": "^7.0.11",
 		"@types/sqlite3": "^3.1.5",

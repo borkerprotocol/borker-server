@@ -2,7 +2,7 @@ import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
 import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed, FlagTxSeed } from '../../src/db/entities/transaction'
 import { randomAddressOrTxid } from './random-generators'
-import BigNumber from 'bignumber.js'
+import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
 
 function getTxSeed (type: TransactionType, sender: User): TxSeed {
 
@@ -11,17 +11,19 @@ function getTxSeed (type: TransactionType, sender: User): TxSeed {
     txid: randomAddressOrTxid(false),
     nonce: 0,
     type,
-    fee: new BigNumber(1),
-    value: new BigNumber(0),
+    fee: 100000000,
+    value: 0,
     sender,
   }
 }
 
 function getUserSeed (): UserSeed {
+  const address = randomAddressOrTxid(true)
   return {
     createdAt: new Date(),
-    address: randomAddressOrTxid(),
+    address,
     birthBlock: Math.floor(Math.random() * 2000001),
+    name: address.substr(0, 9),
   }
 }
 
@@ -42,6 +44,20 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}) {
 
   const user = getManager().create(User, Object.assign(seed, attributes))
   return getManager().save(user)
+}
+
+export async function seedUtxo (attributes: Partial<UtxoSeed> = {}) {
+  const seed: UtxoSeed = Object.assign({
+    txid: randomAddressOrTxid(false),
+    index: 0,
+    createdAt: new Date(),
+    address: randomAddressOrTxid(true),
+    value: 100000000,
+    raw: 'thisisarawtxhex',
+  }, attributes)
+
+  const utxo = getManager().create(Utxo, seed)
+  return getManager().save(utxo)
 }
 
 export async function seedBorkTx (sender: User, attributes: Partial<BorkTxSeed> = {}) {

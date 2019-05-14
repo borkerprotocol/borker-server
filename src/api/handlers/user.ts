@@ -1,8 +1,9 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
-import { getRepository, FindManyOptions } from 'typeorm'
+import { getRepository, FindManyOptions, getManager } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
+import { Utxo } from '../../db/entities/utxo'
 
 @Path('/users')
 export class UserHandler {
@@ -60,10 +61,51 @@ export class UserHandler {
 	@GET
 	async getBalance (
     @PathParam('address') address: string,
-  ): Promise<string> {
+  ): Promise<number> {
 
-    console.log(address)
-    return '100'
+    const { sum } = await getRepository(Utxo)
+      .createQueryBuilder('utxos')
+      .select('SUM(value)', 'sum')
+      .where('address = :address', { address })
+      .getRawOne()
+
+    return sum
+  }
+
+	@Path('/:address/utxos')
+	@GET
+	async getUtxos (
+    @PathParam('address') address: string,
+    @QueryParam('amount') amount: string,
+  ): Promise<Utxo[]> {
+
+    const target = Number(amount)
+
+    let pageNum = 1
+    let perPageNum = 100
+    let utxos: Utxo[] = []
+    let total = 0
+
+    do {
+      let options: FindManyOptions<Utxo> = {
+        where: { address },
+        take: perPageNum,
+        skip: perPageNum * (pageNum - 1),
+        order: { value: 'ASC' },
+      }
+      const newUtxos = await getRepository(Utxo).find(options)
+
+      utxos.concat(newUtxos)
+
+      total = newUtxos.reduce((previous, utxo) => {
+        return previous + utxo.value
+      }, total)
+
+      pageNum++
+
+    } while (total < target)
+
+    return utxos
   }
 
 	@Path('/:address/users')

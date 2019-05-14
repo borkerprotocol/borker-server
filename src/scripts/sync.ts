@@ -3,8 +3,9 @@ import * as fs from 'fs'
 import { getManager, EntityManager } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
-import { mockTxs1, mockTxs2, mockTxs3, MappedTx, mockTxs4 } from '../util/mocks'
+import { BorkerTx, StandardTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, standardTxs1 } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
+import { Utxo } from '../db/entities/utxo'
 
 // let borkerLib: any
 
@@ -37,17 +38,23 @@ async function processBlocks () {
 
   const serializedBlock = await rpc.getBlock(blockHash)
 
-  // const txs: rpc.MappedTx[] = borkerLib.processBlock(serializedBlock)
-  const txs: MappedTx[] = getTxs()
+  // const { borkerTxs: BorkerTx[], txs } = borkerLib.processBlock(serializedBlock)
+  const borkerTxs: BorkerTx[] = getBorkerTxs()
+  const standardTxs: StandardTx[] = getStandardTxs()
 
-  await processTransactions(txs)
+  await getManager().transaction(async manager => {
+    await Promise.all([
+      processBorkerTxs(manager, borkerTxs),
+      processStandardTxs(manager, standardTxs),
+    ])
+  })
 
   blockHeight++
   await processBlocks()
 }
 
 // TODO delete this function once borkerLib is available
-function getTxs () {
+function getBorkerTxs () {
   if (blockHeight === 17903) {
     return mockTxs1
   } else if (blockHeight === 17904) {
@@ -59,99 +66,130 @@ function getTxs () {
   }
 }
 
-async function processTransactions (mappedTxs: MappedTx[]) {
+// TODO delete this function once borkerLib is available
+function getStandardTxs () {
+  if (blockHeight === 17903) {
+    return standardTxs1
+  } else {
+    return []
+  }
+}
 
-  for (let mappedTx of mappedTxs) {
+async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
-    const { txid, timestamp, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress } = mappedTx
+  for (let borkerTx of borkerTxs) {
+
+    const { txid, time, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress } = borkerTx
 
     // continue if we've already seen this txid
-    if (await getManager().findOne(Transaction, txid)) { continue }
+    if (await manager.findOne(Transaction, txid)) { continue }
 
-    await getManager().transaction(async manager => {
-
-      // create tx
-      let tx = manager.create(Transaction, {
-        txid,
-        createdAt: new Date(timestamp),
-        nonce,
-        type,
-        content,
-        fee,
-        value,
-      })
-
-      // attach sender
-      tx.sender = await manager.findOne(User, senderAddress)
-      // create sender if not exists
-      if (!tx.sender) {
-        tx.sender = manager.create(User, {
-          address: senderAddress,
-          createdAt: new Date(timestamp),
-          birthBlock: blockHeight,
-          name: senderAddress.substr(0, 9),
-        })
-      }
-
-      // case on the transaction type
-      switch (type) {
-        // set name
-        case TransactionType.setName:
-          tx.sender.name = content
-          break
-        // set bio
-        case TransactionType.setBio:
-          tx.sender.bio = content
-          break
-        // set avatar
-        case TransactionType.setAvatar:
-          tx.sender.avatarLink = content
-          break
-        // follow
-        case TransactionType.follow:
-        case TransactionType.unfollow:
-        case TransactionType.block:
-        case TransactionType.unblock:
-          await handleFUBU(manager, tx)
-          break
-        // comment, like, rebork
-        case TransactionType.comment:
-        case TransactionType.like:
-        case TransactionType.rebork:
-          await handleCLR(manager, tx, recipientAddress, referenceNonce)
-          break
-        // flag
-        case TransactionType.flag:
-          tx.parent = await manager.findOne(Transaction, tx.content)
-          if (!tx.parent) { break }
-          tx.parent.flagsCount = tx.parent.flagsCount + 1
-          break
-        // extension
-        case TransactionType.extension:
-          tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.sender })
-          break
-        // bork
-        default:
-          break
-      }
-
-      // attach tags and mentions if post type
-      if (
-        type === TransactionType.bork ||
-        type === TransactionType.extension ||
-        type === TransactionType.rebork ||
-        type === TransactionType.comment
-      ) {
-        const [tags, mentions] = await Promise.all([
-          attachTags(manager, tx),
-          attachMentions(manager, tx),
-        ])
-        tx.tags = tags
-        tx.mentions = mentions
-      }
-
-      await manager.save(tx)
+    // create tx
+    let tx = manager.create(Transaction, {
+      txid,
+      createdAt: new Date(time),
+      nonce,
+      type,
+      content,
+      fee,
+      value,
     })
+
+    // attach sender
+    tx.sender = await manager.findOne(User, senderAddress)
+    // create sender if not exists
+    if (!tx.sender) {
+      tx.sender = manager.create(User, {
+        address: senderAddress,
+        createdAt: new Date(time),
+        birthBlock: blockHeight,
+        name: senderAddress.substr(0, 9),
+      })
+    }
+
+    // case on the transaction type
+    switch (type) {
+      // set name
+      case TransactionType.setName:
+        tx.sender.name = content
+        break
+      // set bio
+      case TransactionType.setBio:
+        tx.sender.bio = content
+        break
+      // set avatar
+      case TransactionType.setAvatar:
+        tx.sender.avatarLink = content
+        break
+      // follow
+      case TransactionType.follow:
+      case TransactionType.unfollow:
+      case TransactionType.block:
+      case TransactionType.unblock:
+        await handleFUBU(manager, tx)
+        break
+      // comment, like, rebork
+      case TransactionType.comment:
+      case TransactionType.like:
+      case TransactionType.rebork:
+        await handleCLR(manager, tx, recipientAddress, referenceNonce)
+        break
+      // flag
+      case TransactionType.flag:
+        tx.parent = await manager.findOne(Transaction, tx.content)
+        if (!tx.parent) { break }
+        tx.parent.flagsCount = tx.parent.flagsCount + 1
+        break
+      // extension
+      case TransactionType.extension:
+        tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.sender })
+        break
+      // bork
+      default:
+        break
+    }
+
+    // attach tags and mentions if post type
+    if (
+      type === TransactionType.bork ||
+      type === TransactionType.extension ||
+      type === TransactionType.rebork ||
+      type === TransactionType.comment
+    ) {
+      const [tags, mentions] = await Promise.all([
+        attachTags(manager, tx),
+        attachMentions(manager, tx),
+      ])
+      tx.tags = tags
+      tx.mentions = mentions
+    }
+
+    await manager.save(tx)
+  }
+}
+
+async function processStandardTxs(manager: EntityManager, txs: StandardTx[]) {
+  for (let tx of txs) {
+
+    const { txid, hex, time, inputs, outputs } = tx
+
+    for (let input of inputs) {
+      const { txid: refTxid, index } = input
+      await manager.remove(Utxo, { txid: refTxid, index })
+    }
+
+    for (let output of outputs) {
+      const { value, index, address } = output
+      const utxo = manager.create(Utxo, {
+        txid,
+        index,
+        createdAt: new Date(time),
+        address,
+        value: value,
+        raw: hex,
+      })
+      await manager.save(utxo)
+    }
   }
 }
 

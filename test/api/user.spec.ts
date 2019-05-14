@@ -1,7 +1,7 @@
 import { createConnections, getConnection, Connection, getManager } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
-import { seedBaseUser, seedFullUser, seedFollowTx } from '../helpers/seeds'
+import { seedBaseUser, seedFullUser, seedFollowTx, seedUtxo } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
 import { assertBaseUser, assertFullUser } from '../helpers/assertions'
 import { database } from '../helpers/database'
@@ -24,7 +24,7 @@ describe('User Handler', async () => {
     await Promise.all(connections.map(c => c.close()))
   })
 
-  describe('GET /users && GET /users/:id', async () => {
+  describe('GET /users && GET /users/:address', async () => {
     let user1: User
     let user2: User
 
@@ -50,7 +50,7 @@ describe('User Handler', async () => {
     })
   })
 
-  describe('GET /users/:id/users', async () => {
+  describe('GET /users/:address/users', async () => {
     let user1: User
     let user2: User
 
@@ -67,6 +67,24 @@ describe('User Handler', async () => {
 
       assert.equal(users.length, 1)
       assert.equal(users[0].address, user2.address)
+    })
+  })
+
+  describe('GET /users/:address/balance', async () => {
+    let user: User
+
+    beforeEach(async () => {
+      user = await seedBaseUser()
+      await Promise.all([
+        seedUtxo({ address: user.address }),
+        seedUtxo({ address: user.address }),
+      ])
+    })
+
+    it('returns user balance', async () => {
+      const balance = await userHandler.getBalance(user.address)
+
+      assert.equal(balance, 200000000)
     })
   })
 })

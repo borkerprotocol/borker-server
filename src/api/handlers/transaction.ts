@@ -5,7 +5,6 @@ import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
-import { Utxo, mockUtxos, Output } from '../../util/mocks'
 import * as rpc from '../../util/rpc-requests'
 
 @Path('/transactions')
@@ -75,31 +74,6 @@ export class TransactionHandler {
         ...(await this.iCommentLikeReborkFlag(myAddress, tx.txid)),
       }
     }))
-  }
-
-	@Path('/construct')
-	@POST
-	async construct (
-    @HeaderParam('my-address') myAddress: string,
-    body: ConstructRequest,
-  ): Promise<TxData[]> {
-
-    return [
-      {
-        inputs: mockUtxos.filter(utxo => {
-          return utxo.address === myAddress
-        }),
-        outputs: [
-          {
-            address: '',
-            value: '',
-            content: body.content,
-          },
-        ],
-        fee: '1',
-        txHash: '123456789',
-      },
-    ]
   }
 
 	@Path('/broadcast')
@@ -262,11 +236,4 @@ export interface ApiTransaction extends Transaction {
 
 export interface ApiTransactionExtended extends ApiTransaction {
   extensions: Transaction[]
-}
-
-export interface TxData {
-  inputs: Utxo[]
-  outputs: Output[]
-  fee: string
-  txHash: string
 }
