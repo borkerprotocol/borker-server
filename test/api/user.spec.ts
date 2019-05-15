@@ -3,12 +3,15 @@ import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
 import { seedBaseUser, seedFullUser, seedFollowTx, seedUtxo } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
-import { assertBaseUser, assertFullUser } from '../helpers/assertions'
+import { assertBaseUser, assertFullUser, assertThrows } from '../helpers/assertions'
 import { database } from '../helpers/database'
+import { Errors } from 'typescript-rest'
 
 describe('User Handler', async () => {
   let connections: Connection[]
   let userHandler: UserHandler
+  let user1: User
+  let user2: User
 
   before(async () => {
     connections = await createConnections([database])
@@ -17,6 +20,12 @@ describe('User Handler', async () => {
 
   beforeEach(async () => {
     await getConnection('default').synchronize(true)
+    const [ u1, u2 ] = await Promise.all([
+      seedBaseUser(),
+      seedFullUser(),
+    ])
+    user1 = u1
+    user2 = u2
   })
 
   after(async () => {
@@ -25,13 +34,6 @@ describe('User Handler', async () => {
   })
 
   describe('GET /users && GET /users/:address', async () => {
-    let user1: User
-    let user2: User
-
-    beforeEach(async () => {
-      user1 = await seedBaseUser()
-      user2 = await seedFullUser()
-    })
 
     it('returns all users', async () => {
       const users = await userHandler.index(user1.address)
@@ -51,12 +53,8 @@ describe('User Handler', async () => {
   })
 
   describe('GET /users/:address/users', async () => {
-    let user1: User
-    let user2: User
 
     beforeEach(async () => {
-      user1 = await seedBaseUser()
-      user2 = await seedBaseUser()
       await seedFollowTx(user1, user2)
       user1.followers = [user2]
       await getManager().save(user1)
@@ -71,20 +69,40 @@ describe('User Handler', async () => {
   })
 
   describe('GET /users/:address/balance', async () => {
-    let user: User
 
     beforeEach(async () => {
-      user = await seedBaseUser()
       await Promise.all([
-        seedUtxo({ address: user.address }),
-        seedUtxo({ address: user.address }),
+        seedUtxo({ address: user1.address }),
+        seedUtxo({ address: user1.address }),
       ])
     })
 
     it('returns user balance', async () => {
-      const balance = await userHandler.getBalance(user.address)
+      const balance = await userHandler.getBalance(user1.address)
 
       assert.equal(balance, 200000000)
+    })
+  })
+
+  describe('GET /users/:address/utxos', async () => {
+
+    beforeEach(async () => {
+      await Promise.all([
+        seedUtxo({ address: user1.address }),
+        seedUtxo({ address: user1.address }),
+        seedUtxo({ address: user1.address }),
+      ])
+    })
+
+    it('returns enough utxos to satisfy requirement', async () => {
+      const utxos = await userHandler.getUtxos(user1.address, '150000000', '1')
+
+      assert.equal(utxos.length, 2)
+    })
+
+    it('throws for unsuffient funds', async () => {
+
+      assertThrows(userHandler.getUtxos(user1.address, '350000000', '2'), new Errors.BadRequestError('insufficient funds'))
     })
   })
 })

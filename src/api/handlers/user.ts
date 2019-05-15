@@ -77,12 +77,13 @@ export class UserHandler {
 	async getUtxos (
     @PathParam('address') address: string,
     @QueryParam('amount') amount: string,
+    @QueryParam('batchSize') batchSize: string = '100',
   ): Promise<Utxo[]> {
 
     const target = Number(amount)
+    const perPageNum = Number(batchSize)
 
     let pageNum = 1
-    let perPageNum = 100
     let utxos: Utxo[] = []
     let total = 0
 
@@ -93,13 +94,17 @@ export class UserHandler {
         skip: perPageNum * (pageNum - 1),
         order: { value: 'ASC' },
       }
-      const newUtxos = await getRepository(Utxo).find(options)
+      const moreUtxos = await getRepository(Utxo).find(options)
 
-      utxos.concat(newUtxos)
+      utxos = utxos.concat(moreUtxos)
 
-      total = newUtxos.reduce((previous, utxo) => {
+      total = moreUtxos.reduce((previous, utxo) => {
         return previous + utxo.value
       }, total)
+
+      if (moreUtxos.length < perPageNum && total < target) {
+        throw new Errors.BadRequestError('insufficient funds')
+      }
 
       pageNum++
 
