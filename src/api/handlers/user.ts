@@ -67,7 +67,7 @@ export class UserHandler {
       .createQueryBuilder('utxos')
       .select('SUM(value)', 'sum')
       .where('address = :address', { address })
-      .getRawOne()
+      .getRawOne() as { sum: number }
 
     return sum
   }
@@ -77,21 +77,20 @@ export class UserHandler {
 	async getUtxos (
     @PathParam('address') address: string,
     @QueryParam('amount') amount: string,
-    @QueryParam('batchSize') batchSize: string = '100',
+    batchSize = 100,
   ): Promise<Utxo[]> {
 
     const target = Number(amount)
-    const perPageNum = Number(batchSize)
 
-    let pageNum = 1
+    let page = 1
     let utxos: Utxo[] = []
     let total = 0
 
     do {
       let options: FindManyOptions<Utxo> = {
         where: { address },
-        take: perPageNum,
-        skip: perPageNum * (pageNum - 1),
+        take: batchSize,
+        skip: batchSize * (page - 1),
         order: { value: 'ASC' },
       }
       const moreUtxos = await getRepository(Utxo).find(options)
@@ -102,11 +101,11 @@ export class UserHandler {
         return previous + utxo.value
       }, total)
 
-      if (moreUtxos.length < perPageNum && total < target) {
-        throw new Errors.BadRequestError('insufficient funds')
+      if (moreUtxos.length < batchSize && total < target) {
+        throw new Errors.BadRequestError(`insufficient funds. ${total / 100000000} DOGE available.`)
       }
 
-      pageNum++
+      page++
 
     } while (total < target)
 

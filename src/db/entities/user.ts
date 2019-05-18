@@ -23,7 +23,7 @@ export class User {
 	birthBlock: number
 
 	@Column('text', { name: 'name' })
-	name: string | null
+	name: string
 
 	@Column('text', { name: 'bio', nullable: true })
 	bio: string | null
@@ -89,7 +89,7 @@ export interface UserSeed {
   address: string
   createdAt: Date
   birthBlock: number
-  name?: string
+  name: string
   bio?: string
   avatarLink?: string
 }

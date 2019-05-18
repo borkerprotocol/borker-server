@@ -95,14 +95,14 @@ describe('User Handler', async () => {
     })
 
     it('returns enough utxos to satisfy requirement', async () => {
-      const utxos = await userHandler.getUtxos(user1.address, '150000000', '1')
+      const utxos = await userHandler.getUtxos(user1.address, '150000000', 1)
 
       assert.equal(utxos.length, 2)
     })
 
     it('throws for unsuffient funds', async () => {
 
-      assertThrows(userHandler.getUtxos(user1.address, '350000000', '2'), new Errors.BadRequestError('insufficient funds'))
+      await assertThrows(userHandler.getUtxos(user1.address, '350000000', 2), new Errors.BadRequestError(`insufficient funds. 3 DOGE available.`))
     })
   })
 })

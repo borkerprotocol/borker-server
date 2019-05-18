@@ -36,9 +36,9 @@ async function processBlocks () {
   const blockHash = await rpc.getBlockHash(blockHeight)
   if (!blockHash) return
 
-  const serializedBlock = await rpc.getBlock(blockHash)
+  const block = await rpc.getBlock(blockHash)
 
-  // const { borkerTxs: BorkerTx[], txs } = borkerLib.processBlock(serializedBlock)
+  // const { borkerTxs: BorkerTx[], standardTxs: StandardTx[] } = borkerLib.processBlock(block)
   const borkerTxs: BorkerTx[] = getBorkerTxs()
   const standardTxs: StandardTx[] = getStandardTxs()
 
