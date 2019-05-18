@@ -20,12 +20,12 @@ export class TransactionHandler {
     @QueryParam('tags') tags?: string[],
     @QueryParam('order') order: OrderBy<Transaction> = { createdAt: 'DESC' },
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
-    @QueryParam('page') page: string = '1',
-    @QueryParam('perPage') perPage: string = '20',
+    @QueryParam('page') page: string | number = 1,
+    @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiTransaction[]> {
 
-    const pageNum = Number(page)
-    const perPageNum = Number(perPage)
+    page = Number(page)
+    perPage = Number(perPage)
 
     Object.keys(order).forEach(key => {
       const newkey = `tx.${key}`
@@ -39,8 +39,8 @@ export class TransactionHandler {
       .where('tx.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
       .andWhere('tx.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
       .orderBy(order)
-      .take(perPageNum)
-      .skip(perPageNum * (pageNum - 1))
+      .take(perPage)
+      .skip(perPage * (page - 1))
     
     if (!parentTxid) {
       query
@@ -117,12 +117,12 @@ export class TransactionHandler {
     @PathParam('txid') txid: string,
     @QueryParam('type') type: TransactionType.like | TransactionType.rebork | TransactionType.flag,
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
-    @QueryParam('page') page: string = '1',
-    @QueryParam('perPage') perPage: string = '20',
+    @QueryParam('page') page: string | number = 1,
+    @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
-    const pageNum = Number(page)
-    const perPageNum = Number(perPage)
+    page = Number(page)
+    perPage = Number(perPage)
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`
@@ -142,8 +142,8 @@ export class TransactionHandler {
         return `address IN ${subQuery}`
       })
       .orderBy(order)
-      .take(perPageNum)
-      .offset(perPageNum * (pageNum - 1))
+      .take(perPage)
+      .offset(perPage * (page - 1))
       .getMany()
 
     return Promise.all(users.map(async user => {
@@ -216,15 +216,6 @@ export class TransactionHandler {
       iFlag: !!flag,
     }
   }
-}
-
-export interface ConstructRequest {
-  type: TransactionType
-  content?: string
-  parent?: {
-    txid: string
-    tip: string,
-  },
 }
 
 export interface ApiTransaction extends Transaction {

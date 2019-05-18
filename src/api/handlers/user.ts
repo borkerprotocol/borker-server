@@ -13,16 +13,16 @@ export class UserHandler {
 	async index (
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
-    @QueryParam('page') page: string = '1',
-    @QueryParam('perPage') perPage: string = '20',
+    @QueryParam('page') page: string | number = 1,
+    @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
-    const pageNum = Number(page)
-    const perPageNum = Number(perPage)
+    page = Number(page)
+    perPage = Number(perPage)
 
     let options: FindManyOptions<User> = {
-      take: perPageNum,
-      skip: perPageNum * (pageNum - 1),
+      take: perPage,
+      skip: perPage * (page - 1),
       order,
     }
     const users = await getRepository(User).find(options)
@@ -67,20 +67,21 @@ export class UserHandler {
       .createQueryBuilder('utxos')
       .select('SUM(value)', 'sum')
       .where('address = :address', { address })
-      .getRawOne() as { sum: number }
+      .getRawOne() as { sum: number | null }
 
-    return sum
+    return sum || 0
   }
 
 	@Path('/:address/utxos')
 	@GET
 	async getUtxos (
     @PathParam('address') address: string,
-    @QueryParam('amount') amount: string,
-    batchSize = 100,
+    @QueryParam('amount') amount: string | number,
+    @QueryParam('batchSize') batchSize: string | number = 100,
   ): Promise<Utxo[]> {
 
-    const target = Number(amount)
+    batchSize = Number(batchSize)
+    amount = Number(amount)
 
     let page = 1
     let utxos: Utxo[] = []
@@ -101,13 +102,13 @@ export class UserHandler {
         return previous + utxo.value
       }, total)
 
-      if (moreUtxos.length < batchSize && total < target) {
+      if (moreUtxos.length < batchSize && total < amount) {
         throw new Errors.BadRequestError(`insufficient funds. ${total / 100000000} DOGE available.`)
       }
 
       page++
 
-    } while (total < target)
+    } while (total < amount)
 
     return utxos
   }
@@ -119,16 +120,16 @@ export class UserHandler {
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
-    @QueryParam('page') page: string = '1',
-    @QueryParam('perPage') perPage: string = '20',
+    @QueryParam('page') page: string | number = 1,
+    @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
     if (await checkBlocked(myAddress, address)) {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    const pageNum = Number(page)
-    const perPageNum = Number(perPage)
+    page = Number(page)
+    perPage = Number(perPage)
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`
@@ -139,8 +140,8 @@ export class UserHandler {
     let query = getRepository(User)
       .createQueryBuilder('users')
       .orderBy(order)
-      .take(perPageNum)
-      .offset(perPageNum * (pageNum - 1))
+      .take(perPage)
+      .offset(perPage * (page - 1))
 
     if (type === 'following') {
       query.where('address IN (SELECT followed_address FROM follows WHERE follower_address = :address)', { address })
