@@ -3,9 +3,9 @@ import * as fs from 'fs'
 import { getManager, EntityManager } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
-import { BorkerTx, StandardTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, standardTxs1 } from '../util/mocks'
+import { BorkerTx, Spent, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4 } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
-import { Utxo } from '../db/entities/utxo'
+import { Utxo, UtxoSeed } from '../db/entities/utxo'
 
 // let borkerLib: any
 
@@ -38,14 +38,15 @@ async function processBlocks () {
 
   const block = await rpc.getBlock(blockHash)
 
-  // const { borkerTxs: BorkerTx[], standardTxs: StandardTx[] } = borkerLib.processBlock(block)
+  // const { borkerTxs: BorkerTx[], created: UtxoSeed[], spent: Spent[] } = borkerLib.processBlock(block)
   const borkerTxs: BorkerTx[] = getBorkerTxs()
-  const standardTxs: StandardTx[] = getStandardTxs()
+  const created: UtxoSeed[] = getCreated()
+  const spent: Spent[] = getSpent()
 
   await getManager().transaction(async manager => {
     await Promise.all([
+      processUtxos(manager, created, spent),
       processBorkerTxs(manager, borkerTxs),
-      processStandardTxs(manager, standardTxs),
     ])
   })
 
@@ -61,28 +62,53 @@ function getBorkerTxs () {
     return mockTxs2
   } else if (blockHeight === 17905) {
     return mockTxs3
-  } else {
+  } else if (blockHeight === 17906) {
     return mockTxs4
+  } else {
+    return []
   }
 }
 
 // TODO delete this function once borkerLib is available
-function getStandardTxs () {
+function getCreated () {
   if (blockHeight === 17903) {
-    return standardTxs1
+    return mockCreated1
+  } else if (blockHeight === 17904) {
+    return mockCreated2
+  } else if (blockHeight === 17905) {
+    return mockCreated3
+  } else if (blockHeight === 17906) {
+    return mockCreated4
   } else {
     return []
   }
+}
+
+// TODO delete this function once borkerLib is available
+function getSpent () {
+  if (blockHeight === 17903) {
+    return mockSpent1
+  } else if (blockHeight === 17904) {
+    return mockSpent2
+  } else if (blockHeight === 17905) {
+    return mockSpent3
+  } else if (blockHeight === 17906) {
+    return mockSpent4
+  } else {
+    return []
+  }
+}
+
+async function processUtxos(manager: EntityManager, created: Utxo[], spent: Spent[]) {
+  await manager.save(manager.create(Utxo, created))
+  await manager.remove(Utxo, spent)
 }
 
 async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
   for (let borkerTx of borkerTxs) {
 
-    const { txid, time, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress } = borkerTx
-
-    // continue if we've already seen this txid
-    if (await manager.findOne(Transaction, txid)) { continue }
+    const { txid, time, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress, mentions } = borkerTx
 
     // create tx
     let tx = manager.create(Transaction, {
@@ -95,17 +121,13 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
       value,
     })
 
-    // attach sender
-    tx.sender = await manager.findOne(User, senderAddress)
-    // create sender if not exists
-    if (!tx.sender) {
-      tx.sender = manager.create(User, {
-        address: senderAddress,
-        createdAt: new Date(time),
-        birthBlock: blockHeight,
-        name: senderAddress.substr(0, 9),
-      })
-    }
+    // attach sender - find or create
+    tx.sender = await manager.findOne(User, senderAddress) || manager.create(User, {
+      address: senderAddress,
+      createdAt: new Date(time),
+      birthBlock: blockHeight,
+      name: senderAddress.substr(0, 9),
+    })
 
     // case on the transaction type
     switch (type) {
@@ -149,47 +171,20 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
         break
     }
 
-    // attach tags and mentions if post type
+    // attach tags and mentions
     if (
       type === TransactionType.bork ||
       type === TransactionType.extension ||
       type === TransactionType.rebork ||
       type === TransactionType.comment
     ) {
-      const [tags, mentions] = await Promise.all([
+      await Promise.all([
         attachTags(manager, tx),
-        attachMentions(manager, tx),
+        attachMentions(manager, tx, mentions),
       ])
-      tx.tags = tags
-      tx.mentions = mentions
     }
 
     await manager.save(tx)
-  }
-}
-
-async function processStandardTxs(manager: EntityManager, txs: StandardTx[]) {
-  for (let tx of txs) {
-
-    const { txid, hex, time, inputs, outputs } = tx
-
-    for (let input of inputs) {
-      const { txid: refTxid, index } = input
-      await manager.remove(Utxo, { txid: refTxid, index })
-    }
-
-    for (let output of outputs) {
-      const { value, index, address } = output
-      const utxo = manager.create(Utxo, {
-        txid,
-        index,
-        createdAt: new Date(time),
-        address,
-        value: value,
-        raw: hex,
-      })
-      await manager.save(utxo)
-    }
   }
 }
 
@@ -252,10 +247,11 @@ async function handleCLR (manager: EntityManager, tx: Transaction, recipientAddr
   }
 }
 
-async function attachTags(manager: EntityManager, tx: Transaction): Promise<Tag[]> {  
+async function attachTags(manager: EntityManager, tx: Transaction): Promise<void> {  
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
-  let tags: Tag[] = []
   let match: RegExpExecArray
+
+  tx.tags = []
 
   while ((match = regex.exec(tx.content))) {
     const name = match[1].toLowerCase()
@@ -263,23 +259,15 @@ async function attachTags(manager: EntityManager, tx: Transaction): Promise<Tag[
       name,
       createdAt: new Date(tx.createdAt),
     })
-    tags.push(tag)
+    tx.tags.push(tag)
   }
-
-  return tags
 }
 
-async function attachMentions(manager: EntityManager, tx: Transaction): Promise<User[]> {  
-  const regex = /(?:^|\s)(?:@)([a-zA-Z0-9_\d]+)/gm
-  let mentions: User[] = []
-  let match: RegExpExecArray
-
-  while ((match = regex.exec(tx.content))) {
-    const name = match[1]
-    const user = await manager.findOne(User, { name })
+async function attachMentions(manager: EntityManager, tx: Transaction, mentions: string[]): Promise<void> {
+  tx.mentions = []
+  await Promise.all(mentions.map(async address => {
+    const user = await manager.findOne(User, address)
     if (!user) { return }
-    mentions.push(user)
-  }
-
-  return mentions
+    tx.mentions.push(user)
+  }))
 }
