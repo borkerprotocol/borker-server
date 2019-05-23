@@ -9,10 +9,10 @@ import {
 export class Utxo {
 
   // attributes
-  
+
 	@PrimaryColumn('text', { name: 'txid' })
   txid: string
-  
+
 	@PrimaryColumn('int', { name: 'index' })
 	index: number
 

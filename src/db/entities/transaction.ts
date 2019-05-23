@@ -36,7 +36,7 @@ export class Transaction {
 
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
-  
+
 	@Column('int', { name: 'nonce' })
 	nonce: number
 

@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import { getManager, EntityManager } from 'typeorm'
 import { Transaction, TransactionType } from '../db/entities/transaction'
 import { User } from '../db/entities/user'
-import { BorkerTx, Spent, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4 } from '../util/mocks'
+import { BorkerTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4, Spent } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
 import { Utxo, UtxoSeed } from '../db/entities/utxo'
 
@@ -247,7 +247,7 @@ async function handleCLR (manager: EntityManager, tx: Transaction, recipientAddr
   }
 }
 
-async function attachTags(manager: EntityManager, tx: Transaction): Promise<void> {  
+async function attachTags(manager: EntityManager, tx: Transaction): Promise<void> {
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
   let match: RegExpExecArray
 

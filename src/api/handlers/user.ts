@@ -45,7 +45,7 @@ export class UserHandler {
     if (await checkBlocked(myAddress, address)) {
       throw new Errors.NotAcceptableError('blocked')
     }
-    
+
     const user = await getRepository(User).findOne(address)
     if (!user) {
       throw new Errors.NotFoundError('user not found')

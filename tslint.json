@@ -3,25 +3,37 @@
 		"semicolon": [
 			true,
 			"never"
-		],
+    ],
+    "quotemark": [
+      true,
+      "single"
+    ],
+    "no-unused-variable": true,
+    "no-duplicate-imports": true,
+    "no-trailing-whitespace": true,
 		"whitespace": [
 			true,
-			"check-branch",
-			"check-decl",
-			"check-module",
-			"check-operator",
-			"check-separator",
-			"check-rest-spread",
-			"check-type",
-			"check-typecast",
-			"check-type-operator",
-			"check-preblock",
-			"check-postbrace"
+      "check-branch",
+      "check-decl",
+      "check-module",
+      "check-operator",
+      "check-separator",
+      "check-rest-spread",
+      "check-type",
+      "check-typecast",
+      "check-type-operator",
+      "check-preblock",
+      "check-postbrace"
 		],
 		"trailing-comma": [
 			true,
 			{
-				"multiline": "always",
+				"multiline": {
+          "objects": "always",
+          "arrays": "always",
+          "functions": "always",
+          "typeLiterals": "never"
+        },
 				"singleline": "never"
 			}
 		]

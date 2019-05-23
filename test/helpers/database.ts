@@ -1,4 +1,4 @@
-import { SqliteConnectionOptions } from "typeorm/driver/sqlite/SqliteConnectionOptions"
+import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions'
 
 export const database: SqliteConnectionOptions = {
   type: 'sqlite',

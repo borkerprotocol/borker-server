@@ -41,7 +41,7 @@ async function request (method: string, id: string, params: any[] = []): Promise
 			params,
 		}),
   })
-  
+
   const res: Response = JSON.parse(raw)
   return res.result
 }

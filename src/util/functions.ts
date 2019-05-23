@@ -1,4 +1,4 @@
-import { getManager } from "typeorm"
+import { getManager } from 'typeorm'
 
 export async function checkFollowed (followedAddress: string, followerAddress: string): Promise<boolean> {
   return (await getManager()

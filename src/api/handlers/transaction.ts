@@ -41,7 +41,7 @@ export class TransactionHandler {
       .orderBy(order)
       .take(perPage)
       .skip(perPage * (page - 1))
-    
+
     if (!parentTxid) {
       query
         .leftJoinAndSelect('tx.parent', 'parent')
@@ -89,7 +89,7 @@ export class TransactionHandler {
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiTransactionExtended> {
-    
+
     const tx = await getRepository(Transaction).findOne(txid, { relations: ['sender', 'parent', 'parent.sender'] })
     if (!tx) {
       throw new Errors.NotFoundError('tx not found')
@@ -180,7 +180,7 @@ export class TransactionHandler {
     iComment: boolean
     iLike: boolean
     iRebork: boolean
-    iFlag: boolean,
+    iFlag: boolean
   }> {
 
     const repo = getRepository(Transaction)
@@ -208,7 +208,7 @@ export class TransactionHandler {
         type: TransactionType.flag,
       }),
     ])
-  
+
     return {
       iComment: !!comment,
       iLike: !!like,

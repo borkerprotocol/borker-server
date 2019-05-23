@@ -1,7 +1,7 @@
-import "reflect-metadata"
-import { createConnection } from "typeorm"
+import 'reflect-metadata'
+import { createConnection } from 'typeorm'
 import app from './api/app'
-import { syncChain } from "./scripts/sync"
+import { syncChain } from './scripts/sync'
 
 // create connection and initialize app
 const PORT = process.env.PORT || 4422
