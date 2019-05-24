@@ -1,5 +1,5 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
-import { getRepository, FindManyOptions, getManager } from 'typeorm'
+import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
@@ -123,6 +123,10 @@ export class UserHandler {
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
+
+    if (!type || !['following', 'followers'].includes(type)) {
+      throw new Errors.BadRequestError('query param "type" must be "following" or "followers"')
+    }
 
     if (await checkBlocked(myAddress, address)) {
       throw new Errors.NotAcceptableError('blocked')

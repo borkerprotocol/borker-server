@@ -1,7 +1,7 @@
 import { createConnections, getConnection, Connection, getManager } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
-import { seedBaseUser, seedFullUser, seedFollowTx, seedUtxo } from '../helpers/seeds'
+import { seedBaseUser, seedFullUser, seedUtxo, seedFollow } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
 import { assertBaseUser, assertFullUser, assertThrows } from '../helpers/assertions'
 import { database } from '../helpers/database'
@@ -15,21 +15,20 @@ describe('User Handler', async () => {
 
   before(async () => {
     connections = await createConnections([database])
-    userHandler = new UserHandler()
-  })
-
-  beforeEach(async () => {
     await getConnection('default').synchronize(true)
+
     const [ u1, u2 ] = await Promise.all([
       seedBaseUser(),
       seedFullUser(),
     ])
     user1 = u1
     user2 = u2
+    await seedFollow(user1, user2)
+
+    userHandler = new UserHandler()
   })
 
   after(async () => {
-    await getConnection('default').synchronize(true)
     await Promise.all(connections.map(c => c.close()))
   })
 
@@ -53,12 +52,6 @@ describe('User Handler', async () => {
   })
 
   describe('GET /users/:address/users', async () => {
-
-    beforeEach(async () => {
-      await seedFollowTx(user1, user2)
-      user1.followers = [user2]
-      await getManager().save(user1)
-    })
 
     it('returns all followers', async () => {
       const users = await userHandler.indexFollows(user1.address, user1.address, 'followers')

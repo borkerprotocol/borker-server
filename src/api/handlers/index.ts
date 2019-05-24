@@ -1,4 +1,4 @@
-import { TransactionHandler } from './transaction'
+import { PostHandler } from './post'
 import { UserHandler } from './user'
 
-export default [UserHandler, TransactionHandler]
+export default [UserHandler, PostHandler]

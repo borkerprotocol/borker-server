@@ -5,7 +5,7 @@ import {
   ManyToMany,
   JoinTable,
 } from 'typeorm'
-import { Transaction } from './transaction'
+import { Post } from './post'
 
 @Entity({ name: 'tags' })
 export class Tag {
@@ -20,17 +20,17 @@ export class Tag {
 
   // relations
 
-  @ManyToMany(() => Transaction, transaction => transaction.tags)
+  @ManyToMany(() => Post, post => post.tags)
   @JoinTable({
-    name: 'tx_tags',
+    name: 'post_tags',
     joinColumns: [
       { name: 'tag_name' },
     ],
     inverseJoinColumns: [
-      { name: 'transaction_txid' },
+      { name: 'post_txid' },
     ],
   })
-  transactions: Transaction[]
+  posts: Post[]
 }
 
 export interface TagSeed {

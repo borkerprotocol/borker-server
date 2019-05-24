@@ -1,21 +1,8 @@
 import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Transaction, TxSeed, TransactionType, BorkTxSeed, ProfileTxSeed, CommentTxSeed, ReborkTxSeed, LikeTxSeed, ExtensionTxSeed, FollowTxSeed, UnfollowTxSeed, BlockTxSeed, UnblockTxSeed, FlagTxSeed } from '../../src/db/entities/transaction'
+import { Post, PostSeed, PostType, PostTxWithParentSeed } from '../../src/db/entities/post'
 import { randomAddressOrTxid } from './random-generators'
 import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
-
-function getTxSeed (type: TransactionType, sender: User): TxSeed {
-
-  return {
-    createdAt: new Date(),
-    txid: randomAddressOrTxid(false),
-    nonce: 0,
-    type,
-    fee: 100000000,
-    value: 0,
-    sender,
-  }
-}
 
 function getUserSeed (): UserSeed {
   const address = randomAddressOrTxid(true)
@@ -60,139 +47,41 @@ export async function seedUtxo (attributes: Partial<UtxoSeed> = {}) {
   return getManager().save(utxo)
 }
 
-export async function seedBorkTx (sender: User, attributes: Partial<BorkTxSeed> = {}) {
-  const seed: BorkTxSeed = {
-    ...getTxSeed(TransactionType.bork, sender),
-    content: 'bork content',
+export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}) {
+  const seed: PostSeed = {
+    createdAt: new Date(),
+    txid: randomAddressOrTxid(false),
+    nonce: 0,
+    type: PostType.bork,
+    content: 'post content',
+    sender,
   }
 
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
+  const post = getManager().create(Post, Object.assign(seed, attributes))
 
-  return getManager().save(transaction)
+  return getManager().save(post)
 }
 
-export async function seedEntensionTx (sender: User, parent: Transaction, attributes: Partial<ExtensionTxSeed> = {}) {
-  const seed: ExtensionTxSeed = {
-    ...getTxSeed(TransactionType.extension, sender),
-    content: 'child content',
-    parent,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
+export async function seedFlag (user: User, post: Post): Promise<void> {
+  return getManager()
+    .createQueryBuilder()
+    .relation(User, 'flags')
+    .of(user)
+    .add(post)
 }
 
-export async function seedCommentTx (sender: User, parent: Transaction, attributes: Partial<CommentTxSeed> = {}) {
-  const seed: CommentTxSeed = {
-    ...getTxSeed(TransactionType.comment, sender),
-    content: 'comment content',
-    parent,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
+export async function seedFollow (follower: User, followed: User) {
+  return getManager()
+    .createQueryBuilder()
+    .relation(User, 'following')
+    .of(follower)
+    .add(followed)
 }
 
-export async function seedReborkTx (sender: User, parent: Transaction, attributes: Partial<ReborkTxSeed> = {}) {
-  const seed: ReborkTxSeed = {
-    ...getTxSeed(TransactionType.rebork, sender),
-    content: null,
-    parent,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedLikeTx (sender: User, parent: Transaction, attributes: Partial<LikeTxSeed> = {}) {
-  const seed: LikeTxSeed = {
-    ...getTxSeed(TransactionType.like, sender),
-    parent,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedFlagTx (sender: User, parent: Transaction, attributes: Partial<FlagTxSeed> = {}) {
-  const seed: FlagTxSeed = {
-    ...getTxSeed(TransactionType.flag, sender),
-    parent,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedFollowTx (followed: User, follower: User, attributes: Partial<FollowTxSeed> = {}) {
-  const seed: FollowTxSeed = {
-    ...getTxSeed(TransactionType.follow, follower),
-    content: followed.address,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedUnfollowTx (sender: User, user: User, attributes: Partial<UnfollowTxSeed> = {}) {
-  const seed: UnfollowTxSeed = {
-    ...getTxSeed(TransactionType.unfollow, sender),
-    content: user.address,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedBlockTx (sender: User, user: User, attributes: Partial<BlockTxSeed> = {}) {
-  const seed: BlockTxSeed = {
-    ...getTxSeed(TransactionType.block, sender),
-    content: user.address,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedUnblockTx (sender: User, user: User, attributes: Partial<UnblockTxSeed> = {}) {
-  const seed: UnblockTxSeed = {
-    ...getTxSeed(TransactionType.unblock, sender),
-    content: user.address,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
-}
-
-export async function seedProfileTx (sender: User, type: TransactionType = TransactionType.setName, attributes: Partial<ProfileTxSeed> = {}) {
-  let content: string
-  switch (type) {
-    case TransactionType.setName:
-      content = 'name'
-      break
-    case TransactionType.setBio:
-      content = 'biography'
-      break
-    case TransactionType.setAvatar:
-      content = 'https://fakeAvatarURL.com'
-      break
-  }
-
-  const seed: ProfileTxSeed = {
-    ...getTxSeed(type, sender),
-    content,
-  }
-
-  const transaction = getManager().create(Transaction, Object.assign(seed, attributes))
-
-  return getManager().save(transaction)
+export async function seedBlock (blocker: User, blocked: User) {
+  return getManager()
+    .createQueryBuilder()
+    .relation(User, 'blocking')
+    .of(blocker)
+    .add(blocked)
 }

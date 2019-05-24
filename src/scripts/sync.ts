@@ -1,11 +1,12 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
 import { getManager, EntityManager } from 'typeorm'
-import { Transaction, TransactionType } from '../db/entities/transaction'
+import { Post, PostType } from '../db/entities/post'
 import { User } from '../db/entities/user'
-import { BorkerTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4, Spent } from '../util/mocks'
+import { BorkerTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4, Spent, TransactionType } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
 import { Utxo, UtxoSeed } from '../db/entities/utxo'
+import { eitherPartyBlocked, checkBlocked } from '../util/functions'
 
 // let borkerLib: any
 
@@ -106,168 +107,193 @@ async function processUtxos(manager: EntityManager, created: Utxo[], spent: Spen
 
 async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
-  for (let borkerTx of borkerTxs) {
+  for (let tx of borkerTxs) {
 
-    const { txid, time, nonce, referenceNonce, type, content, fee, value, senderAddress, recipientAddress, mentions } = borkerTx
+    const { txid, time, nonce, referenceNonce, type, content, senderAddress, recipientAddress, mentions } = tx
 
-    // create tx
-    let tx = manager.create(Transaction, {
-      txid,
-      createdAt: new Date(time),
-      nonce,
-      type,
-      content,
-      fee,
-      value,
-    })
-
-    // attach sender - find or create
-    tx.sender = await manager.findOne(User, senderAddress) || manager.create(User, {
+    // find or create sender
+    let sender = await manager.findOne(User, senderAddress) || await manager.save(manager.create(User, {
       address: senderAddress,
       createdAt: new Date(time),
       birthBlock: blockHeight,
       name: senderAddress.substr(0, 9),
-    })
+    }))
 
-    // case on the transaction type
     switch (type) {
-      // set name
+      // if set_name, set_bio, set_avatar
       case TransactionType.setName:
-        tx.sender.name = content
-        break
-      // set bio
       case TransactionType.setBio:
-        tx.sender.bio = content
-        break
-      // set avatar
       case TransactionType.setAvatar:
-        tx.sender.avatarLink = content
+        await handleProfileUpdate(manager, type, sender, content)
         break
-      // follow
+      // if bork, comment, like, extension
+      case TransactionType.bork:
+      case TransactionType.comment:
+      case TransactionType.like:
+      case TransactionType.extension:
+        // create post
+        let post = manager.create(Post, {
+          txid,
+          createdAt: new Date(time),
+          nonce,
+          type: PostType[type],
+          content,
+          sender,
+        })
+        // if comment, like
+        if (type === TransactionType.comment || type === TransactionType.like) {
+          // attach the parent
+          post.parent = await manager.findOne(Post, { nonce: referenceNonce, sender: { address: recipientAddress } })
+          // break before saving if either party is blocked
+          if (await eitherPartyBlocked(recipientAddress, sender.address)) { break }
+        // if extension
+        } else if (type === TransactionType.extension) {
+          post.parent = await manager.findOne(Post, { nonce: referenceNonce, sender })
+        }
+        await manager.save(post)
+        await Promise.all([
+          attachTags(manager, post),
+          attachMentions(manager, post, mentions),
+        ])
+        break
+      case TransactionType.flag:
+      case TransactionType.unflag:
+        // find the post from the content of the tx
+        let post2 = await manager.findOne(Post, content)
+        if (!post2) { break }
+        if (type === TransactionType.flag) {
+          // if either party is blocked, they cannot flag
+          if (await eitherPartyBlocked(recipientAddress, sender.address)) { break }
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('flags')
+            .values([{ user_address: sender.address, post_txid: post2.txid }])
+            .onConflict('DO NOTHING')
+            .execute()
+        } else {
+          await manager
+            .createQueryBuilder()
+            .relation(User, 'flags')
+            .of(sender)
+            .remove(post2)
+        }
+        break
       case TransactionType.follow:
       case TransactionType.unfollow:
       case TransactionType.block:
       case TransactionType.unblock:
-        await handleFUBU(manager, tx)
+        await handleFUBU(manager, type, sender, content)
         break
-      // comment, like, rebork
-      case TransactionType.comment:
-      case TransactionType.like:
-      case TransactionType.rebork:
-        await handleCLR(manager, tx, recipientAddress, referenceNonce)
-        break
-      // flag
-      case TransactionType.flag:
-        tx.parent = await manager.findOne(Transaction, tx.content)
-        if (!tx.parent) { break }
-        tx.parent.flagsCount = tx.parent.flagsCount + 1
-        break
-      // extension
-      case TransactionType.extension:
-        tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: tx.sender })
-        break
-      // bork
-      default:
+      case TransactionType.delete:
         break
     }
-
-    // attach tags and mentions
-    if (
-      type === TransactionType.bork ||
-      type === TransactionType.extension ||
-      type === TransactionType.rebork ||
-      type === TransactionType.comment
-    ) {
-      await Promise.all([
-        attachTags(manager, tx),
-        attachMentions(manager, tx, mentions),
-      ])
-    }
-
-    await manager.save(tx)
   }
 }
 
-async function handleFUBU (manager: EntityManager, tx: Transaction) {
+async function handleProfileUpdate(manager: EntityManager, type: TransactionType, user: User, content: string) {
+  switch (type) {
+    case TransactionType.setName:
+      user.name = content
+      break
+    case TransactionType.setBio:
+      user.bio = content
+      break
+    case TransactionType.setAvatar:
+      user.avatarLink = content
+      break
+  }
+
+  await manager.save(user)
+}
+
+async function handleFUBU (manager: EntityManager, type: TransactionType, sender: User, recipientAddress: string) {
   // get the user from the content of the post
-  const recipient = await manager.findOne(User, tx.content)
+  const recipient = await manager.findOne(User, recipientAddress)
   if (!recipient) { return }
 
-  switch (tx.type) {
+  switch (type) {
     // follow
     case TransactionType.follow:
-      tx.sender.following = [recipient]
-      tx.sender.followingCount = tx.sender.followingCount + 1
-      await manager.update(User, recipient.address, { followersCount: recipient.followersCount + 1 })
+      await manager
+        .createQueryBuilder()
+        .insert()
+        .into('follows')
+        .values({ follower_address: sender.address, followed_address: recipientAddress })
+        .onConflict('DO NOTHING')
+        .execute()
       break
     // unfollow
     case TransactionType.unfollow:
       await manager
         .createQueryBuilder()
         .relation(User, 'following')
-        .of(tx.sender)
+        .of(sender)
         .remove(recipient)
-      tx.sender.followingCount = tx.sender.followingCount - 1
-      await manager.update(User, recipient.address, { followersCount: recipient.followersCount - 1 })
       break
     // block
     case TransactionType.block:
-      tx.sender.blocking = [recipient]
+      await manager
+        .createQueryBuilder()
+        .insert()
+        .into('blocks')
+        .values([{ blocker_address: sender.address, blocked_address: recipientAddress }])
+        .onConflict('DO NOTHING')
+        .execute()
       break
     // unblock
     case TransactionType.unblock:
       await manager
         .createQueryBuilder()
         .relation(User, 'blocking')
-        .of(tx.sender)
+        .of(sender)
         .remove(recipient)
       break
   }
 }
 
-async function handleCLR (manager: EntityManager, tx: Transaction, recipientAddress: string, referenceNonce: number) {
-  // attach the parent
-  tx.parent = await manager.findOne(Transaction, { nonce: referenceNonce, sender: { address: recipientAddress } })
-  // return if parent not found
-  if (!tx.parent) { return }
-  // increment the appropriate count
-  switch (tx.type) {
-    // comment
-    case TransactionType.comment:
-      tx.parent.commentsCount = tx.parent.commentsCount + 1
-      break
-    // like
-    case TransactionType.like:
-      tx.parent.likesCount = tx.parent.likesCount + 1
-      break
-    // rebork
-    case TransactionType.rebork:
-      tx.parent.reborksCount = tx.parent.reborksCount + 1
-      break
-  }
-}
-
-async function attachTags(manager: EntityManager, tx: Transaction): Promise<void> {
+async function attachTags (manager: EntityManager, post: Post): Promise<void> {
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
   let match: RegExpExecArray
 
-  tx.tags = []
+  let postTags = []
 
-  while ((match = regex.exec(tx.content))) {
+  // limit post tags to 10
+  while ((match = regex.exec(post.content)) && postTags.length < 11) {
     const name = match[1].toLowerCase()
-    const tag = await manager.findOne(Tag, name) || manager.create(Tag, {
+    const tag = await manager.findOne(Tag, name) || await manager.save(manager.create(Tag, {
       name,
-      createdAt: new Date(tx.createdAt),
-    })
-    tx.tags.push(tag)
+      createdAt: new Date(post.createdAt),
+    }))
+    postTags.push({ tag_name: tag, post_txid: post.txid })
+  }
+
+  if (postTags.length) {
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into('post_tags')
+      .values(postTags)
+      .onConflict('DO NOTHING')
+      .execute()
   }
 }
 
-async function attachMentions(manager: EntityManager, tx: Transaction, mentions: string[]): Promise<void> {
-  tx.mentions = []
-  await Promise.all(mentions.map(async address => {
+async function attachMentions (manager: EntityManager, post: Post, unverified: string[]): Promise<void> {
+  let mentions = []
+  await Promise.all(unverified.map(async address => {
     const user = await manager.findOne(User, address)
     if (!user) { return }
-    tx.mentions.push(user)
+    mentions.push({ user_address: address, post_txid: post.txid })
   }))
+
+  if (mentions.length) {
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into('mentions')
+      .values(mentions)
+      .onConflict('DO NOTHING')
+      .execute()
+  }
 }

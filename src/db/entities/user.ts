@@ -6,7 +6,7 @@ import {
   JoinTable,
   ManyToMany,
 } from 'typeorm'
-import { Transaction } from './transaction'
+import { Post } from './post'
 
 @Entity({ name: 'users' })
 export class User {
@@ -31,16 +31,10 @@ export class User {
 	@Column('text', { name: 'avatar_link', nullable: true })
   avatarLink: string | null
 
-	@Column('int', { name: 'followers_count', default: 0  })
-  followersCount: number
-
-	@Column('int', { name: 'following_count', default: 0  })
-  followingCount: number
-
   // relations
 
-	@OneToMany(() => Transaction, transaction => transaction.sender)
-	sentTransactions: Transaction[]
+	@OneToMany(() => Post, post => post.sender, { cascade: ['insert'] })
+  posts: Post[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({
@@ -72,17 +66,29 @@ export class User {
   @ManyToMany(() => User, user => user.blockers)
   blocking: User[]
 
-  @ManyToMany(() => Transaction, transaction => transaction.mentions)
+  @ManyToMany(() => Post, post => post.flags)
+  @JoinTable({
+    name: 'flags',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'post_txid' },
+    ],
+  })
+  flags: Post[]
+
+  @ManyToMany(() => Post, post => post.mentions)
   @JoinTable({
     name: 'mentions',
     joinColumns: [
       { name: 'user_address' },
     ],
     inverseJoinColumns: [
-      { name: 'transaction_txid' },
+      { name: 'post_txid' },
     ],
   })
-  mentions: Transaction[]
+  mentions: Post[]
 }
 
 export interface UserSeed {

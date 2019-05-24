@@ -22,6 +22,17 @@ export async function checkBlocked (blockedAddress: string, blockerAddress: stri
   ) > 0
 }
 
+export async function eitherPartyBlocked (address1: string, address2: string): Promise<boolean> {
+  return (await getManager()
+    .createQueryBuilder()
+    .select()
+    .from('blocks', 'blocks')
+    .where('blocked_address = :address1 AND blocker_address = :address2', { address1, address2 })
+    .orWhere('blocked_address = :address2 AND blocker_address = :address1', { address2, address1 })
+    .getCount()
+  ) > 0
+}
+
 export async function iFollowBlock (myAddress: string, address: string): Promise<{ iFollow: boolean, iBlock: boolean }> {
   const [iFollow, iBlock] = await Promise.all([
     checkFollowed(address, myAddress),
