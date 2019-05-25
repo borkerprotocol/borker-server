@@ -39,7 +39,7 @@ async function processBlocks () {
 
   const block = await rpc.getBlock(blockHash)
 
-  // const { borkerTxs: BorkerTx[], created: UtxoSeed[], spent: Spent[] } = borkerLib.processBlock(block)
+  // const { borkerTxs: BorkerTx[], created: UtxoSeed[], spent: Spent[] } = borkerLib.process_block(block)
   const borkerTxs: BorkerTx[] = getBorkerTxs()
   const created: UtxoSeed[] = getCreated()
   const spent: Spent[] = getSpent()
@@ -126,10 +126,10 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
       case TransactionType.setAvatar:
         await handleProfileUpdate(manager, type, sender, content)
         break
-      // if bork, comment, like, extension
+      // if bork, comment, wag, extension
       case TransactionType.bork:
       case TransactionType.comment:
-      case TransactionType.like:
+      case TransactionType.wag:
       case TransactionType.extension:
         // create post
         let post = manager.create(Post, {
@@ -140,8 +140,8 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
           content,
           sender,
         })
-        // if comment, like
-        if (type === TransactionType.comment || type === TransactionType.like) {
+        // if comment, wag
+        if (type === TransactionType.comment || type === TransactionType.wag) {
           // attach the parent
           post.parent = await manager.findOne(Post, { nonce: referenceNonce, sender: { address: recipientAddress } })
           // break before saving if either party is blocked
@@ -186,6 +186,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
         await handleFUBU(manager, type, sender, content)
         break
       case TransactionType.delete:
+        await manager.update(Post, { sender, txid: content }, { content: null, deletedAt: new Date(time) })
         break
     }
   }

@@ -67,11 +67,18 @@ export class PostHandler {
 
     return Promise.all(posts.map(async post => {
       if (post.parent) {
-        Object.assign(post.parent, { ...await this.iCommentLikeFlag(myAddress, post.parent.txid) })
+        Object.assign(post.parent, { ...await this.iCommentWagFlag(myAddress, post.parent.txid) })
       }
+
+      const [iStuff, counts] = await Promise.all([
+        this.iCommentWagFlag(myAddress, post.txid),
+        this.getCounts(post.txid),
+      ])
+
       return {
         ...post,
-        ...(await this.iCommentLikeFlag(myAddress, post.txid)),
+        ...iStuff,
+        ...counts,
       }
     }))
   }
@@ -101,11 +108,17 @@ export class PostHandler {
 
     // TODO fix this...just hideous
     const extensions: Post[] = []
-    await this.getExtensions(post, extensions)
+
+    const [nothing, iStuff, counts] = await Promise.all([
+      this.getExtensions(post, extensions),
+      this.iCommentWagFlag(myAddress, post.txid),
+      this.getCounts(post.txid),
+    ])
 
     return {
       ...post,
-      ...(await this.iCommentLikeFlag(myAddress, post.txid)),
+      ...iStuff,
+      ...counts,
       extensions,
     }
   }
@@ -115,14 +128,14 @@ export class PostHandler {
 	async indexPostUsers (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
-    @QueryParam('type') type: 'likes' | 'flags',
+    @QueryParam('type') type: 'wags' | 'flags',
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
-    if (!type || !['likes', 'flags'].includes(type)) {
-      throw new Errors.BadRequestError('query param "type" must be "likes" or "flags"')
+    if (!type || !['wags', 'flags'].includes(type)) {
+      throw new Errors.BadRequestError('query param "type" must be "wags" or "flags"')
     }
 
     page = Number(page)
@@ -138,7 +151,7 @@ export class PostHandler {
       .createQueryBuilder('users')
       .where(qb => {
         let subQuery: string
-        if (type === 'likes') {
+        if (type === 'wags') {
           subQuery = qb.subQuery()
             .select('sender_address')
             .from(Post, 'posts')
@@ -167,7 +180,27 @@ export class PostHandler {
     }))
   }
 
-  private async getExtensions (post: Post, extensions: Post[]): Promise<Post[]> {
+  private async getCounts (txid: string): Promise<{
+    commentsCount: number
+    wagsCount: number
+    flagsCount: number
+  }> {
+
+    const [ commentsCount, wagsCount, flagsCount ] = await Promise.all([
+      getRepository(Post).count({ parent: { txid }, type: PostType.comment, deletedAt: null }),
+      getRepository(Post).count({ parent: { txid }, type: PostType.wag, deletedAt: null }),
+      getManager()
+        .createQueryBuilder()
+        .select('flags')
+        .from('flags', 'flags')
+        .where('post_txid = :txid', { txid })
+        .getCount(),
+    ])
+
+    return { commentsCount, wagsCount, flagsCount }
+  }
+
+  private async getExtensions (post: Post, extensions: Post[]): Promise<void> {
     // get the next extension
     const ext = await getRepository(Post)
       .findOne({
@@ -188,13 +221,13 @@ export class PostHandler {
     await this.getExtensions(ext, extensions)
   }
 
-  private async iCommentLikeFlag (myAddress: string, txid: string): Promise<{
+  private async iCommentWagFlag (myAddress: string, txid: string): Promise<{
     iComment: boolean
-    iLike: boolean
+    iWag: boolean
     iFlag: boolean
   }> {
 
-    const [comment, like, flag] = await Promise.all([
+    const [comment, wag, flag] = await Promise.all([
       getRepository(Post).findOne({
         sender: { address: myAddress },
         parent: { txid },
@@ -203,7 +236,7 @@ export class PostHandler {
       getRepository(Post).findOne({
         sender: { address: myAddress },
         parent: { txid },
-        type: PostType.like,
+        type: PostType.wag,
       }),
       getManager()
         .createQueryBuilder()
@@ -216,7 +249,7 @@ export class PostHandler {
 
     return {
       iComment: !!comment,
-      iLike: !!like,
+      iWag: !!wag,
       iFlag: !!flag,
     }
   }
@@ -224,8 +257,11 @@ export class PostHandler {
 
 export interface ApiPost extends Post {
   iComment: boolean
-  iLike: boolean
+  iWag: boolean
   iFlag: boolean
+  commentsCount: number
+  wagsCount: number
+  flagsCount: number
 }
 
 export interface ApiPostExtended extends ApiPost {

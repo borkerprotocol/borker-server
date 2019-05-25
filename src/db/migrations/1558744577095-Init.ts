@@ -1,11 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
-
-export class Init1558736452401 implements MigrationInterface {
+export class Init1558744577095 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "users" ("address" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "birth_block" integer NOT NULL, "name" text NOT NULL, "bio" text, "avatar_link" text)`)
         await queryRunner.query(`CREATE TABLE "tags" ("name" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL)`)
-        await queryRunner.query(`CREATE TABLE "posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text)`)
+        await queryRunner.query(`CREATE TABLE "posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "deleted_at" datetime, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text)`)
         await queryRunner.query(`CREATE TABLE "utxos" ("txid" text NOT NULL, "index" integer NOT NULL, "created_at" datetime NOT NULL, "address" text NOT NULL, "value" bigint NOT NULL, "raw" text NOT NULL, PRIMARY KEY ("txid", "index"))`)
         await queryRunner.query(`CREATE INDEX "IDX_7ee003620e5c4dc41c8020c3a4" ON "utxos" ("address") `)
         await queryRunner.query(`CREATE TABLE "follows" ("followed_address" text NOT NULL, "follower_address" text NOT NULL, PRIMARY KEY ("followed_address", "follower_address"))`)
@@ -13,8 +12,8 @@ export class Init1558736452401 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "flags" ("user_address" text NOT NULL, "post_txid" text NOT NULL, PRIMARY KEY ("user_address", "post_txid"))`)
         await queryRunner.query(`CREATE TABLE "mentions" ("user_address" text NOT NULL, "post_txid" text NOT NULL, PRIMARY KEY ("user_address", "post_txid"))`)
         await queryRunner.query(`CREATE TABLE "post_tags" ("tag_name" text NOT NULL, "post_txid" text NOT NULL, PRIMARY KEY ("tag_name", "post_txid"))`)
-        await queryRunner.query(`CREATE TABLE "temporary_posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text, CONSTRAINT "FK_a56e2db14676f90be1694e27235" FOREIGN KEY ("parent_txid") REFERENCES "posts" ("txid"), CONSTRAINT "FK_565d3e71ac2ea22a54a0631994b" FOREIGN KEY ("sender_address") REFERENCES "users" ("address"))`)
-        await queryRunner.query(`INSERT INTO "temporary_posts"("txid", "created_at", "nonce", "type", "content", "parent_txid", "sender_address") SELECT "txid", "created_at", "nonce", "type", "content", "parent_txid", "sender_address" FROM "posts"`)
+        await queryRunner.query(`CREATE TABLE "temporary_posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "deleted_at" datetime, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text, CONSTRAINT "FK_a56e2db14676f90be1694e27235" FOREIGN KEY ("parent_txid") REFERENCES "posts" ("txid"), CONSTRAINT "FK_565d3e71ac2ea22a54a0631994b" FOREIGN KEY ("sender_address") REFERENCES "users" ("address"))`)
+        await queryRunner.query(`INSERT INTO "temporary_posts"("txid", "created_at", "deleted_at", "nonce", "type", "content", "parent_txid", "sender_address") SELECT "txid", "created_at", "deleted_at", "nonce", "type", "content", "parent_txid", "sender_address" FROM "posts"`)
         await queryRunner.query(`DROP TABLE "posts"`)
         await queryRunner.query(`ALTER TABLE "temporary_posts" RENAME TO "posts"`)
         await queryRunner.query(`CREATE TABLE "temporary_follows" ("followed_address" text NOT NULL, "follower_address" text NOT NULL, CONSTRAINT "FK_896ecc3e22c5f3b9fe89e5f6699" FOREIGN KEY ("followed_address") REFERENCES "users" ("address") ON DELETE CASCADE, CONSTRAINT "FK_735aa5a2ac167c99c74ee24650e" FOREIGN KEY ("follower_address") REFERENCES "users" ("address") ON DELETE CASCADE, PRIMARY KEY ("followed_address", "follower_address"))`)
@@ -61,8 +60,8 @@ export class Init1558736452401 implements MigrationInterface {
         await queryRunner.query(`INSERT INTO "follows"("followed_address", "follower_address") SELECT "followed_address", "follower_address" FROM "temporary_follows"`)
         await queryRunner.query(`DROP TABLE "temporary_follows"`)
         await queryRunner.query(`ALTER TABLE "posts" RENAME TO "temporary_posts"`)
-        await queryRunner.query(`CREATE TABLE "posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text)`)
-        await queryRunner.query(`INSERT INTO "posts"("txid", "created_at", "nonce", "type", "content", "parent_txid", "sender_address") SELECT "txid", "created_at", "nonce", "type", "content", "parent_txid", "sender_address" FROM "temporary_posts"`)
+        await queryRunner.query(`CREATE TABLE "posts" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "deleted_at" datetime, "nonce" integer NOT NULL, "type" text NOT NULL, "content" text, "parent_txid" text, "sender_address" text)`)
+        await queryRunner.query(`INSERT INTO "posts"("txid", "created_at", "deleted_at", "nonce", "type", "content", "parent_txid", "sender_address") SELECT "txid", "created_at", "deleted_at", "nonce", "type", "content", "parent_txid", "sender_address" FROM "temporary_posts"`)
         await queryRunner.query(`DROP TABLE "temporary_posts"`)
         await queryRunner.query(`DROP TABLE "post_tags"`)
         await queryRunner.query(`DROP TABLE "mentions"`)

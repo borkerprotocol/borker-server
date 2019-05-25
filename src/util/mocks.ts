@@ -8,7 +8,7 @@ export enum TransactionType {
   comment = 'comment',
   extension = 'extension',
   delete = 'delete',
-  like = 'like',
+  wag = 'wag',
   flag = 'flag',
   unflag = 'unflag',
   follow = 'follow',
@@ -21,7 +21,7 @@ export interface BorkerTx {
   time: number
   txid: string
   type: TransactionType
-  nonce: number
+  nonce: number | null
   referenceNonce: number | null
   content: string | null
   senderAddress: string
@@ -60,7 +60,7 @@ export const mockTxs1: BorkerTx[] = [
   {
     time: 1422184977000,
     txid: '774bef2197e6394112e1ee18246f1a0137ddb19a4d2d4464c1e25217977a0460',
-    type: TransactionType.like,
+    type: TransactionType.wag,
     nonce: 0,
     referenceNonce: 0,
     content: null,
@@ -96,10 +96,10 @@ export const mockTxs2: BorkerTx[] = [
   {
     time: 1424169440000,
     txid: '41266e19b39dbba35128f3af72299b4636cb9250d81741b5db1987716043a7af',
-    type: TransactionType.like,
+    type: TransactionType.wag,
     nonce: 2,
     referenceNonce: 1,
-    content: 'A new kind of like...',
+    content: 'This is a wag with a comment...',
     senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     mentions: [],
@@ -234,7 +234,7 @@ export const mockTxs4: BorkerTx[] = [
   {
     time: 1426287533000,
     txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
-    type: TransactionType.like,
+    type: TransactionType.wag,
     nonce: 0,
     referenceNonce: 4,
     content: null,
@@ -245,7 +245,7 @@ export const mockTxs4: BorkerTx[] = [
   {
     time: 1426287533000,
     txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
-    type: TransactionType.like,
+    type: TransactionType.wag,
     nonce: 3,
     referenceNonce: 0,
     content: null,

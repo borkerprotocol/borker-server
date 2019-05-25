@@ -13,7 +13,7 @@ import { Tag } from './tag'
 export enum PostType {
   bork = 'bork',
   comment = 'comment',
-  like = 'like',
+  wag = 'wag',
   extension = 'extension',
 }
 
@@ -27,6 +27,9 @@ export class Post {
 
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
+
+	@Column('datetime', { name: 'deleted_at', nullable: true })
+  deletedAt: Date | null
 
 	@Column('int', { name: 'nonce' })
 	nonce: number
@@ -53,11 +56,11 @@ export class Post {
   @ManyToMany(() => User, user => user.flags)
   flags: User[]
 
-  @ManyToMany(() => User, user => user.mentions)
-  mentions: User[]
-
   @ManyToMany(() => Tag, tag => tag.posts)
   tags: Tag[]
+
+  @ManyToMany(() => User, user => user.mentions)
+  mentions: User[]
 }
 
 export interface PostSeed {
@@ -67,8 +70,8 @@ export interface PostSeed {
   type: PostType
   sender: User
   content?: string
+  flags?: User[]
   tags?: Tag[]
-  likes?: User[]
   mentions?: User[]
 }
 
