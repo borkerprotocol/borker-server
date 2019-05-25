@@ -7,6 +7,7 @@ import {
   ManyToMany,
 } from 'typeorm'
 import { Post } from './post'
+import { Orphan } from './orphan'
 
 @Entity({ name: 'users' })
 export class User {
@@ -35,6 +36,9 @@ export class User {
 
 	@OneToMany(() => Post, post => post.sender, { cascade: ['insert'] })
   posts: Post[]
+
+	@OneToMany(() => Orphan, orphan => orphan.parentSender)
+  orphans: Orphan[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({
@@ -65,6 +69,18 @@ export class User {
 
   @ManyToMany(() => User, user => user.blockers)
   blocking: User[]
+
+  @ManyToMany(() => Post, post => post.likes)
+  @JoinTable({
+    name: 'likes',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'post_txid' },
+    ],
+  })
+  likes: Post[]
 
   @ManyToMany(() => Post, post => post.flags)
   @JoinTable({

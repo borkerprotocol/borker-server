@@ -54,9 +54,9 @@ export function assertComment (post: Post) {
   assert.exists(post.content)
 }
 
-export function assertWag (post: Post) {
+export function assertRebork (post: Post) {
   assertPost(post)
-  assert.equal(post.type, PostType.wag)
+  assert.equal(post.type, PostType.rebork)
   assert.exists(post.parent)
 }
 

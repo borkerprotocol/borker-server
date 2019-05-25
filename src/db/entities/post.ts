@@ -6,14 +6,17 @@ import {
 	PrimaryColumn,
 	JoinColumn,
   ManyToMany,
+  RelationId,
+  OneToOne,
 } from 'typeorm'
 import { User } from './user'
 import { Tag } from './tag'
+import { Orphan } from './orphan'
 
 export enum PostType {
   bork = 'bork',
   comment = 'comment',
-  wag = 'wag',
+  rebork = 'rebork',
   extension = 'extension',
 }
 
@@ -38,9 +41,12 @@ export class Post {
   type: PostType
 
 	@Column('text', { name: 'content', nullable: true })
-	content: string | null
+  content: string | null
 
   // relations
+
+  @OneToOne(() => Orphan, orphan => orphan.post)
+  orphan: Orphan
 
   @OneToMany(() => Post, post => post.parent)
   children: Post[]
@@ -48,10 +54,17 @@ export class Post {
   @ManyToOne(() => Post, post => post.children, { nullable: true })
   @JoinColumn({ name: 'parent_txid' })
   parent: Post
+  @RelationId((post: Post) => post.parent)
+  parentTxid: string
 
 	@ManyToOne(() => User, user => user.posts)
 	@JoinColumn({ name: 'sender_address' })
   sender: User
+  @RelationId((post: Post) => post.sender)
+  senderAddress: string
+
+  @ManyToMany(() => User, user => user.likes)
+  likes: User[]
 
   @ManyToMany(() => User, user => user.flags)
   flags: User[]
