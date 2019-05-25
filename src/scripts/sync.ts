@@ -121,7 +121,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
   for (let tx of borkerTxs) {
 
-    const { time, referenceNonce, type, content, senderAddress, recipientAddress } = tx
+    const { time, referenceNonce, type, content, skip, senderAddress, recipientAddress } = tx
 
     // find or create sender
     await manager.createQueryBuilder()
@@ -152,7 +152,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
         break
       // like
       case TransactionType.like:
-        await handleLike(manager, senderAddress, recipientAddress, referenceNonce)
+        await handleLike(manager, senderAddress, recipientAddress, referenceNonce, skip)
         break
       // flag, unflag, unlike
       case TransactionType.unlike:
@@ -297,11 +297,26 @@ async function handleCRE (manager: EntityManager, senderAddress: string, tx: Bor
   }
 }
 
-async function handleLike (manager: EntityManager, senderAddress: string, recipientAddress: string, referenceNonce: number): Promise<void> {
-  const parent = await manager.findOne(Post, { nonce: referenceNonce, sender: { address: recipientAddress } })
-  if (!parent) { return }
+async function handleLike (manager: EntityManager, senderAddress: string, recipientAddress: string, referenceNonce: number, skip: number): Promise<void> {
   // if either party is blocked, they cannot like
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
+  // find the parent
+  let parent: Post
+  const options: FindManyOptions<Post> = {
+    where: {
+      nonce: referenceNonce,
+      sender: { address: recipientAddress },
+    },
+    order: { createdAt: 'DESC' },
+  }
+  if (skip) {
+    const parents = await manager.find(Post, options)
+    parent = parents[parents.length - 1 - skip]
+  } else {
+    parent = await manager.findOne(Post, options)
+  }
+  if (!parent) { return }
+
   await manager.createQueryBuilder()
     .insert()
     .into('likes')
