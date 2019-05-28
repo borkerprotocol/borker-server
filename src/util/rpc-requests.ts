@@ -18,8 +18,7 @@ export async function getBlock (blockHash: string): Promise<string> {
 }
 
 export async function broadcast (txHex: string): Promise<string> {
-  return txHex
-  // return request('sendrawtransaction', `${txHex}`, [txHex])
+  return request('sendrawtransaction', `${txHex}`, [txHex])
 }
 
 // private
