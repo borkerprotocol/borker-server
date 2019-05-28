@@ -1,6 +1,6 @@
 # borker-server  - UNRELEASED
 
-Censorship-resistant news sharing on Degecoin.
+Censorship-resistant news sharing on Dogecoin.
 
 ## Installation Instructions:
 
