@@ -9,7 +9,6 @@
       "single"
     ],
     "no-unused-variable": true,
-    "no-duplicate-imports": true,
     "no-trailing-whitespace": true,
 		"whitespace": [
 			true,

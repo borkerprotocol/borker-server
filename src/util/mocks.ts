@@ -1,47 +1,52 @@
-import { UtxoSeed } from '../db/entities/utxo'
+import { BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 
-export enum TransactionType {
-  setName = 'set_name',
-  setBio = 'set_bio',
-  setAvatar = 'set_avatar',
-  bork = 'bork',
-  comment = 'comment',
-  rebork = 'rebork',
-  extension = 'extension',
-  delete = 'delete',
-  like = 'like',
-  unlike = 'unlike',
-  flag = 'flag',
-  unflag = 'unflag',
-  follow = 'follow',
-  unfollow = 'unfollow',
-  block = 'block',
-  unblock = 'unblock',
+export function getMockBorkerTxs (blockHeight: number) {
+  if (blockHeight === 17903) {
+    return mockTxs1
+  } else if (blockHeight === 17904) {
+    return mockTxs2
+  } else if (blockHeight === 17905) {
+    return mockTxs3
+  } else if (blockHeight === 17906) {
+    return mockTxs4
+  } else {
+    return []
+  }
 }
 
-export interface BorkerTx {
-  time: number
-  txid: string
-  type: TransactionType
-  nonce: number | null
-  index: number | null
-  content: string | null
-  referenceId: string | null
-  senderAddress: string
-  recipientAddress: string | null
-  mentions: string[]
+export function getMockCreated (blockHeight: number) {
+  if (blockHeight === 17903) {
+    return mockCreated1
+  } else if (blockHeight === 17904) {
+    return mockCreated2
+  } else if (blockHeight === 17905) {
+    return mockCreated3
+  } else if (blockHeight === 17906) {
+    return mockCreated4
+  } else {
+    return []
+  }
 }
 
-export interface Spent {
-  txid: string
-  index: number
+export function getMockSpent (blockHeight: number) {
+  if (blockHeight === 17903) {
+    return mockSpent1
+  } else if (blockHeight === 17904) {
+    return mockSpent2
+  } else if (blockHeight === 17905) {
+    return mockSpent3
+  } else if (blockHeight === 17906) {
+    return mockSpent4
+  } else {
+    return []
+  }
 }
 
-export const mockTxs1: BorkerTx[] = [
+export const mockTxs1: BorkTxData[] = [
   {
-    time: 1412177231000,
+    time: '2019-05-28T00:51:39Z',
     txid: '39128e8edacce1ada4e1df9aa5fc91431302ef951df06a78e13f4fbc3759e752',
-    type: TransactionType.setName,
+    type: BorkType.SetName,
     nonce: null,
     index: null,
     content: 'MattHill',
@@ -51,9 +56,9 @@ export const mockTxs1: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1422182926000,
+    time: '2019-05-28T00:51:39Z',
     txid: '8b5ab18a8593ba3f1abae61c07bf02169487c58b0e244922b6c4578eaf6e0d35',
-    type: TransactionType.bork,
+    type: BorkType.Bork,
     nonce: 14,
     index: 0,
     content: 'I like to bork. I like to bork',
@@ -63,9 +68,9 @@ export const mockTxs1: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1422184977000,
+    time: '2019-05-28T00:51:39Z',
     txid: '774bef2197e6394112e1ee18246f1a0137ddb19a4d2d4464c1e25217977a0460',
-    type: TransactionType.rebork,
+    type: BorkType.Rebork,
     nonce: 10,
     index: 0,
     content: null,
@@ -75,9 +80,9 @@ export const mockTxs1: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1423181711000,
+    time: '2019-05-28T00:51:39Z',
     txid: '43873bcc83d6d811df6bff1909a5cd3fc98eb84bbaded5a44443fc86f9ef0e3b',
-    type: TransactionType.bork,
+    type: BorkType.Bork,
     nonce: 0,
     index: 0,
     content: 'Bork some more. Bork some more. #Tomorrow',
@@ -88,9 +93,9 @@ export const mockTxs1: BorkerTx[] = [
   },
   // this extension will be orphaned and then cleaned up later
   {
-    time: 1424967192200,
+    time: '2019-05-28T00:51:39Z',
     txid: '89520b2306424bb8704ac63adbb03311f5d3fd4bd2deb72dbe40bfbfc219a5ba',
-    type: TransactionType.extension,
+    type: BorkType.Extension,
     nonce: 156,
     index: 1,
     content: 'extension that was orphaned for a while',
@@ -101,11 +106,11 @@ export const mockTxs1: BorkerTx[] = [
   },
 ]
 
-export const mockTxs2: BorkerTx[] = [
+export const mockTxs2: BorkTxData[] = [
   {
-    time: 1424167335000,
+    time: '2019-05-28T00:51:39Z',
     txid: '069aa2f138cbdc6ebd379b1e6d1cb7f86c8770ad58be27006671d528a75ba0e3',
-    type: TransactionType.bork,
+    type: BorkType.Bork,
     nonce: 222,
     index: 0,
     content: 'Borking like there aint no #tomorrow',
@@ -115,9 +120,9 @@ export const mockTxs2: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1424169440000,
+    time: '2019-05-28T00:51:39Z',
     txid: '41266e19b39dbba35128f3af72299b4636cb9250d81741b5db1987716043a7af',
-    type: TransactionType.rebork,
+    type: BorkType.Rebork,
     nonce: 25,
     index: 0,
     content: 'This is a rebork with a comment...',
@@ -127,9 +132,9 @@ export const mockTxs2: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1424561124000,
+    time: '2019-05-28T00:51:39Z',
     txid: '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
-    type: TransactionType.comment,
+    type: BorkType.Comment,
     nonce: 100,
     index: 0,
     content: 'And some more!',
@@ -139,9 +144,9 @@ export const mockTxs2: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1424967992000,
+    time: '2019-05-28T00:51:39Z',
     txid: '164af924f859c9936f3bda737a986a1a85b3708c9b2fd150b36b964b11c858a6',
-    type: TransactionType.bork,
+    type: BorkType.Bork,
     nonce: 211,
     index: 0,
     content: 'This is a long bork that will take up two whole transactions. I will write',
@@ -151,9 +156,9 @@ export const mockTxs2: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1424967992200,
+    time: '2019-05-28T00:51:39Z',
     txid: 'e3b3a8bf7e3796d908b731c0d16baba0f1e161b97d917e00cde81ff0f1452fd1',
-    type: TransactionType.extension,
+    type: BorkType.Extension,
     nonce: 211,
     index: 1,
     content: 'just a little more. See, I told you. Bork on.',
@@ -163,9 +168,9 @@ export const mockTxs2: BorkerTx[] = [
     mentions: ['DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7'],
   },
   {
-    time: 1425188584000,
+    time: '2019-05-28T00:51:39Z',
     txid: '3ffa42642f6dfd718562b8a6d04c403b20b59fe873eadd1960e402769cee1318',
-    type: TransactionType.follow,
+    type: BorkType.Follow,
     nonce: null,
     index: null,
     content: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
@@ -176,11 +181,11 @@ export const mockTxs2: BorkerTx[] = [
   },
 ]
 
-export const mockTxs3: BorkerTx[] = [
+export const mockTxs3: BorkTxData[] = [
   {
-    time: 1425287522000,
+    time: '2019-05-28T00:51:39Z',
     txid: '4cb6f18366e4a32ff69e681d192aec89a4d8721af544725fe6a02ecde4311605',
-    type: TransactionType.setName,
+    type: BorkType.SetName,
     nonce: null,
     index: null,
     content: 'aiden_mcclelland',
@@ -190,9 +195,9 @@ export const mockTxs3: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1424967392200,
+    time: '2019-05-28T00:51:39Z',
     txid: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
-    type: TransactionType.comment,
+    type: BorkType.Comment,
     nonce: 156,
     index: 0,
     content: 'Wow that was so borking cool. Now I will create an',
@@ -202,9 +207,9 @@ export const mockTxs3: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1425399510000,
+    time: '2019-05-28T00:51:39Z',
     txid: '8a3e0fe9ebc5e2fec31b12e7880f0dc184b56fd2d0541fcc3e6c0a1530826913',
-    type: TransactionType.setBio,
+    type: BorkType.SetBio,
     nonce: null,
     index: null,
     content: 'I am a Bork Master',
@@ -214,9 +219,9 @@ export const mockTxs3: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1426287533000,
+    time: '2019-05-28T00:51:39Z',
     txid: 'c7c4e2977cc67cc16ee8fec757a61219deddcc8edfb6e20ab818af29f4be9373',
-    type: TransactionType.follow,
+    type: BorkType.Follow,
     nonce: null,
     index: null,
     content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
@@ -227,11 +232,11 @@ export const mockTxs3: BorkerTx[] = [
   },
 ]
 
-export const mockTxs4: BorkerTx[] = [
+export const mockTxs4: BorkTxData[] = [
   {
-    time: 1425287522000,
+    time: '2019-05-28T00:51:39Z',
     txid: '0b692b4e683a3ea47f0b3b6a6f30e8cca6efcc78f1c2eb6e35430af9b9415eb5',
-    type: TransactionType.setBio,
+    type: BorkType.SetBio,
     nonce: null,
     index: null,
     content: 'I am the unknown Borker who shall someday be known',
@@ -241,9 +246,9 @@ export const mockTxs4: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1426287533000,
+    time: '2019-05-28T00:51:39Z',
     txid: '3a7f46861703322b75fed4594cd94eb9c04c5a6edb0c1e4ecd1eb91ba2fc4304',
-    type: TransactionType.block,
+    type: BorkType.Block,
     nonce: null,
     index: null,
     content: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
@@ -253,9 +258,9 @@ export const mockTxs4: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1425399510000,
+    time: '2019-05-28T00:51:39Z',
     txid: '20d721480d0450a1b9666618ee618bfbacde74a4bade40908063c6c344bc7214',
-    type: TransactionType.unfollow,
+    type: BorkType.Unfollow,
     nonce: null,
     index: null,
     content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
@@ -265,9 +270,9 @@ export const mockTxs4: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1426287533000,
+    time: '2019-05-28T00:51:39Z',
     txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
-    type: TransactionType.like,
+    type: BorkType.Like,
     nonce: null,
     index: null,
     content: null,
@@ -277,9 +282,9 @@ export const mockTxs4: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1426287533000,
+    time: '2019-05-28T00:51:39Z',
     txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
-    type: TransactionType.like,
+    type: BorkType.Like,
     nonce: null,
     index: null,
     content: null,
@@ -290,9 +295,9 @@ export const mockTxs4: BorkerTx[] = [
   },
   // this comment will be left orphaned
   {
-    time: 1426287533000,
+    time: '2019-05-28T00:51:39Z',
     txid: '2312757481a28100402f71e788d2922f9aae766af10dda0b28dfd7dd858e15a1',
-    type: TransactionType.comment,
+    type: BorkType.Comment,
     nonce: 14,
     index: 0,
     content: 'a poor orphaned comment',
@@ -302,9 +307,9 @@ export const mockTxs4: BorkerTx[] = [
     mentions: [],
   },
   {
-    time: 1426287677000,
+    time: '2019-05-28T00:51:39Z',
     txid: '59a6a9cd14fb864a048b87ef006d168c345943edc1bc54e462694ac42c90cd04',
-    type: TransactionType.flag,
+    type: BorkType.Flag,
     nonce: null,
     index: null,
     content: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
@@ -315,9 +320,9 @@ export const mockTxs4: BorkerTx[] = [
   },
   // this flag will not save because sender is blocked
   {
-    time: 1426287677000,
+    time: '2019-05-28T00:51:39Z',
     txid: '59a6a9cd14fb864a048b87ef006d168c345943edc1bc54e462694ac42c90cd04',
-    type: TransactionType.flag,
+    type: BorkType.Flag,
     nonce: null,
     index: null,
     content: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
@@ -328,7 +333,7 @@ export const mockTxs4: BorkerTx[] = [
   },
 ]
 
-export const mockCreated1: UtxoSeed[] = [
+export const mockCreated1: NewUtxo[] = [
   {
     txid: '89da78a5802eb72ba3ae4e12654b10b0223221f7f76ac915f5636394a8c463e7',
     address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
@@ -360,7 +365,7 @@ export const mockCreated1: UtxoSeed[] = [
   },
 ]
 
-export const mockCreated2: UtxoSeed[] = [
+export const mockCreated2: NewUtxo[] = [
   {
     txid: '41266e19b39dbba35128f3af72299b4636cb9250d81741b5db1987716043a7af',
     address: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
@@ -385,7 +390,7 @@ export const mockCreated2: UtxoSeed[] = [
   },
 ]
 
-export const mockCreated3: UtxoSeed[] = [
+export const mockCreated3: NewUtxo[] = [
   {
     txid: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
     address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
@@ -395,7 +400,7 @@ export const mockCreated3: UtxoSeed[] = [
   },
 ]
 
-export const mockCreated4: UtxoSeed[] = [
+export const mockCreated4: NewUtxo[] = [
   {
     txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
     address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
@@ -412,16 +417,16 @@ export const mockCreated4: UtxoSeed[] = [
   },
 ]
 
-export const mockSpent1: Spent[] = []
+export const mockSpent1: UtxoId[] = []
 
-export const mockSpent2: Spent[] = [
+export const mockSpent2: UtxoId[] = [
   {
     txid: '89da78a5802eb72ba3ae4e12654b10b0223221f7f76ac915f5636394a8c463e7',
     index: 0,
   },
 ]
 
-export const mockSpent3: Spent[] = [
+export const mockSpent3: UtxoId[] = [
   {
     txid: '774bef2197e6394112e1ee18246f1a0137ddb19a4d2d4464c1e25217977a0460',
     index: 1,
@@ -436,7 +441,7 @@ export const mockSpent3: Spent[] = [
   },
 ]
 
-export const mockSpent4: Spent[] = [
+export const mockSpent4: UtxoId[] = [
   {
     txid: '',
     index: 0,

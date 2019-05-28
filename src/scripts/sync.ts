@@ -1,15 +1,14 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, FindManyOptions, Like, Raw } from 'typeorm'
+import { getManager, EntityManager, Like } from 'typeorm'
 import { Post, PostType } from '../db/entities/post'
 import { User } from '../db/entities/user'
-import { BorkerTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4, Spent, TransactionType } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
-import { Utxo, UtxoSeed } from '../db/entities/utxo'
+import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked } from '../util/functions'
 import { OrphanCR } from '../db/entities/orphan-cr'
-
-// let borkerLib: any
+import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
+// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 const config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
@@ -40,10 +39,10 @@ async function processBlocks () {
 
   const block = await rpc.getBlock(blockHash)
 
-  // const { borkerTxs: BorkerTx[], created: UtxoSeed[], spent: Spent[] } = borkerLib.process_block(block)
-  const borkerTxs: BorkerTx[] = getBorkerTxs()
-  const created: UtxoSeed[] = getCreated()
-  const spent: Spent[] = getSpent()
+  const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
+  // const borkerTxs = getMockBorkerTxs(blockHeight)
+  // const created = getMockCreated(blockHeight)
+  // const spent = getMockSpent(blockHeight)
 
   await getManager().transaction(async manager => {
     await Promise.all([
@@ -56,52 +55,7 @@ async function processBlocks () {
   await processBlocks()
 }
 
-// TODO delete this function once borkerLib is available
-function getBorkerTxs () {
-  if (blockHeight === 17903) {
-    return mockTxs1
-  } else if (blockHeight === 17904) {
-    return mockTxs2
-  } else if (blockHeight === 17905) {
-    return mockTxs3
-  } else if (blockHeight === 17906) {
-    return mockTxs4
-  } else {
-    return []
-  }
-}
-
-// TODO delete this function once borkerLib is available
-function getCreated () {
-  if (blockHeight === 17903) {
-    return mockCreated1
-  } else if (blockHeight === 17904) {
-    return mockCreated2
-  } else if (blockHeight === 17905) {
-    return mockCreated3
-  } else if (blockHeight === 17906) {
-    return mockCreated4
-  } else {
-    return []
-  }
-}
-
-// TODO delete this function once borkerLib is available
-function getSpent () {
-  if (blockHeight === 17903) {
-    return mockSpent1
-  } else if (blockHeight === 17904) {
-    return mockSpent2
-  } else if (blockHeight === 17905) {
-    return mockSpent3
-  } else if (blockHeight === 17906) {
-    return mockSpent4
-  } else {
-    return []
-  }
-}
-
-async function processUtxos(manager: EntityManager, created: Utxo[], spent: Spent[]) {
+async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: UtxoId[]) {
   // insert created utxos
   if (created.length) {
     await manager.createQueryBuilder()
@@ -117,7 +71,7 @@ async function processUtxos(manager: EntityManager, created: Utxo[], spent: Spen
   }
 }
 
-async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
+async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[]) {
 
   for (let tx of borkerTxs) {
 
@@ -138,59 +92,59 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
     switch (type) {
       // if set_name, set_bio, set_avatar
-      case TransactionType.setName:
-      case TransactionType.setBio:
-      case TransactionType.setAvatar:
+      case BorkType.SetName:
+      case BorkType.SetBio:
+      case BorkType.SetAvatar:
         await handleProfileUpdate(manager, type, senderAddress, content)
         break
       // if bork, comment, rebork, extension
-      case TransactionType.bork:
-      case TransactionType.comment:
-      case TransactionType.rebork:
-      case TransactionType.extension:
+      case BorkType.Bork:
+      case BorkType.Comment:
+      case BorkType.Rebork:
+      case BorkType.Extension:
         await handleBCRE(manager, tx)
         break
       // like
-      case TransactionType.like:
+      case BorkType.Like:
         await handleLike(manager, referenceId, senderAddress, recipientAddress)
         break
       // flag, unflag, unlike
-      case TransactionType.unlike:
-      case TransactionType.flag:
-      case TransactionType.unflag:
+      case BorkType.Unlike:
+      case BorkType.Flag:
+      case BorkType.Unflag:
         await handleFUU(manager, type, senderAddress, content)
         break
-      case TransactionType.follow:
-      case TransactionType.unfollow:
-      case TransactionType.block:
-      case TransactionType.unblock:
+      case BorkType.Follow:
+      case BorkType.Unfollow:
+      case BorkType.Block:
+      case BorkType.Unblock:
         await handleFUBU(manager, type, senderAddress, content)
         break
-      case TransactionType.delete:
+      case BorkType.Delete:
         await manager.update(Post, { sender: { address: senderAddress }, txid: content }, { content: null, deletedAt: new Date(time) })
         break
     }
   }
 }
 
-async function handleProfileUpdate(manager: EntityManager, type: TransactionType, senderAddress: string, content: string) {
+async function handleProfileUpdate(manager: EntityManager, type: BorkType, senderAddress: string, content: string) {
   let params: Partial<User>
 
   switch (type) {
-    case TransactionType.setName:
+    case BorkType.SetName:
       params = { name: content }
       break
-    case TransactionType.setBio:
+    case BorkType.SetBio:
       params = { bio: content }
       break
-    case TransactionType.setAvatar:
+    case BorkType.SetAvatar:
       params = { avatarLink: content }
       break
   }
   await manager.update(User, senderAddress, params)
 }
 
-async function handleBCRE (manager: EntityManager, tx: BorkerTx): Promise<void> {
+async function handleBCRE (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
   const { txid, time, nonce, index, type, content, referenceId, senderAddress, mentions } = tx
 
@@ -218,7 +172,7 @@ async function handleBCRE (manager: EntityManager, tx: BorkerTx): Promise<void> 
       .where('parent_txid IS NULL')
       .andWhere('nonce = :nonce', { nonce })
       .andWhere('sender_address = :senderAddress', { senderAddress })
-      .andWhere('type = :type', { type: TransactionType.extension })
+      .andWhere('type = :type', { type: BorkType.Extension })
       .andWhere('created_at > :cutoff', { cutoff: getCutoff(new Date(time)) })
       .execute(),
     // update CR orphaned posts
@@ -234,9 +188,9 @@ async function handleBCRE (manager: EntityManager, tx: BorkerTx): Promise<void> 
     // attach mentions
     attachMentions(manager, txid, mentions),
     // if comment or rebork
-    (type === TransactionType.comment || type === TransactionType.rebork) && handleCR(manager, tx),
+    (type === BorkType.Comment || type === BorkType.Rebork) && handleCR(manager, tx),
     // if extension
-    type === TransactionType.extension && handleExtension(manager, tx),
+    type === BorkType.Extension && handleExtension(manager, tx),
   ])
 
   // delete duplicate orphaned extension posts
@@ -254,7 +208,7 @@ async function handleBCRE (manager: EntityManager, tx: BorkerTx): Promise<void> 
     )`, { txid })
 }
 
-async function handleCR (manager: EntityManager, tx: BorkerTx): Promise<void> {
+async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
   const { txid, time, referenceId, senderAddress, recipientAddress } = tx
 
@@ -287,7 +241,7 @@ async function handleCR (manager: EntityManager, tx: BorkerTx): Promise<void> {
   }
 }
 
-async function handleExtension (manager: EntityManager, tx: BorkerTx): Promise<void> {
+async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
   const { txid, time, nonce, index, senderAddress } = tx
 
@@ -297,13 +251,13 @@ async function handleExtension (manager: EntityManager, tx: BorkerTx): Promise<v
     .from(Post, 'posts')
     .where('nonce = :nonce', { nonce })
     .andWhere('sender_address = :senderAddress', { senderAddress })
-    .andWhere('type != :type', { type: TransactionType.extension })
+    .andWhere('type != :type', { type: BorkType.Extension })
     .andWhere(`created_at > :cutoff`, { cutoff: getCutoff(new Date(time)) })
     .andWhere(qb => {
       const subQuery = qb.subQuery()
         .select('parent_txid')
         .from(Post, 'posts2')
-        .where('type = :type', { type: TransactionType.extension })
+        .where('type = :type', { type: BorkType.Extension })
         .andWhere('"index" = :index', { index })
         .andWhere('parent_txid IS NOT NULL')
         .getQuery()
@@ -341,13 +295,13 @@ async function handleLike (manager: EntityManager, referenceId: string, senderAd
     .execute()
 }
 
-async function handleFUU (manager: EntityManager, type: TransactionType, senderAddress: string, content: string): Promise<void> {
+async function handleFUU (manager: EntityManager, type: BorkType, senderAddress: string, content: string): Promise<void> {
   // find the post from the content of the tx
   const parent = await manager.findOne(Post, content)
   if (!parent) { return }
 
   switch (type) {
-    case TransactionType.flag:
+    case BorkType.Flag:
       // if either party is blocked, they cannot flag
       if (await eitherPartyBlocked(parent.senderAddress, senderAddress)) { return }
       await manager.createQueryBuilder()
@@ -360,13 +314,13 @@ async function handleFUU (manager: EntityManager, type: TransactionType, senderA
         .onConflict('DO NOTHING')
         .execute()
       break
-    case TransactionType.unflag:
+    case BorkType.Unflag:
       await manager.createQueryBuilder()
         .relation(User, 'flags')
         .of(senderAddress)
         .remove(parent.txid)
       break
-    case TransactionType.unlike:
+    case BorkType.Unlike:
       await manager.createQueryBuilder()
         .relation(User, 'likes')
         .of(senderAddress)
@@ -375,14 +329,14 @@ async function handleFUU (manager: EntityManager, type: TransactionType, senderA
   }
 }
 
-async function handleFUBU (manager: EntityManager, type: TransactionType, senderAddress: string, recipientAddress: string): Promise<void> {
+async function handleFUBU (manager: EntityManager, type: BorkType, senderAddress: string, recipientAddress: string): Promise<void> {
   // get the user from the content of the post
   const recipient = await manager.findOne(User, recipientAddress)
   if (!recipient) { return }
 
   switch (type) {
     // follow
-    case TransactionType.follow:
+    case BorkType.Follow:
       await manager.createQueryBuilder()
         .insert()
         .into('follows')
@@ -394,14 +348,14 @@ async function handleFUBU (manager: EntityManager, type: TransactionType, sender
         .execute()
       break
     // unfollow
-    case TransactionType.unfollow:
+    case BorkType.Unfollow:
       await manager.createQueryBuilder()
         .relation(User, 'following')
         .of(senderAddress)
         .remove(recipientAddress)
       break
     // block
-    case TransactionType.block:
+    case BorkType.Block:
       await manager.createQueryBuilder()
         .insert()
         .into('blocks')
@@ -413,7 +367,7 @@ async function handleFUBU (manager: EntityManager, type: TransactionType, sender
         .execute()
       break
     // unblock
-    case TransactionType.unblock:
+    case BorkType.Unblock:
       await manager.createQueryBuilder()
         .relation(User, 'blocking')
         .of(senderAddress)
