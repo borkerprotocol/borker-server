@@ -5,7 +5,7 @@ import { Post, PostType } from '../db/entities/post'
 import { User } from '../db/entities/user'
 import { Tag } from '../db/entities/tag'
 import { Utxo } from '../db/entities/utxo'
-import { eitherPartyBlocked } from '../util/functions'
+import { eitherPartyBlocked, chunks } from '../util/functions'
 import { OrphanCR } from '../db/entities/orphan-cr'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
@@ -58,16 +58,20 @@ async function processBlocks () {
 async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: UtxoId[]) {
   // insert created utxos
   if (created.length) {
-    await manager.createQueryBuilder()
-      .insert()
-      .into(Utxo)
-      .values(created)
-      .onConflict('("txid", "index") DO NOTHING')
-      .execute()
+    await Promise.all(chunks(created, 100).map(chunk => {
+      return manager.createQueryBuilder()
+        .insert()
+        .into(Utxo)
+        .values(chunk)
+        .onConflict('("txid", "index") DO NOTHING')
+        .execute()
+    }))
   }
   // delete spent utxos
   if (spent.length) {
-    await manager.delete(Utxo, spent)
+    await Promise.all(chunks(spent, 100).map(chunk => {
+      return manager.delete(Utxo, chunk)
+    }))
   }
 }
 

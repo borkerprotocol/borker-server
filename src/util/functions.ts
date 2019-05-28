@@ -1,5 +1,16 @@
 import { getManager } from 'typeorm'
 
+export function chunks<T> (arr: T[], size: number): T[][] {
+  const ret = []
+  let temparray = []
+  const j = arr.length
+  for (let i = 0; i < j; i += size) {
+    temparray = arr.slice(i, i + size)
+    ret.push(temparray)
+  }
+  return ret
+}
+
 export async function checkFollowed (followedAddress: string, followerAddress: string): Promise<boolean> {
   return (await getManager()
     .createQueryBuilder()
