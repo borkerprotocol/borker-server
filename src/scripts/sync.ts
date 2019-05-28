@@ -10,7 +10,7 @@ import { OrphanCR } from '../db/entities/orphan-cr'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
-const config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
+let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
 
 export async function syncChain () {
@@ -25,8 +25,6 @@ export async function syncChain () {
 		console.error('error syncing: ', err)
   }
   finally {
-    config.startBlockSync = blockHeight
-    fs.writeFileSync('borkerconfig.json', JSON.stringify(config, null, 2), 'utf8')
     setTimeout(syncChain, 4000)
   }
 }
@@ -34,8 +32,12 @@ export async function syncChain () {
 async function processBlocks () {
   console.log(`syncing block ${blockHeight}`)
 
-  const blockHash = await rpc.getBlockHash(blockHeight)
-  if (!blockHash) return
+  let blockHash: string
+  try {
+    blockHash = await rpc.getBlockHash(blockHeight)
+  } catch (err) {
+    return
+  }
 
   const block = await rpc.getBlock(blockHash)
 
@@ -52,6 +54,11 @@ async function processBlocks () {
   })
 
   blockHeight++
+
+  config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
+  config.startBlockSync = blockHeight
+  fs.writeFileSync('borkerconfig.json', JSON.stringify(config, null, 2), 'utf8')
+
   await processBlocks()
 }
 
