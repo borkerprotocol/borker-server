@@ -1,13 +1,13 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, FindManyOptions } from 'typeorm'
+import { getManager, EntityManager, FindManyOptions, Like, Raw } from 'typeorm'
 import { Post, PostType } from '../db/entities/post'
 import { User } from '../db/entities/user'
 import { BorkerTx, mockTxs1, mockTxs2, mockTxs3, mockTxs4, mockCreated1, mockCreated2, mockSpent1, mockSpent2, mockCreated3, mockCreated4, mockSpent3, mockSpent4, Spent, TransactionType } from '../util/mocks'
 import { Tag } from '../db/entities/tag'
 import { Utxo, UtxoSeed } from '../db/entities/utxo'
-import { eitherPartyBlocked, checkBlocked } from '../util/functions'
-import { Orphan } from '../db/entities/orphan'
+import { eitherPartyBlocked } from '../util/functions'
+import { OrphanCR } from '../db/entities/orphan-cr'
 
 // let borkerLib: any
 
@@ -121,7 +121,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
 
   for (let tx of borkerTxs) {
 
-    const { time, referenceNonce, type, content, skip, senderAddress, recipientAddress } = tx
+    const { time, type, content, referenceId, senderAddress, recipientAddress } = tx
 
     // find or create sender
     await manager.createQueryBuilder()
@@ -148,11 +148,11 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkerTx[]) {
       case TransactionType.comment:
       case TransactionType.rebork:
       case TransactionType.extension:
-        await handleBCRE(manager, senderAddress, tx)
+        await handleBCRE(manager, tx)
         break
       // like
       case TransactionType.like:
-        await handleLike(manager, senderAddress, recipientAddress, referenceNonce, skip)
+        await handleLike(manager, referenceId, senderAddress, recipientAddress)
         break
       // flag, unflag, unlike
       case TransactionType.unlike:
@@ -190,9 +190,9 @@ async function handleProfileUpdate(manager: EntityManager, type: TransactionType
   await manager.update(User, senderAddress, params)
 }
 
-async function handleBCRE (manager: EntityManager, senderAddress: string, tx: BorkerTx): Promise<void> {
+async function handleBCRE (manager: EntityManager, tx: BorkerTx): Promise<void> {
 
-  const { txid, time, nonce, skip, type, content, mentions } = tx
+  const { txid, time, nonce, index, type, content, referenceId, senderAddress, mentions } = tx
 
   // create post
   await manager.createQueryBuilder()
@@ -202,6 +202,7 @@ async function handleBCRE (manager: EntityManager, senderAddress: string, tx: Bo
       txid,
       createdAt: new Date(time),
       nonce,
+      index,
       type: PostType[type],
       content,
       sender: { address: senderAddress },
@@ -209,112 +210,124 @@ async function handleBCRE (manager: EntityManager, senderAddress: string, tx: Bo
     .onConflict('("txid") DO NOTHING')
     .execute()
 
-  const children = await manager.createQueryBuilder()
-    .select('posts')
-    .from(Post, 'posts')
-    .where(qb => {
-      const subQuery = qb.subQuery()
-        .select('post_txid')
-        .from(Orphan, 'orphans')
-        .where('parent_sender_address = :senderAddress', { senderAddress })
-        .andWhere('parent_nonce = :nonce', { nonce })
-        .getQuery()
-      return `txid IN ${subQuery}`
-    })
-    .orderBy({ created_at: 'DESC' })
-    .getMany()
-
-  if (children.length) {
-    const child = children[children.length - 1 - skip]
-    await Promise.all([
-      manager.update(Post, child.txid, { parent: { txid } }),
-      manager.delete(Orphan, { postTxid: child.txid }),
-    ])
-
-  }
-
-  // if comment, rebork, extension
-  if (type !== TransactionType.bork) {
-    await handleCRE(manager, senderAddress, tx)
-  }
-
   await Promise.all([
-    attachTags(manager, txid, content, time),
+    // update extension orphaned posts
+    manager.createQueryBuilder()
+      .update(Post)
+      .set({ parent: { txid } })
+      .where('parent_txid IS NULL')
+      .andWhere('nonce = :nonce', { nonce })
+      .andWhere('sender_address = :senderAddress', { senderAddress })
+      .andWhere('type = :type', { type: TransactionType.extension })
+      .andWhere('created_at > :cutoff', { cutoff: getCutoff(new Date(time)) })
+      .execute(),
+    // update CR orphaned posts
+    manager.createQueryBuilder()
+      .update(Post)
+      .set({ parent: { txid } })
+      .where('txid IN (SELECT post_txid FROM orphans_cr WHERE parent_sender_address = :senderAddress AND reference_id = :referenceId)', { senderAddress, referenceId })
+      .execute(),
+    // delete orphans
+    manager.delete(OrphanCR, { parentSender: { address: senderAddress }, referenceId }),
+    // attach tags
+    attachTags(manager, txid, content),
+    // attach mentions
     attachMentions(manager, txid, mentions),
+    // if comment or rebork
+    (type === TransactionType.comment || type === TransactionType.rebork) && handleCR(manager, tx),
+    // if extension
+    type === TransactionType.extension && handleExtension(manager, tx),
   ])
+
+  // delete duplicate orphaned extension posts
+  await manager.createQueryBuilder()
+    .delete()
+    .from(Post, 'posts')
+    .where(`txid IN (
+      SELECT txid FROM posts p1
+      INNER JOIN posts p2
+      ON p1.parent_txid = p2.parent_txid
+      AND p1.index = p2.index
+      AND p1.txid != p2.txid
+      AND p1.created_at >= p2.created_at
+      AND p1.txid = :txid
+    )`, { txid })
 }
 
-async function handleCRE (manager: EntityManager, senderAddress: string, tx: BorkerTx): Promise<void> {
+async function handleCR (manager: EntityManager, tx: BorkerTx): Promise<void> {
 
-  const { txid, time, skip, type, referenceNonce, recipientAddress } = tx
+  const { txid, time, referenceId, senderAddress, recipientAddress } = tx
 
-  let parent: Post
-  // if comment, rebork
-  if (type === TransactionType.comment || type === TransactionType.rebork) {
-    // if either party is blocked, they cannot comment or rebork
-    if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
-    // find the parent
-    const options: FindManyOptions<Post> = {
-      where: {
-        nonce: referenceNonce,
-        sender: { address: recipientAddress },
-      },
-      order: { createdAt: 'DESC' },
-    }
-    if (skip) {
-      const parents = await manager.find(Post, options)
-      parent = parents[parents.length - 1 - skip]
-    } else {
-      parent = await manager.findOne(Post, options)
-    }
-  // if extension
-  } else if (type === TransactionType.extension) {
-    // find the parent
-    parent = await manager.findOne(Post, {
-      where: {
-        nonce: referenceNonce,
-        sender: { address: senderAddress },
-      },
-      order: { createdAt: 'DESC' },
-    })
-  }
+  // if either party is blocked, return
+  if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
+  // find the parent
+  const parent = await manager.findOne(Post, {
+    where: {
+      txid: Like(`${referenceId}%`),
+      sender: { address: recipientAddress },
+    },
+    order: { createdAt: 'DESC' },
+  })
   // attach parent if exists
   if (parent) {
     await manager.update(Post, txid, { parent })
+  // create orphan if no parent
   } else {
     await manager.createQueryBuilder()
       .insert()
-      .into(Orphan)
+      .into(OrphanCR)
       .values({
         createdAt: new Date(time),
-        parentNonce: referenceNonce,
-        skip,
+        referenceId,
         post: { txid },
-        parentSender: { address: recipientAddress || senderAddress },
+        parentSender: { address: recipientAddress },
       })
       .onConflict('("post_txid") DO NOTHING')
       .execute()
   }
 }
 
-async function handleLike (manager: EntityManager, senderAddress: string, recipientAddress: string, referenceNonce: number, skip: number): Promise<void> {
-  // if either party is blocked, they cannot like
+async function handleExtension (manager: EntityManager, tx: BorkerTx): Promise<void> {
+
+  const { txid, time, nonce, index, senderAddress } = tx
+
+  // find the parent
+  const parent = await manager.createQueryBuilder()
+    .select('posts')
+    .from(Post, 'posts')
+    .where('nonce = :nonce', { nonce })
+    .andWhere('sender_address = :senderAddress', { senderAddress })
+    .andWhere('type != :type', { type: TransactionType.extension })
+    .andWhere(`created_at > :cutoff`, { cutoff: getCutoff(new Date(time)) })
+    .andWhere(qb => {
+      const subQuery = qb.subQuery()
+        .select('parent_txid')
+        .from(Post, 'posts2')
+        .where('type = :type', { type: TransactionType.extension })
+        .andWhere('"index" = :index', { index })
+        .andWhere('parent_txid IS NOT NULL')
+        .getQuery()
+      return `txid NOT IN ${subQuery}`
+    })
+    .orderBy('posts.createdAt', 'DESC')
+    .getOne()
+
+  // attach/detach parent
+  await manager.update(Post, txid, { parent })
+}
+
+async function handleLike (manager: EntityManager, referenceId: string, senderAddress: string, recipientAddress: string): Promise<void> {
+  // if either party is blocked, return
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
   // find the parent
-  let parent: Post
-  const options: FindManyOptions<Post> = {
+  const parent = await manager.findOne(Post, {
     where: {
-      nonce: referenceNonce,
+      txid: Like(`${referenceId}%`),
       sender: { address: recipientAddress },
     },
     order: { createdAt: 'DESC' },
-  }
-  if (skip) {
-    const parents = await manager.find(Post, options)
-    parent = parents[parents.length - 1 - skip]
-  } else {
-    parent = await manager.findOne(Post, options)
-  }
+  })
+  // @TODO handle orphan case...somehow
   if (!parent) { return }
 
   await manager.createQueryBuilder()
@@ -409,7 +422,11 @@ async function handleFUBU (manager: EntityManager, type: TransactionType, sender
   }
 }
 
-async function attachTags (manager: EntityManager, txid: string, content: string, time: number): Promise<void> {
+function getCutoff (now: Date): Date {
+  return new Date(now.setHours(now.getHours() - 24))
+}
+
+async function attachTags (manager: EntityManager, txid: string, content: string): Promise<void> {
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
   let match: RegExpExecArray
 
@@ -424,7 +441,6 @@ async function attachTags (manager: EntityManager, txid: string, content: string
       .into(Tag)
       .values({
         name,
-        createdAt: new Date(time),
       })
       .onConflict('DO NOTHING')
       .execute()

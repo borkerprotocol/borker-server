@@ -5,9 +5,10 @@ import {
 	PrimaryColumn,
   JoinTable,
   ManyToMany,
+  Index,
 } from 'typeorm'
 import { Post } from './post'
-import { Orphan } from './orphan'
+import { OrphanCR } from './orphan-cr'
 
 @Entity({ name: 'users' })
 export class User {
@@ -20,6 +21,7 @@ export class User {
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
+  @Index()
 	@Column('int', { name: 'birth_block' })
 	birthBlock: number
 
@@ -34,11 +36,11 @@ export class User {
 
   // relations
 
-	@OneToMany(() => Post, post => post.sender, { cascade: ['insert'] })
+	@OneToMany(() => Post, post => post.sender)
   posts: Post[]
 
-	@OneToMany(() => Orphan, orphan => orphan.parentSender)
-  orphans: Orphan[]
+	@OneToMany(() => OrphanCR, orphanCR => orphanCR.parentSender)
+  orphansCR: OrphanCR[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({

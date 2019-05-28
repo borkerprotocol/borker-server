@@ -20,6 +20,8 @@ export class UserHandler {
     page = Number(page)
     perPage = Number(perPage)
 
+    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
+
     let options: FindManyOptions<User> = {
       take: perPage,
       skip: perPage * (page - 1),
@@ -42,18 +44,22 @@ export class UserHandler {
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
 
-    if (await checkBlocked(myAddress, address)) {
-      throw new Errors.NotAcceptableError('blocked')
-    }
+    const [user, blocked, iStuff] = await Promise.all([
+      getRepository(User).findOne(address),
+      checkBlocked(myAddress, address),
+      iFollowBlock(myAddress, address),
+    ])
 
-    const user = await getRepository(User).findOne(address)
     if (!user) {
       throw new Errors.NotFoundError('user not found')
+    }
+    if (blocked) {
+      throw new Errors.NotAcceptableError('blocked')
     }
 
     return {
       ...user,
-      ...(await iFollowBlock(myAddress, user.address)),
+      ...iStuff,
     }
   }
 
@@ -82,6 +88,8 @@ export class UserHandler {
 
     batchSize = Number(batchSize)
     amount = Number(amount)
+
+    if (batchSize > 500) { throw new Errors.BadRequestError('batchSize limit is 500') }
 
     let page = 1
     let utxos: Utxo[] = []
@@ -124,16 +132,10 @@ export class UserHandler {
     @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
-    if (!type || !['following', 'followers'].includes(type)) {
-      throw new Errors.BadRequestError('query param "type" must be "following" or "followers"')
-    }
-
-    if (await checkBlocked(myAddress, address)) {
-      throw new Errors.NotAcceptableError('blocked')
-    }
-
     page = Number(page)
     perPage = Number(perPage)
+
+    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`
@@ -149,11 +151,20 @@ export class UserHandler {
 
     if (type === 'following') {
       query.where('address IN (SELECT followed_address FROM follows WHERE follower_address = :address)', { address })
-    } else {
+    } else if (type === 'followers') {
       query.where('address IN (SELECT follower_address FROM follows WHERE followed_address = :address)', { address })
+    } else {
+      throw new Errors.BadRequestError('query param "type" must be "following" or "followers"')
     }
 
-    const users = await query.getMany()
+    const [blocked, users] = await Promise.all([
+      checkBlocked(myAddress, address),
+      query.getMany(),
+    ])
+
+    if (blocked) {
+      throw new Errors.NotAcceptableError('blocked')
+    }
 
     return Promise.all(users.map(async user => {
       return {

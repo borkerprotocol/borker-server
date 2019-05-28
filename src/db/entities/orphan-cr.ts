@@ -6,43 +6,42 @@ import {
 	JoinColumn,
   RelationId,
   OneToOne,
+  Index,
 } from 'typeorm'
 import { User } from './user'
 import { Post } from './post'
 
-@Entity({ name: 'orphans' })
-export class Orphan {
+@Entity({ name: 'orphans_cr' })
+export class OrphanCR {
 
   // attributes
 
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
-	@Column('int', { name: 'parent_nonce' })
-  parentNonce: number
-
-	@Column('int', { name: 'skip' })
-	skip: number
+  @Index()
+	@Column('text', { name: 'reference_id' })
+  referenceId: string
 
   // relations
 
   @PrimaryColumn('text', { name: 'post_txid' })
   postTxid: string
   @JoinColumn({ name: 'post_txid' })
-  @OneToOne(() => Post, post => post.orphan)
+  @OneToOne(() => Post, post => post.orphanCR)
   post: Post
 
-  @ManyToOne(() => User, user => user.orphans)
+  @ManyToOne(() => User, user => user.orphansCR)
+  @Index()
   @JoinColumn({ name: 'parent_sender_address' })
   parentSender: User
-  @RelationId((orphan: Orphan) => orphan.parentSender)
+  @RelationId((orphanCR: OrphanCR) => orphanCR.parentSender)
   parentSenderAddress: string
 }
 
-export interface OrphanSeed {
+export interface OrphanCRSeed {
   createdAt: Date
-  parentNonce: number
-  skip: number
-  post: Post
-  parentSender: User
+  referenceId: string
+  postTxid: Post
+  parentSenderAddress: User
 }

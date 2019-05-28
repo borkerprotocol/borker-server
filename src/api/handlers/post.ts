@@ -27,6 +27,8 @@ export class PostHandler {
     page = Number(page)
     perPage = Number(perPage)
 
+    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
+
     Object.keys(order).forEach(key => {
       const newkey = `post.${key}`
       order[newkey] = order[key]
@@ -51,7 +53,7 @@ export class PostHandler {
       query.andWhere('posts.type IN (:...types)', { types })
     }
     if (tags) {
-      query.andWhere('posts.txid IN (SELECT post_txid FROM tags WHERE tag_name IN (:...tags))', { tags })
+      query.andWhere('posts.txid IN (SELECT post_txid FROM post_tags WHERE tag_name IN (:...tags))', { tags })
     }
     if (filterFollowing) {
       query.andWhere('posts.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
@@ -95,7 +97,7 @@ export class PostHandler {
 	async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
-  ): Promise<ApiPostExtended> {
+  ): Promise<ApiPost> {
 
     const post = await getRepository(Post).findOne(txid, { relations: ['sender', 'parent', 'parent.sender'] })
     if (!post) {
@@ -106,11 +108,7 @@ export class PostHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    // TODO fix this...just hideous
-    const extensions: Post[] = []
-
-    const [nothing, iStuff, counts] = await Promise.all([
-      this.getExtensions(post, extensions),
+    const [iStuff, counts] = await Promise.all([
       this.iCommentReborkFlag(myAddress, post.txid),
       this.getCounts(post.txid),
     ])
@@ -119,7 +117,6 @@ export class PostHandler {
       ...post,
       ...iStuff,
       ...counts,
-      extensions,
     }
   }
 
@@ -134,12 +131,10 @@ export class PostHandler {
     @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
 
-    if (!type || !['reborks', 'likes', 'flags'].includes(type)) {
-      throw new Errors.BadRequestError('query param "type" must be "reborks", "likes", or "flags"')
-    }
-
     page = Number(page)
     perPage = Number(perPage)
+
+    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`
@@ -151,25 +146,31 @@ export class PostHandler {
       .createQueryBuilder('users')
       .where(qb => {
         let subQuery: string
-        if (type === 'reborks') {
-          subQuery = qb.subQuery()
-            .select('sender_address')
-            .from(Post, 'posts')
-            .where('parent_txid = :txid', { txid })
-            .andWhere('type = :type', { type })
-            .getQuery()
-        } else if (type === 'likes') {
-          subQuery = qb.subQuery()
-            .select('user_address')
-            .from('likes', 'likes')
-            .where('post_txid = :txid', { txid })
-            .getQuery()
-        } else {
-          subQuery = qb.subQuery()
-            .select('user_address')
-            .from('flags', 'flags')
-            .where('post_txid = :txid', { txid })
-            .getQuery()
+        switch (type) {
+          case 'reborks':
+            subQuery = qb.subQuery()
+              .select('sender_address')
+              .from(Post, 'posts')
+              .where('parent_txid = :txid', { txid })
+              .andWhere('type = :type', { type })
+              .getQuery()
+            break
+          case 'likes':
+            subQuery = qb.subQuery()
+              .select('user_address')
+              .from('likes', 'likes')
+              .where('post_txid = :txid', { txid })
+              .getQuery()
+            break
+          case 'flags':
+            subQuery = qb.subQuery()
+              .select('user_address')
+              .from('flags', 'flags')
+              .where('post_txid = :txid', { txid })
+              .getQuery()
+            break
+          default:
+            throw new Errors.BadRequestError('query param "type" must be "reborks", "likes", or "flags"')
         }
         return `address IN ${subQuery}`
       })
@@ -282,8 +283,4 @@ export interface ApiPost extends Post {
   reborksCount: number
   likesCount: number
   flagsCount: number
-}
-
-export interface ApiPostExtended extends ApiPost {
-  extensions: Post[]
 }

@@ -8,10 +8,11 @@ import {
   ManyToMany,
   RelationId,
   OneToOne,
+  Index,
 } from 'typeorm'
 import { User } from './user'
 import { Tag } from './tag'
-import { Orphan } from './orphan'
+import { OrphanCR } from './orphan-cr'
 
 export enum PostType {
   bork = 'bork',
@@ -28,6 +29,7 @@ export class Post {
 	@PrimaryColumn('text', { name: 'txid' })
 	txid: string
 
+  @Index()
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
@@ -35,8 +37,13 @@ export class Post {
   deletedAt: Date | null
 
 	@Column('int', { name: 'nonce' })
-	nonce: number
+  nonce: number
 
+  @Index()
+	@Column('int', { name: 'index' })
+  index: number
+
+  @Index()
 	@Column('text', { name: 'type' })
   type: PostType
 
@@ -45,19 +52,21 @@ export class Post {
 
   // relations
 
-  @OneToOne(() => Orphan, orphan => orphan.post)
-  orphan: Orphan
+  @OneToOne(() => OrphanCR, orphanCR => orphanCR.post)
+  orphanCR: OrphanCR
 
   @OneToMany(() => Post, post => post.parent)
   children: Post[]
 
   @ManyToOne(() => Post, post => post.children, { nullable: true })
+  @Index()
   @JoinColumn({ name: 'parent_txid' })
   parent: Post
   @RelationId((post: Post) => post.parent)
   parentTxid: string
 
-	@ManyToOne(() => User, user => user.posts)
+  @ManyToOne(() => User, user => user.posts)
+  @Index()
 	@JoinColumn({ name: 'sender_address' })
   sender: User
   @RelationId((post: Post) => post.sender)

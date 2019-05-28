@@ -16,9 +16,6 @@ export class Utxo {
 	@PrimaryColumn('int', { name: 'index' })
 	index: number
 
-	@Column('datetime', { name: 'created_at' })
-  createdAt: Date
-
   @Index()
 	@Column('text', { name: 'address' })
   address: string
@@ -33,7 +30,6 @@ export class Utxo {
 export interface UtxoSeed {
   txid: string
   index: number
-  createdAt: Date
   address: string
   value: number
   raw: string

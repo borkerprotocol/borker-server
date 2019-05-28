@@ -1,5 +1,4 @@
 import {
-	Column,
 	Entity,
 	PrimaryColumn,
   ManyToMany,
@@ -14,9 +13,6 @@ export class Tag {
 
 	@PrimaryColumn('text', { name: 'name' })
 	name: string
-
-	@Column('datetime', { name: 'created_at' })
-  createdAt: Date
 
   // relations
 
