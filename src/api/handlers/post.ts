@@ -30,7 +30,7 @@ export class PostHandler {
     if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
-      const newkey = `post.${key}`
+      const newkey = `posts.${key}`
       order[newkey] = order[key]
       delete order[key]
     })
