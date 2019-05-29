@@ -9,7 +9,7 @@ import { eitherPartyBlocked, chunks } from '../util/functions'
 import { OrphanCR } from '../db/entities/orphan-cr'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 import { OrphanLike } from '../db/entities/orphan-like'
-import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
@@ -43,10 +43,10 @@ async function processBlocks () {
 
   const block = await rpc.getBlock(blockHash)
 
-  // const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
-  const borkerTxs = getMockBorkerTxs(blockHeight)
-  const created = getMockCreated(blockHeight)
-  const spent = getMockSpent(blockHeight)
+  const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
+  // const borkerTxs = getMockBorkerTxs(blockHeight)
+  // const created = getMockCreated(blockHeight)
+  // const spent = getMockSpent(blockHeight)
 
   await getManager().transaction(async manager => {
     await Promise.all([
