@@ -8,7 +8,8 @@ import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { OrphanCR } from '../db/entities/orphan-cr'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
-// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+import { OrphanLike } from '../db/entities/orphan-like'
+import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
@@ -36,15 +37,16 @@ async function processBlocks () {
   try {
     blockHash = await rpc.getBlockHash(blockHeight)
   } catch (err) {
+    console.error(err)
     return
   }
 
   const block = await rpc.getBlock(blockHash)
 
-  const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
-  // const borkerTxs = getMockBorkerTxs(blockHeight)
-  // const created = getMockCreated(blockHeight)
-  // const spent = getMockSpent(blockHeight)
+  // const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
+  const borkerTxs = getMockBorkerTxs(blockHeight)
+  const created = getMockCreated(blockHeight)
+  const spent = getMockSpent(blockHeight)
 
   await getManager().transaction(async manager => {
     await Promise.all([
@@ -86,7 +88,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[])
 
   for (let tx of borkerTxs) {
 
-    const { time, type, content, referenceId, senderAddress, recipientAddress } = tx
+    const { time, type, content, senderAddress } = tx
 
     // find or create sender
     await manager.createQueryBuilder()
@@ -117,7 +119,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[])
         break
       // like
       case BorkType.Like:
-        await handleLike(manager, referenceId, senderAddress, recipientAddress)
+        await handleLike(manager, tx)
         break
       // flag, unflag, unlike
       case BorkType.Unlike:
@@ -157,7 +159,7 @@ async function handleProfileUpdate(manager: EntityManager, type: BorkType, sende
 
 async function handleBCRE (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
-  const { txid, time, nonce, index, type, content, referenceId, senderAddress, mentions } = tx
+  const { txid, time, nonce, index, type, content, senderAddress, mentions } = tx
 
   // create post
   await manager.createQueryBuilder()
@@ -186,14 +188,20 @@ async function handleBCRE (manager: EntityManager, tx: BorkTxData): Promise<void
       .andWhere('type = :type', { type: BorkType.Extension })
       .andWhere('created_at > :cutoff', { cutoff: getCutoff(new Date(time)) })
       .execute(),
-    // update CR orphaned posts
+    // update comment/rebork orphaned posts
     manager.createQueryBuilder()
       .update(Post)
-      .set({ parent: { txid } })
-      .where('txid IN (SELECT post_txid FROM orphans_cr WHERE parent_sender_address = :senderAddress AND reference_id = :referenceId)', { senderAddress, referenceId })
+      .set({ parent: { txid } }) // TODO is SQL correct?
+      .where(`txid IN (SELECT post_txid FROM orphans_comments_reborks WHERE parent_sender_address = :senderAddress AND :txid LIKE reference_id || '%')`, { senderAddress, txid })
       .execute(),
-    // delete orphans
-    manager.delete(OrphanCR, { parentSender: { address: senderAddress }, referenceId }),
+    // create likes if orphans_likes exist -- TODO is SQL correct?
+    manager.query(`
+      INSERT INTO likes (post_txid, user_address)
+      SELECT DISTINCT $1, sender_address
+      FROM orphans_likes
+      WHERE parent_sender_address = $2
+      AND $1 LIKE reference_id || '%'
+    `, [txid, senderAddress]),
     // attach tags
     attachTags(manager, txid, content),
     // attach mentions
@@ -204,19 +212,34 @@ async function handleBCRE (manager: EntityManager, tx: BorkTxData): Promise<void
     type === BorkType.Extension && handleExtension(manager, tx),
   ])
 
-  // delete duplicate orphaned extension posts
-  await manager.createQueryBuilder()
-    .delete()
-    .from(Post, 'posts')
-    .where(`txid IN (
-      SELECT txid FROM posts p1
-      INNER JOIN posts p2
-      ON p1.parent_txid = p2.parent_txid
-      AND p1.index = p2.index
-      AND p1.txid != p2.txid
-      AND p1.created_at >= p2.created_at
-      AND p1.txid = :txid
-    )`, { txid })
+  await Promise.all([
+    // delete orphans_comments_reborks
+    manager.createQueryBuilder()
+      .delete()
+      .from(OrphanCR) // TODO is SQL correct?
+      .where('post_txid IN (SELECT txid FROM posts WHERE type IN (:type1, :type2) AND parent_txid IS NOT NULL)', { type1: BorkType.Comment, type2: BorkType.Rebork })
+      .execute(),
+    // delete orphans_likes
+    manager.createQueryBuilder()
+      .delete()
+      .from(OrphanLike) // TODO is SQL correct?
+      .where('parent_sender_address = :senderAddress', { senderAddress })
+      .andWhere(`:txid LIKE reference_id || '%'`, { txid })
+      .execute(),
+    // delete duplicate orphaned extensions
+    manager.createQueryBuilder()
+      .delete()
+      .from(Post, 'posts')
+      .where(`txid IN (
+        SELECT txid FROM posts p1
+        INNER JOIN posts p2
+        ON p1.parent_txid = p2.parent_txid
+        AND p1.index = p2.index
+        AND p1.txid != p2.txid
+        AND p1.created_at >= p2.created_at
+        AND p1.txid = :txid
+      )`, { txid }),
+  ])
 }
 
 async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> {
@@ -254,34 +277,29 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
 
 async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
-  const { txid, time, nonce, index, senderAddress } = tx
+  const { txid, time, nonce, senderAddress } = tx
 
-  // find the parent
-  const parent = await manager.createQueryBuilder()
-    .select('posts')
-    .from(Post, 'posts')
-    .where('nonce = :nonce', { nonce })
-    .andWhere('sender_address = :senderAddress', { senderAddress })
-    .andWhere('type != :type', { type: BorkType.Extension })
-    .andWhere(`created_at > :cutoff`, { cutoff: getCutoff(new Date(time)) })
-    .andWhere(qb => {
-      const subQuery = qb.subQuery()
-        .select('parent_txid')
-        .from(Post, 'posts2')
-        .where('type = :type', { type: BorkType.Extension })
-        .andWhere('"index" = :index', { index })
-        .andWhere('parent_txid IS NOT NULL')
-        .getQuery()
-      return `txid NOT IN ${subQuery}`
-    })
-    .orderBy('posts.createdAt', 'DESC')
-    .getOne()
-
-  // attach/detach parent
-  await manager.update(Post, txid, { parent })
+  // attach the parent
+  await manager.query(`
+    UPDATE posts
+    SET parent_txid = (
+      SELECT txid
+      FROM posts
+      WHERE sender_address = $1
+      AND nonce = $2
+      AND type != $3
+      AND created_at > $4
+      ORDER BY created_at DESC
+      LIMIT 1
+    )
+    WHERE txid = $5
+  `, [senderAddress, nonce, BorkType.Extension, getCutoff(new Date(time)), txid])
 }
 
-async function handleLike (manager: EntityManager, referenceId: string, senderAddress: string, recipientAddress: string): Promise<void> {
+async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
+
+  const { time, referenceId, senderAddress, recipientAddress } = tx
+
   // if either party is blocked, return
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
   // find the parent
@@ -292,18 +310,30 @@ async function handleLike (manager: EntityManager, referenceId: string, senderAd
     },
     order: { createdAt: 'DESC' },
   })
-  // @TODO handle orphan case...somehow
-  if (!parent) { return }
-
-  await manager.createQueryBuilder()
-    .insert()
-    .into('likes')
-    .values({
-      user_address: senderAddress,
-      post_txid: parent.txid,
-    })
-    .onConflict('DO NOTHING')
-    .execute()
+  // create like if parent exists
+  if (parent) {
+    await manager.createQueryBuilder()
+      .insert()
+      .into('likes')
+      .values({
+        user_address: senderAddress,
+        post_txid: parent.txid,
+      })
+      .onConflict('DO NOTHING')
+      .execute()
+  // create orphan if no parent
+  } else {
+    await manager.createQueryBuilder()
+      .insert()
+      .into(OrphanLike)
+      .values({
+        createdAt: new Date(time),
+        referenceId,
+        sender: { address: senderAddress },
+        parentSender: { address: recipientAddress },
+      })
+      .execute()
+  }
 }
 
 async function handleFUU (manager: EntityManager, type: BorkType, senderAddress: string, content: string): Promise<void> {

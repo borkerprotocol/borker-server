@@ -58,15 +58,15 @@ export class Post {
   @OneToMany(() => Post, post => post.parent)
   children: Post[]
 
-  @ManyToOne(() => Post, post => post.children, { nullable: true })
   @Index()
+  @ManyToOne(() => Post, post => post.children, { nullable: true })
   @JoinColumn({ name: 'parent_txid' })
   parent: Post
   @RelationId((post: Post) => post.parent)
   parentTxid: string
 
-  @ManyToOne(() => User, user => user.posts)
   @Index()
+  @ManyToOne(() => User, user => user.posts)
 	@JoinColumn({ name: 'sender_address' })
   sender: User
   @RelationId((post: Post) => post.sender)

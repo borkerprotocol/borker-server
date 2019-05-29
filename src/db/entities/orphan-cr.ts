@@ -11,7 +11,7 @@ import {
 import { User } from './user'
 import { Post } from './post'
 
-@Entity({ name: 'orphans_cr' })
+@Entity({ name: 'orphans_comments_reborks' })
 export class OrphanCR {
 
   // attributes
@@ -31,8 +31,8 @@ export class OrphanCR {
   @OneToOne(() => Post, post => post.orphanCR)
   post: Post
 
-  @ManyToOne(() => User, user => user.orphansCR)
   @Index()
+  @ManyToOne(() => User, user => user.orphansCR)
   @JoinColumn({ name: 'parent_sender_address' })
   parentSender: User
   @RelationId((orphanCR: OrphanCR) => orphanCR.parentSender)
@@ -42,6 +42,6 @@ export class OrphanCR {
 export interface OrphanCRSeed {
   createdAt: Date
   referenceId: string
-  postTxid: Post
-  parentSenderAddress: User
+  post: Post
+  parentSender: User
 }
