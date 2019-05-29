@@ -37,7 +37,6 @@ async function processBlocks () {
   try {
     blockHash = await rpc.getBlockHash(blockHeight)
   } catch (err) {
-    console.error(err)
     return
   }
 
