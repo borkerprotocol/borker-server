@@ -1,7 +1,8 @@
 import { assert } from 'chai'
 import { User } from '../../src/db/entities/user'
-import { Post, PostType } from '../../src/db/entities/post'
+import { Post } from '../../src/db/entities/post'
 import { Errors } from 'typescript-rest'
+import { BorkType } from 'borker-rs-node'
 
 export async function assertThrows<T> (func: Promise<T>, expectedError?: Errors.HttpError) {
   let error: Errors.HttpError
@@ -43,26 +44,26 @@ export function assertPost (post: Post) {
 
 export function assertBork (post: Post) {
   assertPost(post)
-  assert.equal(post.type, PostType.bork)
+  assert.equal(post.type, BorkType.Bork)
   assert.exists(post.content)
 }
 
 export function assertComment (post: Post) {
   assertPost(post)
-  assert.equal(post.type, PostType.comment)
+  assert.equal(post.type, BorkType.Comment)
   assert.exists(post.parent)
   assert.exists(post.content)
 }
 
 export function assertRebork (post: Post) {
   assertPost(post)
-  assert.equal(post.type, PostType.rebork)
+  assert.equal(post.type, BorkType.Rebork)
   assert.exists(post.parent)
 }
 
 export function assertExtension (post: Post) {
   assertPost(post)
-  assert.equal(post.type, PostType.extension)
+  assert.equal(post.type, BorkType.Extension)
   assert.exists(post.parent)
   assert.exists(post.content)
 }

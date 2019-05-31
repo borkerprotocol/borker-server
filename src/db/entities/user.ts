@@ -8,8 +8,6 @@ import {
   Index,
 } from 'typeorm'
 import { Post } from './post'
-import { OrphanCR } from './orphan-cr'
-import { OrphanLike } from './orphan-like'
 
 @Entity({ name: 'users' })
 export class User {
@@ -39,15 +37,6 @@ export class User {
 
 	@OneToMany(() => Post, post => post.sender)
   posts: Post[]
-
-	@OneToMany(() => OrphanCR, orphanCR => orphanCR.parentSender)
-  orphansCR: OrphanCR[]
-
-	@OneToMany(() => OrphanLike, orphanLike => orphanLike.sender)
-  orphansLikeOut: OrphanLike[]
-
-	@OneToMany(() => OrphanLike, orphanLike => orphanLike.parentSender)
-  orphansLikeIn: OrphanLike[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({

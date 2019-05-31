@@ -13,8 +13,8 @@ export class Utxo {
 	@PrimaryColumn('text', { name: 'txid' })
   txid: string
 
-	@PrimaryColumn('int', { name: 'index' })
-	index: number
+	@PrimaryColumn('int', { name: 'position' })
+	position: number
 
   @Index()
 	@Column('text', { name: 'address' })
@@ -29,7 +29,7 @@ export class Utxo {
 
 export interface UtxoSeed {
   txid: string
-  index: number
+  position: number
   address: string
   value: number
   raw: string

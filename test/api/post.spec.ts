@@ -2,7 +2,7 @@ import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { PostHandler } from '../../src/api/handlers/post'
 import { seedBaseUser, seedPost, seedFullUser } from '../helpers/seeds'
-import { Post, PostType } from '../../src/db/entities/post'
+import { Post } from '../../src/db/entities/post'
 import { User } from '../../src/db/entities/user'
 import { database } from '../helpers/database'
 

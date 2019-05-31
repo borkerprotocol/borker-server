@@ -1,8 +1,10 @@
 import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Post, PostSeed, PostType, PostTxWithParentSeed } from '../../src/db/entities/post'
+import { Post, PostSeed, PostWithParentSeed } from '../../src/db/entities/post'
 import { randomAddressOrTxid } from './random-generators'
 import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
+import { BorkType } from 'borker-rs-node'
+import { OrphanSeed, Orphan } from '../../src/db/entities/orphan'
 
 function getUserSeed (): UserSeed {
   const address = randomAddressOrTxid(true)
@@ -14,14 +16,14 @@ function getUserSeed (): UserSeed {
   }
 }
 
-export async function seedBaseUser (attributes: Partial<UserSeed> = {}) {
+export async function seedBaseUser (attributes: Partial<UserSeed> = {}): Promise<User> {
   const seed: UserSeed = Object.assign(getUserSeed(), attributes)
 
   const user = getManager().create(User, seed)
   return getManager().save(user)
 }
 
-export async function seedFullUser (attributes: Partial<UserSeed> = {}) {
+export async function seedFullUser (attributes: Partial<UserSeed> = {}): Promise<User> {
   const seed: UserSeed = {
     ...getUserSeed(),
     name: 'name',
@@ -33,10 +35,10 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}) {
   return getManager().save(user)
 }
 
-export async function seedUtxo (attributes: Partial<UtxoSeed> = {}) {
+export async function seedUtxo (attributes: Partial<UtxoSeed> = {}): Promise<Utxo> {
   const seed: UtxoSeed = Object.assign({
     txid: randomAddressOrTxid(false),
-    index: 0,
+    position: 0,
     createdAt: new Date(),
     address: randomAddressOrTxid(true),
     value: 100000000,
@@ -47,17 +49,33 @@ export async function seedUtxo (attributes: Partial<UtxoSeed> = {}) {
   return getManager().save(utxo)
 }
 
-export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}) {
+export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}): Promise<Post> {
   const seed: PostSeed = {
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     nonce: 0,
-    type: PostType.bork,
+    type: BorkType.Bork,
     content: 'post content',
     sender,
   }
 
   const post = getManager().create(Post, Object.assign(seed, attributes))
+
+  return getManager().save(post)
+}
+
+export async function seedOrphan (sender: User, referencePost: Post, attributes: Partial<OrphanSeed> = {}): Promise<Orphan> {
+  const seed: OrphanSeed = {
+    createdAt: new Date(),
+    txid: randomAddressOrTxid(false),
+    type: BorkType.Comment,
+    content: 'post content',
+    senderAddress: sender.address,
+    referenceId: referencePost.txid.substring(0, 1),
+    referenceSenderAddress: referencePost.senderAddress,
+  }
+
+  const post = getManager().create(Orphan, Object.assign(seed, attributes))
 
   return getManager().save(post)
 }
@@ -70,7 +88,7 @@ export async function seedFlag (user: User, post: Post): Promise<void> {
     .add(post)
 }
 
-export async function seedFollow (follower: User, followed: User) {
+export async function seedFollow (follower: User, followed: User): Promise<void> {
   return getManager()
     .createQueryBuilder()
     .relation(User, 'following')
@@ -78,7 +96,7 @@ export async function seedFollow (follower: User, followed: User) {
     .add(followed)
 }
 
-export async function seedBlock (blocker: User, blocked: User) {
+export async function seedBlock (blocker: User, blocked: User): Promise<void> {
   return getManager()
     .createQueryBuilder()
     .relation(User, 'blocking')

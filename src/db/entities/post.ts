@@ -12,14 +12,7 @@ import {
 } from 'typeorm'
 import { User } from './user'
 import { Tag } from './tag'
-import { OrphanCR } from './orphan-cr'
-
-export enum PostType {
-  bork = 'bork',
-  comment = 'comment',
-  rebork = 'rebork',
-  extension = 'extension',
-}
+import { BorkType } from 'borker-rs-node'
 
 @Entity({ name: 'posts' })
 export class Post {
@@ -40,20 +33,17 @@ export class Post {
   nonce: number
 
   @Index()
-	@Column('int', { name: 'index' })
-  index: number
+	@Column('int', { name: 'position' })
+  position: number
 
   @Index()
 	@Column('text', { name: 'type' })
-  type: PostType
+  type: BorkType
 
 	@Column('text', { name: 'content', nullable: true })
   content: string | null
 
   // relations
-
-  @OneToOne(() => OrphanCR, orphanCR => orphanCR.post)
-  orphanCR: OrphanCR
 
   @OneToMany(() => Post, post => post.parent)
   children: Post[]
@@ -89,7 +79,7 @@ export interface PostSeed {
   txid: string
   createdAt: Date
   nonce: number
-  type: PostType
+  type: BorkType
   sender: User
   content?: string
   flags?: User[]
@@ -97,6 +87,6 @@ export interface PostSeed {
   mentions?: User[]
 }
 
-export interface PostTxWithParentSeed extends PostSeed {
+export interface PostWithParentSeed extends PostSeed {
   parent: Post
 }

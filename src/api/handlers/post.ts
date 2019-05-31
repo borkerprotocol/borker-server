@@ -1,11 +1,12 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
-import { Post, PostType } from '../../db/entities/post'
+import { Post } from '../../db/entities/post'
 import { getRepository, getManager } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
 import * as rpc from '../../util/rpc-requests'
+import { BorkType } from 'borker-rs-node'
 
 @Path('/posts')
 export class PostHandler {
@@ -16,7 +17,7 @@ export class PostHandler {
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
-    @QueryParam('types') types?: PostType[],
+    @QueryParam('types') types?: BorkType[],
     @QueryParam('tags') tags?: string[],
     @QueryParam('order') order: OrderBy<Post> = { createdAt: 'DESC' },
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
@@ -195,8 +196,8 @@ export class PostHandler {
   }> {
 
     const [ commentsCount, reborksCount, likesCount, flagsCount ] = await Promise.all([
-      getRepository(Post).count({ parent: { txid }, type: PostType.comment, deletedAt: null }),
-      getRepository(Post).count({ parent: { txid }, type: PostType.rebork, deletedAt: null }),
+      getRepository(Post).count({ parent: { txid }, type: BorkType.Comment, deletedAt: null }),
+      getRepository(Post).count({ parent: { txid }, type: BorkType.Rebork, deletedAt: null }),
       getManager().createQueryBuilder()
         .select('likes')
         .from('likes', 'likes')
@@ -212,27 +213,6 @@ export class PostHandler {
     return { commentsCount, reborksCount, likesCount, flagsCount }
   }
 
-  private async getExtensions (post: Post, extensions: Post[]): Promise<void> {
-    // get the next extension
-    const ext = await getRepository(Post)
-      .findOne({
-        parent: post,
-        type: PostType.extension,
-      }, {
-        relations: ['sender'],
-      })
-
-    // if no more extensions, return
-    if (!ext) { return }
-    // add it to the list, along with the current tx as it's parent
-    extensions.push({
-      ...ext,
-      parent: post,
-    })
-    // do it again
-    await this.getExtensions(ext, extensions)
-  }
-
   private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
     iComment: boolean
     iRebork: boolean
@@ -244,12 +224,12 @@ export class PostHandler {
       getRepository(Post).findOne({
         sender: { address: myAddress },
         parent: { txid },
-        type: PostType.comment,
+        type: BorkType.Comment,
       }),
       getRepository(Post).findOne({
         sender: { address: myAddress },
         parent: { txid },
-        type: PostType.rebork,
+        type: BorkType.Rebork,
       }),
       getManager().createQueryBuilder()
         .select('likes')
