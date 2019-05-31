@@ -16,8 +16,25 @@ let blockHeight: number
 
 export async function syncChain () {
   console.log('begin sync')
-  const lastBlock = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
-  blockHeight = lastBlock ? Math.max(config.startBlockSync, lastBlock.height + 1) : config.startBlockSync
+  let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
+
+  let keepGoing = true
+  do {
+    if (block) {
+      const blockHash = await rpc.getBlockHash(block.height)
+      if (blockHash !== block.hash) {
+        blockHeight = block.height - 6
+        console.log(`block ${block.height} hash mismatch, trying ${blockHeight}`)
+        block = await getManager().findOne(TxBlock, blockHeight)
+      } else {
+        blockHeight = block.height + 1
+        keepGoing = false
+      }
+    } else {
+      blockHeight = config.startBlockSync
+      keepGoing = false
+    }
+  } while (keepGoing)
 
 	try {
     await processBlocks()
