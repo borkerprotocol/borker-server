@@ -8,7 +8,7 @@ import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 import { Orphan } from '../db/entities/orphan'
-import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 import { TxBlock } from '../db/entities/tx-block'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
@@ -194,8 +194,8 @@ async function handleProfileUpdate(manager: EntityManager, type: BorkType, sende
   await manager.update(User, senderAddress, params)
 }
 
-async function createPost (manager: EntityManager, tx: BorkTxData, parent?: Post): Promise<void> {
-  const { txid, time, nonce, index, type, content, senderAddress, mentions } = tx
+async function createPost (manager: EntityManager, tx: any, parent?: Post): Promise<void> {
+  const { txid, time, nonce, position, type, content, senderAddress, mentions } = tx
 
   // create post
   await manager.createQueryBuilder()
@@ -205,7 +205,7 @@ async function createPost (manager: EntityManager, tx: BorkTxData, parent?: Post
       txid,
       createdAt: new Date(time),
       nonce,
-      position: index,
+      position,
       type,
       content,
       sender: { address: senderAddress },
@@ -222,8 +222,8 @@ async function createPost (manager: EntityManager, tx: BorkTxData, parent?: Post
     ])
 }
 
-async function createOrphan (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { txid, time, type, nonce, index, content, referenceId, senderAddress, recipientAddress, mentions } = tx
+async function createOrphan (manager: EntityManager, tx: any): Promise<void> {
+  const { txid, time, type, nonce, position, content, referenceId, senderAddress, recipientAddress, mentions } = tx
 
   await manager.createQueryBuilder()
     .insert()
@@ -233,7 +233,7 @@ async function createOrphan (manager: EntityManager, tx: BorkTxData): Promise<vo
       createdAt: new Date(time),
       type,
       nonce,
-      position: index,
+      position,
       content,
       senderAddress,
       referenceId,
