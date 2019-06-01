@@ -43,6 +43,9 @@ export class Orphan {
   @Index()
   @Column('text', { name: 'reference_sender_address', nullable: true })
   referenceSenderAddress: string | null
+
+  @Column('text', { name: 'mentions', nullable: true })
+  mentions: string | null
 }
 
 export interface OrphanSeed {
@@ -55,4 +58,5 @@ export interface OrphanSeed {
   senderAddress: string
   referenceId?: string
   referenceSenderAddress?: string
+  mentions?: string
 }

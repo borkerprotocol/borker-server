@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class Init1559325581119 implements MigrationInterface {
+export class Init1559398078193 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
-        await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer, "position" integer, "type" text NOT NULL, "content" text, "sender_address" text NOT NULL, "reference_id" text, "reference_sender_address" text)`)
+        await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "nonce" integer, "position" integer, "type" text NOT NULL, "content" text, "sender_address" text NOT NULL, "reference_id" text, "reference_sender_address" text, "mentions" text)`)
         await queryRunner.query(`CREATE INDEX "IDX_4149b5d28a9d574cb35ac0b880" ON "orphans" ("created_at") `)
         await queryRunner.query(`CREATE INDEX "IDX_2ccda451e12bc68c5af8d3c9b4" ON "orphans" ("position") `)
         await queryRunner.query(`CREATE INDEX "IDX_17be0dbba5ea05d3c431737ba8" ON "orphans" ("type") `)

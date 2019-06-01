@@ -65,12 +65,10 @@ async function processBlocks () {
   // const created = getMockCreated(blockHeight)
   // const spent = getMockSpent(blockHeight)
 
+  // @TODO should we save the block height on utxos, posts, and orphans, such that we can delete them in the event of a fork? Do we need to delete them?
   await getManager().transaction(async manager => {
     await Promise.all([
-      manager.createQueryBuilder().insert().into(TxBlock).values({
-        height: blockHeight,
-        hash: blockHash,
-      }).onConflict('(height) DO NOTHING').execute(),
+      createTxBlock(manager, blockHeight, blockHash),
       processUtxos(manager, created, spent),
       processBorkerTxs(manager, borkerTxs),
     ])
@@ -81,6 +79,19 @@ async function processBlocks () {
   blockHeight++
 
   await processBlocks()
+}
+
+async function createTxBlock(manager: EntityManager, height: number, hash: string) {
+  await manager.createQueryBuilder()
+    .insert()
+    .into(TxBlock)
+    .values({
+      height,
+      hash,
+    })
+    .onConflict('(height) DO UPDATE SET hash = :hash')
+    .setParameter('hash', hash)
+    .execute()
 }
 
 async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: UtxoId[]) {
@@ -108,7 +119,7 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[])
   for (let tx of borkerTxs) {
     const { time, type, content, senderAddress } = tx
 
-    // find or create sender
+    // create sender
     await manager.createQueryBuilder()
       .insert()
       .into(User)
@@ -212,7 +223,7 @@ async function createPost (manager: EntityManager, tx: BorkTxData, parent?: Post
 }
 
 async function createOrphan (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { txid, time, type, nonce, index, content, referenceId, senderAddress, recipientAddress } = tx
+  const { txid, time, type, nonce, index, content, referenceId, senderAddress, recipientAddress, mentions } = tx
 
   await manager.createQueryBuilder()
     .insert()
@@ -227,6 +238,7 @@ async function createOrphan (manager: EntityManager, tx: BorkTxData): Promise<vo
       senderAddress,
       referenceId,
       referenceSenderAddress: recipientAddress,
+      mentions: mentions.join(),
     })
     .onConflict('(txid) DO NOTHING')
     .execute()

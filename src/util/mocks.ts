@@ -90,7 +90,7 @@ export const mockTxs1: BorkTxData[] = [
     referenceId: null,
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,
-    mentions: ['DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7'],
+    mentions: ['DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7', 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk'],
   },
 ]
 
