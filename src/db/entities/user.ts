@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm'
 import { Post } from './post'
+import { Orphan } from './orphan'
 
 @Entity({ name: 'users' })
 export class User {
@@ -21,7 +22,7 @@ export class User {
   createdAt: Date
 
   @Index()
-	@Column('int', { name: 'birth_block' })
+	@Column('bigint', { name: 'birth_block' })
 	birthBlock: number
 
 	@Column('text', { name: 'name' })
@@ -37,6 +38,9 @@ export class User {
 
 	@OneToMany(() => Post, post => post.sender)
   posts: Post[]
+
+	@OneToMany(() => Orphan, orphan => orphan.sender)
+  orphans: Orphan[]
 
   @ManyToMany(() => User, user => user.following)
   @JoinTable({

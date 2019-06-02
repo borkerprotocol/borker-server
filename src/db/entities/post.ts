@@ -79,12 +79,11 @@ export interface PostSeed {
   txid: string
   createdAt: Date
   nonce: number
+  position: number
   type: BorkType
   sender: User
   content?: string
-  flags?: User[]
-  tags?: Tag[]
-  mentions?: User[]
+  parent?: Post
 }
 
 export interface PostWithParentSeed extends PostSeed {

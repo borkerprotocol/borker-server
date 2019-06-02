@@ -2,39 +2,21 @@ import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
 import { getManager, EntityManager, Like, Not, MoreThan } from 'typeorm'
 import { Post } from '../db/entities/post'
+import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
 import { Tag } from '../db/entities/tag'
 import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 import { Orphan } from '../db/entities/orphan'
-// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
-import { TxBlock } from '../db/entities/tx-block'
+import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
 
 export async function syncChain () {
   console.log('begin sync')
-  let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
-
-  let keepGoing = true
-  do {
-    if (block) {
-      const blockHash = await rpc.getBlockHash(block.height)
-      if (blockHash !== block.hash) {
-        blockHeight = block.height - 6
-        console.log(`block ${block.height} hash mismatch, trying ${blockHeight}`)
-        block = await getManager().findOne(TxBlock, blockHeight)
-      } else {
-        blockHeight = block.height + 1
-        keepGoing = false
-      }
-    } else {
-      blockHeight = config.startBlockSync
-      keepGoing = false
-    }
-  } while (keepGoing)
+  await setBlockHeight()
 
 	try {
     await processBlocks()
@@ -48,6 +30,33 @@ export async function syncChain () {
   }
 }
 
+async function setBlockHeight (): Promise<void> {
+  let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
+  let keepGoing = true
+
+  do {
+    if (block) {
+      const blockHash = await rpc.getBlockHash(block.height)
+      if (blockHash !== block.hash) {
+        blockHeight = block.height - 6
+        console.log(`block ${block.height} hash mismatch, rolling back to ${blockHeight}`)
+        const [next] = await Promise.all([
+          getManager().findOne(TxBlock, blockHeight),
+          // delete all Utxos to prevent double spend
+          getManager().delete(Utxo, { blockHeight: MoreThan(blockHeight) }),
+        ])
+        block = next
+      } else {
+        blockHeight = block.height + 1
+        keepGoing = false
+      }
+    } else {
+      blockHeight = config.startBlockSync
+      keepGoing = false
+    }
+  } while (keepGoing)
+}
+
 async function processBlocks () {
   console.log(`syncing block ${blockHeight}`)
 
@@ -59,18 +68,17 @@ async function processBlocks () {
     return
   }
 
-  const block = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
-  // const borkerTxs = getMockBorkerTxs(blockHeight)
-  // const created = getMockCreated(blockHeight)
-  // const spent = getMockSpent(blockHeight)
+  const blockHex = await rpc.getBlock(blockHash)
+  // const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
+  const borkerTxs = getMockBorkerTxs(blockHeight)
+  const created = getMockCreated(blockHeight)
+  const spent = getMockSpent(blockHeight)
 
-  // @TODO should we save the block height on utxos, posts, and orphans, such that we can delete them in the event of a fork? Do we need to delete them?
   await getManager().transaction(async manager => {
     await Promise.all([
-      createTxBlock(manager, blockHeight, blockHash),
+      createTxBlock(manager, blockHash),
       processUtxos(manager, created, spent),
-      processBorkerTxs(manager, borkerTxs),
+      Promise.all(borkerTxs.map(tx => processBorkerTx(manager, tx))),
     ])
   })
 
@@ -81,12 +89,12 @@ async function processBlocks () {
   await processBlocks()
 }
 
-async function createTxBlock(manager: EntityManager, height: number, hash: string) {
+async function createTxBlock(manager: EntityManager, hash: string) {
   await manager.createQueryBuilder()
     .insert()
     .into(TxBlock)
     .values({
-      height,
+      height: blockHeight,
       hash,
     })
     .onConflict('(height) DO UPDATE SET hash = :hash')
@@ -114,9 +122,8 @@ async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: U
   }
 }
 
-async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[]) {
+async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
 
-  for (let tx of borkerTxs) {
     const { time, type, content, senderAddress } = tx
 
     // create sender
@@ -174,7 +181,6 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[])
         await handleDelete(manager, tx)
         break
     }
-  }
 }
 
 async function handleProfileUpdate(manager: EntityManager, type: BorkType, senderAddress: string, content: string) {
@@ -235,7 +241,7 @@ async function createOrphan (manager: EntityManager, tx: any): Promise<void> {
       nonce,
       position,
       content,
-      senderAddress,
+      sender: { address: senderAddress },
       referenceId,
       referenceSenderAddress: recipientAddress,
       mentions: mentions.join(),

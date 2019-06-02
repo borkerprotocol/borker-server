@@ -14,7 +14,11 @@ export class Utxo {
   txid: string
 
 	@PrimaryColumn('int', { name: 'position' })
-	position: number
+  position: number
+
+  @Index()
+	@Column('bigint', { name: 'block_height' })
+	blockHeight: number
 
   @Index()
 	@Column('text', { name: 'address' })

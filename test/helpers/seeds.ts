@@ -1,10 +1,10 @@
 import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Post, PostSeed, PostWithParentSeed } from '../../src/db/entities/post'
+import { Post, PostSeed } from '../../src/db/entities/post'
 import { randomAddressOrTxid } from './random-generators'
 import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
-import { BorkType } from 'borker-rs-node'
 import { OrphanSeed, Orphan } from '../../src/db/entities/orphan'
+import { BorkType } from 'borker-rs-node'
 
 function getUserSeed (): UserSeed {
   const address = randomAddressOrTxid(true)
@@ -54,6 +54,7 @@ export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     nonce: 0,
+    position: 0,
     type: BorkType.Bork,
     content: 'post content',
     sender,
@@ -69,8 +70,8 @@ export async function seedOrphan (sender: User, referencePost: Post, attributes:
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     type: BorkType.Comment,
-    content: 'post content',
-    senderAddress: sender.address,
+    content: 'orphan content',
+    sender,
     referenceId: referencePost.txid.substring(0, 1),
     referenceSenderAddress: referencePost.senderAddress,
   }

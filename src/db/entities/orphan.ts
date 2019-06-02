@@ -3,8 +3,12 @@ import {
   Entity,
   PrimaryColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
+  RelationId,
 } from 'typeorm'
 import { BorkType } from 'borker-rs-node'
+import { User } from './user'
 
 @Entity({ name: 'orphans' })
 export class Orphan {
@@ -33,10 +37,6 @@ export class Orphan {
   content: string | null
 
   @Index()
-  @Column('text', { name: 'sender_address' })
-  senderAddress: string
-
-  @Index()
   @Column('text', { name: 'reference_id', nullable: true })
   referenceId: string | null
 
@@ -46,16 +46,26 @@ export class Orphan {
 
   @Column('text', { name: 'mentions', nullable: true })
   mentions: string | null
+
+  // relations
+
+  @Index()
+  @ManyToOne(() => User, user => user.orphans)
+	@JoinColumn({ name: 'sender_address' })
+  sender: User
+  @RelationId((orphan: Orphan) => orphan.sender)
+  senderAddress: string
+
 }
 
 export interface OrphanSeed {
   txid: string
   createdAt: Date
   nonce?: number
-  index?: number
+  position?: number
   type: BorkType
   content?: string
-  senderAddress: string
+  sender: User
   referenceId?: string
   referenceSenderAddress?: string
   mentions?: string
