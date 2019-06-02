@@ -1,10 +1,15 @@
 import {
 	Entity,
 	PrimaryColumn,
-  ManyToMany,
-  JoinTable,
+  OneToMany,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  RelationId,
 } from 'typeorm'
 import { Post } from './post'
+import { PostTag } from './post-tag'
+import { Block } from './block'
 
 @Entity({ name: 'tags' })
 export class Tag {
@@ -16,20 +21,17 @@ export class Tag {
 
   // relations
 
-  @ManyToMany(() => Post, post => post.tags)
-  @JoinTable({
-    name: 'post_tags',
-    joinColumns: [
-      { name: 'tag_name' },
-    ],
-    inverseJoinColumns: [
-      { name: 'post_txid' },
-    ],
-  })
-  posts: Post[]
+  @OneToMany(() => PostTag, postTag => postTag.tag)
+  postTags: PostTag[]
+
+  @Index()
+  @ManyToOne(() => Block, block => block.posts, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'block_height' })
+  block: Block
+  @RelationId((post: Post) => post.block)
+  blockHeight: string
 }
 
 export interface TagSeed {
-  tag: string
-  createdAt: string
+  name: string
 }

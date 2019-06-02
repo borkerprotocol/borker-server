@@ -3,7 +3,11 @@ import {
 	Entity,
 	PrimaryColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
+  RelationId,
 } from 'typeorm'
+import { Block } from './block'
 
 @Entity({ name: 'utxos' })
 export class Utxo {
@@ -24,7 +28,16 @@ export class Utxo {
   value: number
 
 	@Column('text', { name: 'raw' })
-	raw: string
+  raw: string
+
+  // relations
+
+  @Index()
+  @ManyToOne(() => Block, block => block.posts, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'block_height' })
+  block: Block
+  @RelationId((utxo: Utxo) => utxo.block)
+  blockHeight: string
 }
 
 export interface UtxoSeed {

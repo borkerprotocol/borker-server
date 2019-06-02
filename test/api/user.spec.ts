@@ -1,15 +1,17 @@
-import { createConnections, getConnection, Connection, getManager } from 'typeorm'
+import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
-import { seedBaseUser, seedFullUser, seedUtxo, seedFollow } from '../helpers/seeds'
+import { seedBaseUser, seedFullUser, seedUtxo, seedFollow, seedBlock } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
 import { assertBaseUser, assertFullUser, assertThrows } from '../helpers/assertions'
 import { database } from '../helpers/database'
 import { Errors } from 'typescript-rest'
+import { Block } from '../../src/db/entities/block'
 
 describe('User Handler', async () => {
   let connections: Connection[]
   let userHandler: UserHandler
+  let block: Block
   let user1: User
   let user2: User
 
@@ -17,13 +19,13 @@ describe('User Handler', async () => {
     connections = await createConnections([database])
     await getConnection('default').synchronize(true)
 
+    block = await seedBlock()
     const [ u1, u2 ] = await Promise.all([
-      seedBaseUser(),
-      seedFullUser(),
+      seedBaseUser(block),
+      seedFullUser(block),
     ])
     user1 = u1
     user2 = u2
-    await seedFollow(user1, user2)
 
     userHandler = new UserHandler()
   })
