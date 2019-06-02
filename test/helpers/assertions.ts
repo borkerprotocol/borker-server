@@ -24,7 +24,7 @@ export async function assertThrows<T> (func: Promise<T>, expectedError?: Errors.
 export function assertBaseUser (user: User) {
   assert.exists(user.address)
   assert.exists(user.createdAt)
-  assert.exists(user.block)
+  assert.exists(user.birthBlock)
 }
 
 export function assertFullUser (user: User) {

@@ -1,5 +1,4 @@
 import { getManager } from 'typeorm'
-import { Follow, UserBlock } from '../db/entities'
 
 export function chunks<T> (arr: T[], size: number): T[][] {
   const ret = []
@@ -16,7 +15,7 @@ export async function checkFollowed (followedAddress: string, followerAddress: s
   return (await getManager()
     .createQueryBuilder()
     .select()
-    .from(Follow, 'follows')
+    .from('follows', 'follows')
     .where('followed_address = :followedAddress', { followedAddress })
     .andWhere('follower_address = :followerAddress', { followerAddress })
     .getCount()
@@ -27,7 +26,7 @@ export async function checkBlocked (blockedAddress: string, blockerAddress: stri
   return (await getManager()
     .createQueryBuilder()
     .select()
-    .from(UserBlock, 'user_blocks')
+    .from('blocks', 'blocks')
     .where('blocked_address = :blockedAddress', { blockedAddress })
     .andWhere('blocker_address = :blockerAddress', { blockerAddress })
     .getCount()
@@ -38,7 +37,7 @@ export async function eitherPartyBlocked (address1: string, address2: string): P
   return (await getManager()
     .createQueryBuilder()
     .select()
-    .from(UserBlock, 'user_blocks')
+    .from('blocks', 'blocks')
     .where('blocked_address = :address1 AND blocker_address = :address2', { address1, address2 })
     .orWhere('blocked_address = :address2 AND blocker_address = :address1', { address2, address1 })
     .getCount()

@@ -3,19 +3,11 @@ import {
 	Entity,
 	OneToMany,
 	PrimaryColumn,
+  JoinTable,
+  ManyToMany,
   Index,
-  ManyToOne,
-  JoinColumn,
-  RelationId,
 } from 'typeorm'
 import { Post } from './post'
-import { Like } from './like'
-import { UserBlock } from './user-block'
-import { Follow } from './follow'
-import { Flag } from './flag'
-import { Mention } from './mention'
-import { Block } from './block'
-import { Orphan } from './orphan'
 
 @Entity({ name: 'users' })
 export class User {
@@ -27,6 +19,10 @@ export class User {
 
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
+
+  @Index()
+	@Column('int', { name: 'birth_block' })
+	birthBlock: number
 
 	@Column('text', { name: 'name' })
 	name: string
@@ -42,42 +38,77 @@ export class User {
 	@OneToMany(() => Post, post => post.sender)
   posts: Post[]
 
-	@OneToMany(() => Orphan, orphan => orphan.sender)
-  orphans: Orphan[]
+  @ManyToMany(() => User, user => user.following)
+  @JoinTable({
+    name: 'follows',
+    joinColumns: [
+      { name: 'followed_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'follower_address' },
+    ],
+  })
+  followers: User[]
 
-	@OneToMany(() => Like, like => like.user)
-  likes: Like[]
+  @ManyToMany(() => User, user => user.followers)
+  following: User[]
 
-	@OneToMany(() => UserBlock, userBlock => userBlock.blocker)
-  blocking: UserBlock[]
+  @ManyToMany(() => User, user => user.blocking)
+  @JoinTable({
+    name: 'blocks',
+    joinColumns: [
+      { name: 'blocked_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'blocker_address' },
+    ],
+  })
+  blockers: User[]
 
-	@OneToMany(() => UserBlock, userBlock => userBlock.blocked)
-  blockers: UserBlock[]
+  @ManyToMany(() => User, user => user.blockers)
+  blocking: User[]
 
-	@OneToMany(() => Follow, follow => follow.followed)
-  following: Follow[]
+  @ManyToMany(() => Post, post => post.likes)
+  @JoinTable({
+    name: 'likes',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'post_txid' },
+    ],
+  })
+  likes: Post[]
 
-	@OneToMany(() => Follow, follow => follow.followed)
-  followers: Follow[]
+  @ManyToMany(() => Post, post => post.flags)
+  @JoinTable({
+    name: 'flags',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'post_txid' },
+    ],
+  })
+  flags: Post[]
 
-	@OneToMany(() => Flag, flag => flag.user)
-  flags: Flag[]
-
-	@OneToMany(() => Mention, mention => mention.user)
-  mentions: Mention[]
-
-  @Index()
-  @ManyToOne(() => Block, block => block.users, { onDelete: 'CASCADE' })
-	@JoinColumn({ name: 'block_height' })
-  block: Block
-  @RelationId((user: User) => user.block)
-  blockHeight: string
+  @ManyToMany(() => Post, post => post.mentions)
+  @JoinTable({
+    name: 'mentions',
+    joinColumns: [
+      { name: 'user_address' },
+    ],
+    inverseJoinColumns: [
+      { name: 'post_txid' },
+    ],
+  })
+  mentions: Post[]
 }
 
 export interface UserSeed {
   address: string
   createdAt: Date
-  block: Block
+  birthBlock: number
   name: string
   bio?: string
   avatarLink?: string

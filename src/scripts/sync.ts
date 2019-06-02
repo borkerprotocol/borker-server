@@ -1,30 +1,40 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
 import { getManager, EntityManager, Like, Not, MoreThan } from 'typeorm'
-import {
-  Block,
-  Flag,
-  Follow,
-  Like as LocalLike,
-  Mention,
-  Orphan,
-  PostTag,
-  Post,
-  Tag,
-  UserBlock,
-  User,
-  Utxo,
-} from '../db/entities'
-import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
+import { Post } from '../db/entities/post'
+import { User } from '../db/entities/user'
+import { Tag } from '../db/entities/tag'
+import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked, chunks } from '../util/functions'
+import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
+import { Orphan } from '../db/entities/orphan'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+import { TxBlock } from '../db/entities/tx-block'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
 
 export async function syncChain () {
   console.log('begin sync')
-  await setBlockHeight()
+  let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
+
+  let keepGoing = true
+  do {
+    if (block) {
+      const blockHash = await rpc.getBlockHash(block.height)
+      if (blockHash !== block.hash) {
+        blockHeight = block.height - 6
+        console.log(`block ${block.height} hash mismatch, trying ${blockHeight}`)
+        block = await getManager().findOne(TxBlock, blockHeight)
+      } else {
+        blockHeight = block.height + 1
+        keepGoing = false
+      }
+    } else {
+      blockHeight = config.startBlockSync
+      keepGoing = false
+    }
+  } while (keepGoing)
 
 	try {
     await processBlocks()
@@ -38,32 +48,6 @@ export async function syncChain () {
   }
 }
 
-async function setBlockHeight (): Promise<void> {
-  let block = await getManager().findOne(Block, { order: { height: 'DESC' } })
-  let keepGoing = true
-
-  do {
-    if (block) {
-      const blockHash = await rpc.getBlockHash(block.height)
-      if (blockHash !== block.hash) {
-        blockHeight = block.height - 6
-        console.log(`block ${block.height} hash mismatch, deleting last 6 blocks and trying ${blockHeight}`)
-        const [next] = await Promise.all([
-          getManager().findOne(Block, blockHeight),
-          getManager().delete(Block, { height: MoreThan(blockHeight) }),
-        ])
-        block = next
-      } else {
-        blockHeight = block.height + 1
-        keepGoing = false
-      }
-    } else {
-      blockHeight = config.startBlockSync
-      keepGoing = false
-    }
-  } while (keepGoing)
-}
-
 async function processBlocks () {
   console.log(`syncing block ${blockHeight}`)
 
@@ -75,15 +59,16 @@ async function processBlocks () {
     return
   }
 
-  const blockHex = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
+  const block = await rpc.getBlock(blockHash)
+  const { borkerTxs, created, spent } = processBlock(block, Network.Dogecoin)
   // const borkerTxs = getMockBorkerTxs(blockHeight)
   // const created = getMockCreated(blockHeight)
   // const spent = getMockSpent(blockHeight)
 
+  // @TODO should we save the block height on utxos, posts, and orphans, such that we can delete them in the event of a fork? Do we need to delete them?
   await getManager().transaction(async manager => {
-    await createBlock(manager, blockHeight, blockHash)
     await Promise.all([
+      createTxBlock(manager, blockHeight, blockHash),
       processUtxos(manager, created, spent),
       processBorkerTxs(manager, borkerTxs),
     ])
@@ -96,10 +81,10 @@ async function processBlocks () {
   await processBlocks()
 }
 
-async function createBlock(manager: EntityManager, height: number, hash: string): Promise<void> {
+async function createTxBlock(manager: EntityManager, height: number, hash: string) {
   await manager.createQueryBuilder()
     .insert()
-    .into(Block)
+    .into(TxBlock)
     .values({
       height,
       hash,
@@ -112,8 +97,7 @@ async function createBlock(manager: EntityManager, height: number, hash: string)
 async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: UtxoId[]) {
   // insert created utxos
   if (created.length) {
-    const withBlock = created.map(obs => Object.assign(obs, { block: { height: blockHeight } }))
-    await Promise.all(chunks(withBlock, 100).map(chunk => {
+    await Promise.all(chunks(created, 100).map(chunk => {
       return manager.createQueryBuilder()
         .insert()
         .into(Utxo)
@@ -142,8 +126,8 @@ async function processBorkerTxs(manager: EntityManager, borkerTxs: BorkTxData[])
       .values({
         address: senderAddress,
         createdAt: new Date(time),
+        birthBlock: blockHeight,
         name: senderAddress.substr(0, 9),
-        block: { height: blockHeight },
       })
       .onConflict('(address) DO NOTHING')
       .execute()
@@ -224,7 +208,6 @@ async function createPost (manager: EntityManager, tx: any, parent?: Post): Prom
       position,
       type,
       content,
-      block: { height: blockHeight },
       sender: { address: senderAddress },
       parent,
     })
@@ -252,8 +235,7 @@ async function createOrphan (manager: EntityManager, tx: any): Promise<void> {
       nonce,
       position,
       content,
-      block: { height: blockHeight },
-      sender: { address: senderAddress },
+      senderAddress,
       referenceId,
       referenceSenderAddress: recipientAddress,
       mentions: mentions.join(),
@@ -323,11 +305,10 @@ async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void
   if (parent) {
     await manager.createQueryBuilder()
       .insert()
-      .into(LocalLike)
+      .into('likes')
       .values({
-        user: { address: senderAddress },
-        post: { txid: parent.txid },
-        block: { height: blockHeight },
+        user_address: senderAddress,
+        post_txid: parent.txid,
       })
       .onConflict('DO NOTHING')
       .execute()
@@ -353,28 +334,27 @@ async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void>
       case BorkType.Flag:
         await manager.createQueryBuilder()
           .insert()
-          .into(Flag)
+          .into('flags')
           .values({
-            user: { address: senderAddress },
-            post: { txid: parent.txid },
-            block: { height: blockHeight },
+            user_address: senderAddress,
+            post_txid: parent.txid,
           })
           .onConflict('DO NOTHING')
           .execute()
         break
       // unflag
       case BorkType.Unflag:
-        await manager.delete(Flag, {
-          parent,
-          user: { address: senderAddress },
-        })
+        await manager.createQueryBuilder()
+          .relation(User, 'flags')
+          .of(senderAddress)
+          .remove(parent.txid)
         break
       // unlike
       case BorkType.Unlike:
-        await manager.delete(LocalLike, {
-          parent,
-          user: { address: senderAddress },
-        })
+        await manager.createQueryBuilder()
+          .relation(User, 'likes')
+          .of(senderAddress)
+          .remove(parent.txid)
         break
     }
   // create orphan if no parent
@@ -396,41 +376,39 @@ async function handleFUBU (manager: EntityManager, tx: BorkTxData): Promise<void
       case BorkType.Follow:
         await manager.createQueryBuilder()
           .insert()
-          .into(Follow)
+          .into('follows')
           .values({
-            follower: { address: senderAddress },
-            followed: { address: recipient.address },
-            block: { height: blockHeight },
+            follower_address: senderAddress,
+            followed_address: recipient.address,
           })
           .onConflict('DO NOTHING')
           .execute()
         break
       // unfollow
       case BorkType.Unfollow:
-        await manager.delete(Follow, {
-          follower: { address: senderAddress },
-          followed: { address: recipient.address },
-        })
+        await manager.createQueryBuilder()
+          .relation(User, 'following')
+          .of(senderAddress)
+          .remove(recipient.address)
         break
       // block
       case BorkType.Block:
         await manager.createQueryBuilder()
           .insert()
-          .into(UserBlock)
+          .into('blocks')
           .values({
-            blocker: {address: senderAddress },
-            blocked: { address: recipient.address },
-            block: { height: blockHeight },
+            blocker_address: senderAddress,
+            blocked_address: recipient.address,
           })
           .onConflict('DO NOTHING')
           .execute()
         break
       // unblock
       case BorkType.Unblock:
-        await manager.delete(UserBlock, {
-          blocker: { address: senderAddress },
-          blocked: { address: recipient.address },
-        })
+        await manager.createQueryBuilder()
+          .relation(User, 'blocking')
+          .of(senderAddress)
+          .remove(recipient.address)
         break
     }
   } else {
@@ -447,14 +425,7 @@ async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<vo
   // delete parent if exists
   if (parent) {
     // benign if parent sender !== sender
-    await manager.update(Post, {
-      sender: { address: senderAddress },
-      txid: parent.txid,
-    },
-    {
-      content: null,
-      deletedAt: new Date(time),
-    })
+    await manager.update(Post, { sender: { address: senderAddress }, txid: parent.txid }, { content: null, deletedAt: new Date(time) })
   // create orphan if no parent
   } else {
     await createOrphan(manager, tx)
@@ -517,22 +488,17 @@ async function attachTags (manager: EntityManager, txid: string, content: string
       .into(Tag)
       .values({
         name,
-        block: { height: blockHeight },
       })
       .onConflict('DO NOTHING')
       .execute()
 
-    postTags.push({
-      tag: { name },
-      post: { txid },
-      block: { height: blockHeight },
-    })
+    postTags.push({ tag_name: name, post_txid: txid })
   }
 
   if (postTags.length) {
     await manager.createQueryBuilder()
       .insert()
-      .into(PostTag)
+      .into('post_tags')
       .values(postTags)
       .onConflict('DO NOTHING')
       .execute()
@@ -544,17 +510,13 @@ async function attachMentions (manager: EntityManager, txid: string, unverified:
   await Promise.all(unverified.map(async address => {
     const user = await manager.findOne(User, address)
     if (!user) { return }
-    mentions.push({
-      user: { address },
-      post: { txid },
-      block: { height: blockHeight },
-    })
+    mentions.push({ user_address: address, post_txid: txid })
   }))
 
   if (mentions.length) {
     await manager.createQueryBuilder()
       .insert()
-      .into(Mention)
+      .into('mentions')
       .values(mentions)
       .onConflict('DO NOTHING')
       .execute()

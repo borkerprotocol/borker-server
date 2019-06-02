@@ -7,7 +7,6 @@ import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
 import * as rpc from '../../util/rpc-requests'
 import { BorkType } from 'borker-rs-node'
-import { Like, Flag } from '../../db/entities'
 
 @Path('/posts')
 export class PostHandler {
@@ -160,14 +159,14 @@ export class PostHandler {
           case 'likes':
             subQuery = qb.subQuery()
               .select('user_address')
-              .from(Like, 'likes')
+              .from('likes', 'likes')
               .where('post_txid = :txid', { txid })
               .getQuery()
             break
           case 'flags':
             subQuery = qb.subQuery()
               .select('user_address')
-              .from(Flag, 'flags')
+              .from('flags', 'flags')
               .where('post_txid = :txid', { txid })
               .getQuery()
             break
@@ -201,12 +200,12 @@ export class PostHandler {
       getRepository(Post).count({ parent: { txid }, type: BorkType.Rebork, deletedAt: null }),
       getManager().createQueryBuilder()
         .select('likes')
-        .from(Like, 'likes')
+        .from('likes', 'likes')
         .where('post_txid = :txid', { txid })
         .getCount(),
       getManager().createQueryBuilder()
         .select('flags')
-        .from(Flag, 'flags')
+        .from('flags', 'flags')
         .where('post_txid = :txid', { txid })
         .getCount(),
     ])
@@ -234,13 +233,13 @@ export class PostHandler {
       }),
       getManager().createQueryBuilder()
         .select('likes')
-        .from(Like, 'likes')
+        .from('likes', 'likes')
         .where('user_address = :myAddress', { myAddress })
         .andWhere('post_txid = :txid', { txid })
         .getOne(),
       getManager().createQueryBuilder()
         .select('flags')
-        .from(Flag, 'flags')
+        .from('flags', 'flags')
         .where('user_address = :myAddress', { myAddress })
         .andWhere('post_txid = :txid', { txid })
         .getOne(),

@@ -7,16 +7,12 @@ import {
 	JoinColumn,
   ManyToMany,
   RelationId,
+  OneToOne,
   Index,
 } from 'typeorm'
 import { User } from './user'
 import { Tag } from './tag'
 import { BorkType } from 'borker-rs-node'
-import { Block } from './block'
-import { PostTag } from './post-tag'
-import { Like } from './like'
-import { Flag } from './flag'
-import { Mention } from './mention'
 
 @Entity({ name: 'posts' })
 export class Post {
@@ -52,25 +48,6 @@ export class Post {
   @OneToMany(() => Post, post => post.parent)
   children: Post[]
 
-  @OneToMany(() => PostTag, postTag => postTag.post)
-  postTags: PostTag[]
-
-  @OneToMany(() => Like, like => like.post)
-  likes: Like[]
-
-	@OneToMany(() => Flag, flag => flag.post)
-  flags: Flag[]
-
-  @ManyToMany(() => Mention, mention => mention.post)
-  mentions: Mention[]
-
-  @Index()
-  @ManyToOne(() => Block, block => block.posts, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'block_height' })
-  block: Block
-  @RelationId((post: Post) => post.block)
-  blockHeight: string
-
   @Index()
   @ManyToOne(() => Post, post => post.children, { nullable: true })
   @JoinColumn({ name: 'parent_txid' })
@@ -79,23 +56,35 @@ export class Post {
   parentTxid: string
 
   @Index()
-  @ManyToOne(() => User, user => user.posts, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, user => user.posts)
 	@JoinColumn({ name: 'sender_address' })
   sender: User
   @RelationId((post: Post) => post.sender)
   senderAddress: string
+
+  @ManyToMany(() => User, user => user.likes)
+  likes: User[]
+
+  @ManyToMany(() => User, user => user.flags)
+  flags: User[]
+
+  @ManyToMany(() => Tag, tag => tag.posts)
+  tags: Tag[]
+
+  @ManyToMany(() => User, user => user.mentions)
+  mentions: User[]
 }
 
 export interface PostSeed {
   txid: string
   createdAt: Date
   nonce: number
-  position?: number
   type: BorkType
   sender: User
-  block: Block
   content?: string
-  parent?: Post
+  flags?: User[]
+  tags?: Tag[]
+  mentions?: User[]
 }
 
 export interface PostWithParentSeed extends PostSeed {

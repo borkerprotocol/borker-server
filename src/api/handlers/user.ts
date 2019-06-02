@@ -12,7 +12,7 @@ export class UserHandler {
 	@GET
 	async index (
     @HeaderParam('my-address') myAddress: string,
-    @QueryParam('order') order: OrderBy<User> = { block: 'ASC' },
+    @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
   ): Promise<ApiUser[]> {
