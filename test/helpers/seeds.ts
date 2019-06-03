@@ -65,16 +65,15 @@ export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}
   return getManager().save(post)
 }
 
-export async function seedOrphan (sender: User, referencePost: Post, attributes: Partial<OrphanSeed> = {}): Promise<Orphan> {
+export async function seedOrphan (sender: User, attributes: Partial<OrphanSeed> = {}): Promise<Orphan> {
   const seed: OrphanSeed = {
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     blockHeight: 100,
-    type: BorkType.Comment,
+    nonce: 45,
+    position: 1,
     content: 'orphan content',
     sender,
-    referenceId: referencePost.txid.substring(0, 1),
-    referenceSenderAddress: referencePost.senderAddress,
   }
 
   const post = getManager().create(Orphan, Object.assign(seed, attributes))

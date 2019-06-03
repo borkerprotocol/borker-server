@@ -45,12 +45,14 @@ export function assertPost (post: Post) {
 export function assertBork (post: Post) {
   assertPost(post)
   assert.equal(post.type, BorkType.Bork)
+  assert.equal(post.position, 0)
   assert.exists(post.content)
 }
 
 export function assertComment (post: Post) {
   assertPost(post)
   assert.equal(post.type, BorkType.Comment)
+  assert.equal(post.position, 0)
   assert.exists(post.parent)
   assert.exists(post.content)
 }
@@ -58,12 +60,14 @@ export function assertComment (post: Post) {
 export function assertRebork (post: Post) {
   assertPost(post)
   assert.equal(post.type, BorkType.Rebork)
+  assert.equal(post.position, 0)
   assert.exists(post.parent)
 }
 
 export function assertExtension (post: Post) {
   assertPost(post)
   assert.equal(post.type, BorkType.Extension)
+  assert.notEqual(post.position, 0)
   assert.exists(post.parent)
   assert.exists(post.content)
 }

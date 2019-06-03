@@ -6,9 +6,9 @@ import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
 import { Tag } from '../db/entities/tag'
 import { Utxo } from '../db/entities/utxo'
+import { Orphan } from '../db/entities/orphan'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
-import { Orphan } from '../db/entities/orphan'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
@@ -23,7 +23,7 @@ export async function syncChain () {
     console.log('sync complete')
   }
   catch (err) {
-		console.error('error syncing: ', err)
+		console.error('error in processBlocks(): ', err.message)
   }
   finally {
     setTimeout(syncChain, 4000)
@@ -40,12 +40,12 @@ async function setBlockHeight (): Promise<void> {
       if (blockHash !== block.hash) {
         blockHeight = block.height - 6
         console.log(`block ${block.height} hash mismatch, rolling back to ${blockHeight}`)
-        const [next] = await Promise.all([
+        const [nextBlock] = await Promise.all([
           getManager().findOne(TxBlock, blockHeight),
           // delete all Utxos to prevent double spend
           getManager().delete(Utxo, { blockHeight: MoreThan(blockHeight) }),
         ])
-        block = next
+        block = nextBlock
       } else {
         blockHeight = block.height + 1
         keepGoing = false
@@ -82,7 +82,11 @@ async function processBlocks () {
     ])
   })
 
-  // cleanupOrphans(blockHeight)
+  const isCleaning = (await getManager().count(TxBlock, { isCleaning: true })) > 0
+  if (!isCleaning) {
+    await getManager().update(TxBlock, blockHeight, { isCleaning: true })
+    cleanupOrphans(blockHeight)
+  }
 
   blockHeight++
 
@@ -178,7 +182,7 @@ async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
         break
       // delete
       case BorkType.Delete:
-        await handleDelete(manager, tx)
+        await manager.update(Post, { sender: { address: senderAddress }, txid: content }, { content: null, deletedAt: new Date(time) })
         break
     }
 }
@@ -228,34 +232,12 @@ async function createPost (manager: EntityManager, tx: any, parentTxid?: string)
     ])
 }
 
-async function createOrphan (manager: EntityManager, tx: any): Promise<void> {
-  const { txid, time, type, nonce, position, content, referenceId, senderAddress, recipientAddress, mentions } = tx
-
-  await manager.createQueryBuilder()
-    .insert()
-    .into(Orphan)
-    .values({
-      txid,
-      createdAt: new Date(time),
-      blockHeight,
-      type,
-      nonce,
-      position,
-      content,
-      sender: { address: senderAddress },
-      referenceId,
-      referenceSenderAddress: recipientAddress,
-      mentions: mentions.join(),
-    })
-    .onConflict('(txid) DO NOTHING')
-    .execute()
-}
-
 async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> {
   const { referenceId, senderAddress, recipientAddress } = tx
 
   // return if either party blocked
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
+
   // find parent
   const parent = await manager.findOne(Post, {
     where: {
@@ -264,17 +246,14 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
     },
     order: { createdAt: 'DESC' },
   })
+  if (!parent) { return }
+
   // create post if parent exists
-  if (parent) {
-    await createPost(manager, tx, parent.txid)
-  // create orphan if no parent
-  } else {
-    await createOrphan(manager, tx)
-  }
+  await createPost(manager, tx, parent.txid)
 }
 
-async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { time, nonce, senderAddress } = tx
+async function handleExtension (manager: EntityManager, tx: any): Promise<void> {
+  const { txid, time, nonce, position, content, senderAddress, mentions } = tx
 
   // find parent
   const parent = await manager.findOne(Post, {
@@ -291,7 +270,21 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
     await createPost(manager, tx, parent.txid)
   // create orphan if no parent
   } else {
-    await createOrphan(manager, tx)
+    await manager.createQueryBuilder()
+      .insert()
+      .into(Orphan)
+      .values({
+        txid,
+        createdAt: new Date(time),
+        blockHeight,
+        nonce,
+        position,
+        content,
+        sender: { address: senderAddress },
+        mentions: mentions.join(),
+      })
+      .onConflict('(txid) DO NOTHING')
+      .execute()
   }
 }
 
@@ -300,6 +293,7 @@ async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void
 
   // return if either party is blocked
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
+
   // find parent
   const parent = await manager.findOne(Post, {
     where: {
@@ -308,21 +302,18 @@ async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void
     },
     order: { createdAt: 'DESC' },
   })
+  if (!parent) { return }
+
   // create like if parent exists
-  if (parent) {
-    await manager.createQueryBuilder()
-      .insert()
-      .into('likes')
-      .values({
-        user_address: senderAddress,
-        post_txid: parent.txid,
-      })
-      .onConflict('DO NOTHING')
-      .execute()
-  // create orphan if no parent
-  } else {
-    await createOrphan(manager, tx)
-  }
+  await manager.createQueryBuilder()
+    .insert()
+    .into('likes')
+    .values({
+      user_address: senderAddress,
+      post_txid: parent.txid,
+    })
+    .onConflict('DO NOTHING')
+    .execute()
 }
 
 async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void> {
@@ -330,43 +321,39 @@ async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void>
 
   // find parent from content of tx
   const parent = await manager.findOne(Post, content)
+  if (!parent) { return }
+
+  // return if either party blocked
+  if (await eitherPartyBlocked(parent.senderAddress, senderAddress)) { return }
 
   // create flag, unflag, or unlike if parent exists
-  if (parent) {
-    // return if either party blocked
-    if (await eitherPartyBlocked(parent.senderAddress, senderAddress)) { return }
-
-    switch (type) {
-      // flag
-      case BorkType.Flag:
-        await manager.createQueryBuilder()
-          .insert()
-          .into('flags')
-          .values({
-            user_address: senderAddress,
-            post_txid: parent.txid,
-          })
-          .onConflict('DO NOTHING')
-          .execute()
-        break
-      // unflag
-      case BorkType.Unflag:
-        await manager.createQueryBuilder()
-          .relation(User, 'flags')
-          .of(senderAddress)
-          .remove(parent.txid)
-        break
-      // unlike
-      case BorkType.Unlike:
-        await manager.createQueryBuilder()
-          .relation(User, 'likes')
-          .of(senderAddress)
-          .remove(parent.txid)
-        break
-    }
-  // create orphan if no parent
-  } else {
-    await createOrphan(manager, tx)
+  switch (type) {
+    // flag
+    case BorkType.Flag:
+      await manager.createQueryBuilder()
+        .insert()
+        .into('flags')
+        .values({
+          user_address: senderAddress,
+          post_txid: parent.txid,
+        })
+        .onConflict('DO NOTHING')
+        .execute()
+      break
+    // unflag
+    case BorkType.Unflag:
+      await manager.createQueryBuilder()
+        .relation(User, 'flags')
+        .of(senderAddress)
+        .remove(parent.txid)
+      break
+    // unlike
+    case BorkType.Unlike:
+      await manager.createQueryBuilder()
+        .relation(User, 'likes')
+        .of(senderAddress)
+        .remove(parent.txid)
+      break
   }
 }
 
@@ -375,169 +362,82 @@ async function handleFUBU (manager: EntityManager, tx: BorkTxData): Promise<void
 
   // get recipient from content of post
   const recipient = await manager.findOne(User, recipientAddress)
+  if (!recipient) { return }
 
   // create follow, unfollow, block, or unblock if recipient exists
-  if (recipient) {
-    switch (type) {
-      // follow
-      case BorkType.Follow:
-        await manager.createQueryBuilder()
-          .insert()
-          .into('follows')
-          .values({
-            follower_address: senderAddress,
-            followed_address: recipient.address,
-          })
-          .onConflict('DO NOTHING')
-          .execute()
-        break
-      // unfollow
-      case BorkType.Unfollow:
-        await manager.createQueryBuilder()
-          .relation(User, 'following')
-          .of(senderAddress)
-          .remove(recipient.address)
-        break
-      // block
-      case BorkType.Block:
-        await manager.createQueryBuilder()
-          .insert()
-          .into('blocks')
-          .values({
-            blocker_address: senderAddress,
-            blocked_address: recipient.address,
-          })
-          .onConflict('DO NOTHING')
-          .execute()
-        break
-      // unblock
-      case BorkType.Unblock:
-        await manager.createQueryBuilder()
-          .relation(User, 'blocking')
-          .of(senderAddress)
-          .remove(recipient.address)
-        break
-    }
-  } else {
-    await createOrphan(manager, tx)
-  }
-}
-
-async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { time, content, senderAddress } = tx
-
-  // find parent from content of tx
-  const parent = await manager.findOne(Post, content)
-
-  // delete parent if exists
-  if (parent) {
-    // benign if parent sender !== sender
-    await manager.update(Post, { sender: { address: senderAddress }, txid: parent.txid }, { content: null, deletedAt: new Date(time) })
-  // create orphan if no parent
-  } else {
-    await createOrphan(manager, tx)
+  switch (type) {
+    // follow
+    case BorkType.Follow:
+      await manager.createQueryBuilder()
+        .insert()
+        .into('follows')
+        .values({
+          follower_address: senderAddress,
+          followed_address: recipient.address,
+        })
+        .onConflict('DO NOTHING')
+        .execute()
+      break
+    // unfollow
+    case BorkType.Unfollow:
+      await manager.createQueryBuilder()
+        .relation(User, 'following')
+        .of(senderAddress)
+        .remove(recipient.address)
+      break
+    // block
+    case BorkType.Block:
+      await manager.createQueryBuilder()
+        .insert()
+        .into('blocks')
+        .values({
+          blocker_address: senderAddress,
+          blocked_address: recipient.address,
+        })
+        .onConflict('DO NOTHING')
+        .execute()
+      break
+    // unblock
+    case BorkType.Unblock:
+      await manager.createQueryBuilder()
+        .relation(User, 'blocking')
+        .of(senderAddress)
+        .remove(recipient.address)
+      break
   }
 }
 
 async function cleanupOrphans (height: number): Promise<void> {
 
-  await getManager().transaction(async manager => {
-    await Promise.all([
-      // create comments and reborks
-      Promise.all((await findOrphansCRE(manager)).map(orphan => {
-        return createPost(manager, orphan, orphan.parent_txid)
-      })),
-      // manager.query(`
-      //   INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
-      //   SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
-      //   FROM orphans o
-      //   LEFT JOIN posts p
-      //   ON p.sender_address = o.reference_sender_address
-      //   AND p.txid LIKE o.reference_id || '%'
-      //   AND o.type IN ('comment', 'rebork')
-      //   GROUP BY o.txid
-      // `),
-      // create extensions
-      // manager.query(`
-      //   INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
-      //   SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
-      //   FROM orphans o
-      //   LEFT JOIN posts p
-      //   ON p.sender_address = o.sender_address
-      //   AND p.nonce = o.nonce
-      //   AND p.created_at < DATETIME(o.created_at, '+24 hours')
-      //   AND o.type = 'extension'
-      //   GROUP BY o.txid
-      //   `),
-      // create likes
-      manager.query(`
-        INSERT INTO likes (user_address, post_txid)
-        SELECT o.sender_address, p.txid, MAX(p.created_at)
+  try {
+    await getManager().transaction(async manager => {
+      // find orphans
+      const orphans: OrphanPost[] = await manager.query(`
+        SELECT o.txid, o.created_at as createdAt, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, p.txid as parentTxid, MIN(p.created_at)
         FROM orphans o
-        LEFT JOIN posts p
-        ON p.sender_address = o.reference_sender_address
-        AND p.txid LIKE o.reference_id || '%'
-        AND o.type = 'like'
+        INNER JOIN posts p
+        ON p.sender_address = o.sender_address
+        AND p.nonce = o.nonce
+        AND p.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
+        AND o.block_height <= $1
         GROUP BY o.txid
-      `),
-      // create flags
-      manager.query(`
-        INSERT INTO flags (user_address, post_txid)
-        SELECT o.sender_address, p.txid, MAX(p.created_at)
-        FROM orphans o
-        LEFT JOIN posts p
-        ON p.sender_address = o.reference_sender_address
-        AND p.txid LIKE o.reference_id || '%'
-        AND o.type = 'flag'
-        GROUP BY o.txid
-      `),
-      // create follows
-      manager.query(`
-        INSERT INTO follows (follower_address, followed_address)
-        SELECT sender_address, content
-        FROM orphans
-        WHERE content IN (SELECT address FROM users)
-        AND type = 'follow'
-      `),
-      // create blocks
-      manager.query(`
-        INSERT INTO blocked (blocker_address, blocked_address)
-        SELECT sender_address, content
-        FROM orphans
-        WHERE content IN (SELECT address FROM users)
-        AND type = 'block'
-      `),
-    ])
+      `, [height])
 
-    // delete orphans
-    await manager.delete(Orphan, { blockHeight: LessThanOrEqual(height) })
-  })
-}
-
-async function findOrphansCRE (manager: EntityManager): Promise<any[]> {
-  const [rawCR, rawE]: [any[], any[]] = await Promise.all([
-    manager.query(`
-      SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
-      FROM orphans o
-      INNER JOIN posts p
-      ON p.sender_address = o.reference_sender_address
-      AND p.txid LIKE o.reference_id || '%'
-      AND o.type IN ('comment', 'rebork')
-      GROUP BY o.txid
-    `),
-    manager.query(`
-      SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MIN(p.created_at)
-      FROM orphans o
-      INNER JOIN posts p
-      ON p.sender_address = o.sender_address
-      AND p.nonce = o.nonce
-      AND p.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
-      AND o.type = 'extension'
-      GROUP BY o.txid
-    `),
-  ])
-
-  return rawCR.concat(rawE)
+      await Promise.all([
+        // create posts
+        Promise.all(orphans.map(orphan => createPost(manager, Object.assign(orphan, {
+          mentions: orphan.mentions.split(','),
+          type: BorkType.Extension,
+        }), orphan.parentTxid))),
+        // delete orphans
+        orphans.length && manager.delete(Orphan, orphans.map(orphan => orphan.txid)),
+        // update isCleaning on block
+        manager.update(TxBlock, height, { isCleaning: false }),
+      ])
+    })
+  } catch (err) {
+    console.error('error in cleanupOrphans(): ', err.message)
+  }
 }
 
 async function attachTags (manager: EntityManager, txid: string, content: string): Promise<void> {
@@ -592,4 +492,15 @@ async function attachMentions (manager: EntityManager, txid: string, unverified:
 
 function getCutoff (now: Date): Date {
   return new Date(now.setHours(now.getHours() - 24))
+}
+
+export interface OrphanPost {
+  txid: string
+  createdAt: Date
+  nonce: number
+  position: number
+  content: string
+  mentions: string
+  senderAddress: string
+  parentTxid: string
 }

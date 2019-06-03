@@ -121,18 +121,6 @@ export const mockTxs2: any[] = [
   },
   {
     time: '2019-05-28T00:51:39Z',
-    txid: '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
-    type: BorkType.Comment,
-    nonce: 100,
-    position: 0,
-    content: 'And some more!',
-    referenceId: '43',
-    senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    mentions: [],
-  },
-  {
-    time: '2019-05-28T00:51:39Z',
     txid: '164af924f859c9936f3bda737a986a1a85b3708c9b2fd150b36b964b11c858a6',
     type: BorkType.Bork,
     nonce: 211,
@@ -167,18 +155,6 @@ export const mockTxs2: any[] = [
     recipientAddress: null,
     mentions: [],
   },
-  {
-    time: '2019-05-28T00:51:39Z',
-    txid: '8535c83e9711caec65f2fbb0b463730623e0099cadafeb7715ea08dcd77c0577',
-    type: BorkType.Like,
-    nonce: null,
-    position: null,
-    content: null,
-    referenceId: 'a2',
-    senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
-    mentions: [],
-  },
 ]
 
 export const mockTxs3: any[] = [
@@ -204,6 +180,18 @@ export const mockTxs3: any[] = [
     referenceId: 'e3b3',
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    mentions: [],
+  },
+  {
+    time: '2019-05-28T00:51:39Z',
+    txid: '8535c83e9711caec65f2fbb0b463730623e0099cadafeb7715ea08dcd77c0577',
+    type: BorkType.Like,
+    nonce: null,
+    position: null,
+    content: null,
+    referenceId: 'a2',
+    senderAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     mentions: [],
   },
   {
@@ -295,17 +283,17 @@ export const mockTxs4: any[] = [
   },
   {
     time: '2019-05-28T00:51:39Z',
-    txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
-    type: BorkType.Like,
-    nonce: null,
-    position: null,
-    content: null,
-    referenceId: '89',
+    txid: '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
+    type: BorkType.Comment,
+    nonce: 100,
+    position: 0,
+    content: 'And some more!',
+    referenceId: '43',
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
-    recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
+    recipientAddress: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
     mentions: [],
   },
-  // this comment will be left orphaned
+  // this comment will be ignored. No parent
   {
     time: '2019-05-28T00:51:39Z',
     txid: '2312757481a28100402f71e788d2922f9aae766af10dda0b28dfd7dd858e15a1',
@@ -399,14 +387,6 @@ export const mockCreated2: any[] = [
     position: 1,
     raw: '010000000262df9a74ca67d26b58806c663f8ec0ada897012878c8b0a3a35ffa9ed3884627010000006b483045022100a7a0612277416d4eedd572c57ebcf2a527ba35055ef0d272d325f35ee4a487cd02207ac4efc8f46458f9c8c1987d916a847c14c4aadee5051a887d2b7e686b01aac6012103f6bc078d542f937fd496dc9cd1aafe9d321192265c21f3722a756d34de4219b6feffffffde4011114099874f48d19242caf3e9a3235040654f25c57ee30fdedba5643a82000000006a473044022061a9710de749e655582acccd9f902c76847b0a5041d5706d77383c9edaca260f0220694df77369886c692cff0eed604484cd3481f215430366f0251c605132800d51012103700368eb7c4865c7b1190da66e0008c1de799d43c87de95639924129cfcfd73dfeffffff0200c2eb0b000000001976a914be07a7b9e5721edd4b16ecfc13ef5990d1ed2dff88ac80841e00000000001976a9144f8052cb3b02c19f4d6bcbe9526cbc94e180175888accd982600',
   },
-  {
-    txid: '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
-    blockHeight: 17904,
-    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
-    value: 10000000000,
-    position: 0,
-    raw: '010000000262df9a74ca67d26b58806c663f8ec0ada897012878c8b0a3a35ffa9ed3884627010000006b483045022100a7a0612277416d4eedd572c57ebcf2a527ba35055ef0d272d325f35ee4a487cd02207ac4efc8f46458f9c8c1987d916a847c14c4aadee5051a887d2b7e686b01aac6012103f6bc078d542f937fd496dc9cd1aafe9d321192265c21f3722a756d34de4219b6feffffffde4011114099874f48d19242caf3e9a3235040654f25c57ee30fdedba5643a82000000006a473044022061a9710de749e655582acccd9f902c76847b0a5041d5706d77383c9edaca260f0220694df77369886c692cff0eed604484cd3481f215430366f0251c605132800d51012103700368eb7c4865c7b1190da66e0008c1de799d43c87de95639924129cfcfd73dfeffffff0200c2eb0b000000001976a914be07a7b9e5721edd4b16ecfc13ef5990d1ed2dff88ac80841e00000000001976a9144f8052cb3b02c19f4d6bcbe9526cbc94e180175888accd982600',
-  },
 ]
 
 export const mockCreated3: any[] = [
@@ -428,6 +408,14 @@ export const mockCreated4: any[] = [
     value: 2500000000,
     position: 0,
     raw: '0100000001ec26dbed51dceecbaa53ddcdc18c542307ae0fc2ae9110a8c0799f08df44826f020000006b483045022100a4e8e1ae7dcc18a99a7e778321acf93e9da390d6739ffbca7c16eb118e3c3b69022049feafce324beef28d2103bad3c1d35ffca156f092869156dcff51b964108ee1012103e7502b8906ecb0c6ad2470e3fdb85001127dd3f3062fc4e8a651229c3c49bc8fffffffff0200ac23fc060000001976a914ef4bb3249c38bad1bdd6aabae59400486d18f51c88ac1c929548c62f00001976a9148e134c775a0301645b4e1f4c3d419e4d3dca155588ac00000000',
+  },
+  {
+    txid: '99f14aa1ac661f932113cbb92cfa7ee1cfc649cbc416f7c6aa43b13ce301d3a4',
+    blockHeight: 17904,
+    address: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    value: 10000000000,
+    position: 0,
+    raw: '010000000262df9a74ca67d26b58806c663f8ec0ada897012878c8b0a3a35ffa9ed3884627010000006b483045022100a7a0612277416d4eedd572c57ebcf2a527ba35055ef0d272d325f35ee4a487cd02207ac4efc8f46458f9c8c1987d916a847c14c4aadee5051a887d2b7e686b01aac6012103f6bc078d542f937fd496dc9cd1aafe9d321192265c21f3722a756d34de4219b6feffffffde4011114099874f48d19242caf3e9a3235040654f25c57ee30fdedba5643a82000000006a473044022061a9710de749e655582acccd9f902c76847b0a5041d5706d77383c9edaca260f0220694df77369886c692cff0eed604484cd3481f215430366f0251c605132800d51012103700368eb7c4865c7b1190da66e0008c1de799d43c87de95639924129cfcfd73dfeffffff0200c2eb0b000000001976a914be07a7b9e5721edd4b16ecfc13ef5990d1ed2dff88ac80841e00000000001976a9144f8052cb3b02c19f4d6bcbe9526cbc94e180175888accd982600',
   },
   {
     txid: 'f93162e896c44fae41c75b66f2c1aa2eeb6e7de54a21b89075f99a90f582434e',
