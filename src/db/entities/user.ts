@@ -7,7 +7,7 @@ import {
   ManyToMany,
   Index,
 } from 'typeorm'
-import { Post } from './post'
+import { Bork } from './bork'
 import { Orphan } from './orphan'
 
 @Entity({ name: 'users' })
@@ -36,8 +36,8 @@ export class User {
 
   // relations
 
-	@OneToMany(() => Post, post => post.sender)
-  posts: Post[]
+	@OneToMany(() => Bork, bork => bork.sender)
+  borks: Bork[]
 
 	@OneToMany(() => Orphan, orphan => orphan.sender)
   orphans: Orphan[]
@@ -72,41 +72,41 @@ export class User {
   @ManyToMany(() => User, user => user.blockers)
   blocking: User[]
 
-  @ManyToMany(() => Post, post => post.likes)
+  @ManyToMany(() => Bork, bork => bork.likes)
   @JoinTable({
     name: 'likes',
     joinColumns: [
       { name: 'user_address' },
     ],
     inverseJoinColumns: [
-      { name: 'post_txid' },
+      { name: 'bork_txid' },
     ],
   })
-  likes: Post[]
+  likes: Bork[]
 
-  @ManyToMany(() => Post, post => post.flags)
+  @ManyToMany(() => Bork, bork => bork.flags)
   @JoinTable({
     name: 'flags',
     joinColumns: [
       { name: 'user_address' },
     ],
     inverseJoinColumns: [
-      { name: 'post_txid' },
+      { name: 'bork_txid' },
     ],
   })
-  flags: Post[]
+  flags: Bork[]
 
-  @ManyToMany(() => Post, post => post.mentions)
+  @ManyToMany(() => Bork, bork => bork.mentions)
   @JoinTable({
     name: 'mentions',
     joinColumns: [
       { name: 'user_address' },
     ],
     inverseJoinColumns: [
-      { name: 'post_txid' },
+      { name: 'bork_txid' },
     ],
   })
-  mentions: Post[]
+  mentions: Bork[]
 }
 
 export interface UserSeed {

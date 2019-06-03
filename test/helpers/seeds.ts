@@ -1,6 +1,6 @@
 import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
-import { Post, PostSeed } from '../../src/db/entities/post'
+import { Bork, BorkSeed } from '../../src/db/entities/bork'
 import { randomAddressOrTxid } from './random-generators'
 import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
 import { OrphanSeed, Orphan } from '../../src/db/entities/orphan'
@@ -49,20 +49,20 @@ export async function seedUtxo (attributes: Partial<UtxoSeed> = {}): Promise<Utx
   return getManager().save(utxo)
 }
 
-export async function seedPost (sender: User, attributes: Partial<PostSeed> = {}): Promise<Post> {
-  const seed: PostSeed = {
+export async function seedBork (sender: User, attributes: Partial<BorkSeed> = {}): Promise<Bork> {
+  const seed: BorkSeed = {
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
     nonce: 0,
     position: 0,
     type: BorkType.Bork,
-    content: 'post content',
+    content: 'bork content',
     sender,
   }
 
-  const post = getManager().create(Post, Object.assign(seed, attributes))
+  const bork = getManager().create(Bork, Object.assign(seed, attributes))
 
-  return getManager().save(post)
+  return getManager().save(bork)
 }
 
 export async function seedOrphan (sender: User, attributes: Partial<OrphanSeed> = {}): Promise<Orphan> {
@@ -76,17 +76,17 @@ export async function seedOrphan (sender: User, attributes: Partial<OrphanSeed> 
     sender,
   }
 
-  const post = getManager().create(Orphan, Object.assign(seed, attributes))
+  const bork = getManager().create(Orphan, Object.assign(seed, attributes))
 
-  return getManager().save(post)
+  return getManager().save(bork)
 }
 
-export async function seedFlag (user: User, post: Post): Promise<void> {
+export async function seedFlag (user: User, bork: Bork): Promise<void> {
   return getManager()
     .createQueryBuilder()
     .relation(User, 'flags')
     .of(user)
-    .add(post)
+    .add(bork)
 }
 
 export async function seedFollow (follower: User, followed: User): Promise<void> {

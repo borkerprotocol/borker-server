@@ -1,6 +1,6 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
-import { Post } from '../../db/entities/post'
-import { getRepository, getManager } from 'typeorm'
+import { Bork } from '../../db/entities/bork'
+import { getRepository, getManager, Brackets } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
@@ -8,8 +8,8 @@ import { OrderBy } from '../../util/misc-types'
 import * as rpc from '../../util/rpc-requests'
 import { BorkType } from 'borker-rs-node'
 
-@Path('/posts')
-export class PostHandler {
+@Path('/borks')
+export class BorkHandler {
 
 	@Path('/')
 	@GET
@@ -19,11 +19,11 @@ export class PostHandler {
     @QueryParam('parentTxid') parentTxid?: string,
     @QueryParam('types') types?: BorkType[],
     @QueryParam('tags') tags?: string[],
-    @QueryParam('order') order: OrderBy<Post> = { createdAt: 'DESC' },
+    @QueryParam('order') order: OrderBy<Bork> = { createdAt: 'DESC' },
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
-  ): Promise<ApiPost[]> {
+  ): Promise<ApiBork[]> {
 
     page = Number(page)
     perPage = Number(perPage)
@@ -31,55 +31,55 @@ export class PostHandler {
     if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
-      const newkey = `posts.${key}`
+      const newkey = `borks.${key}`
       order[newkey] = order[key]
       delete order[key]
     })
 
-    let query = getRepository(Post)
-      .createQueryBuilder('posts')
-      .leftJoinAndSelect('posts.sender', 'sender')
-      .where('posts.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
-      .andWhere('posts.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
+    let query = getRepository(Bork)
+      .createQueryBuilder('borks')
+      .leftJoinAndSelect('borks.sender', 'sender')
+      .where('borks.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
+      .andWhere('borks.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
       .orderBy(order)
       .take(perPage)
       .skip(perPage * (page - 1))
 
     if (!parentTxid) {
       query
-        .leftJoinAndSelect('posts.parent', 'parent')
+        .leftJoinAndSelect('borks.parent', 'parent')
         .leftJoinAndSelect('parent.sender', 'parentSender')
     }
     if (types) {
-      query.andWhere('posts.type IN (:...types)', { types })
+      query.andWhere('borks.type IN (:...types)', { types })
     }
     if (tags) {
-      query.andWhere('posts.txid IN (SELECT post_txid FROM post_tags WHERE tag_name IN (:...tags))', { tags })
+      query.andWhere('borks.txid IN (SELECT bork_txid FROM bork_tags WHERE tag_name IN (:...tags))', { tags })
     }
     if (filterFollowing) {
-      query.andWhere('posts.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
+      query.andWhere('borks.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
     }
     if (senderAddress) {
-      query.andWhere('posts.sender_address = :senderAddress', { senderAddress })
+      query.andWhere('borks.sender_address = :senderAddress', { senderAddress })
     }
     if (parentTxid) {
-      query.andWhere('posts.parent_txid = :parentTxid', { parentTxid })
+      query.andWhere('borks.parent_txid = :parentTxid', { parentTxid })
     }
 
-    const posts = await query.getMany()
+    const borks = await query.getMany()
 
-    return Promise.all(posts.map(async post => {
-      if (post.parent) {
-        Object.assign(post.parent, { ...await this.iCommentReborkFlag(myAddress, post.parent.txid) })
+    return Promise.all(borks.map(async bork => {
+      if (bork.parent) {
+        Object.assign(bork.parent, { ...await this.iCommentReborkFlag(myAddress, bork.parent.txid) })
       }
 
       const [iStuff, counts] = await Promise.all([
-        this.iCommentReborkFlag(myAddress, post.txid),
-        this.getCounts(post.txid),
+        this.iCommentReborkFlag(myAddress, bork.txid),
+        this.getCounts(bork.txid),
       ])
 
       return {
-        ...post,
+        ...bork,
         ...iStuff,
         ...counts,
       }
@@ -98,24 +98,24 @@ export class PostHandler {
 	async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
-  ): Promise<ApiPost> {
+  ): Promise<ApiBork> {
 
-    const post = await getRepository(Post).findOne(txid, { relations: ['sender', 'parent', 'parent.sender'] })
-    if (!post) {
-      throw new Errors.NotFoundError('post not found')
+    const bork = await getRepository(Bork).findOne(txid, { relations: ['sender', 'parent', 'parent.sender'] })
+    if (!bork) {
+      throw new Errors.NotFoundError('bork not found')
     }
 
-    if (await checkBlocked(myAddress, post.sender.address)) {
+    if (await checkBlocked(myAddress, bork.sender.address)) {
       throw new Errors.NotAcceptableError('blocked')
     }
 
     const [iStuff, counts] = await Promise.all([
-      this.iCommentReborkFlag(myAddress, post.txid),
-      this.getCounts(post.txid),
+      this.iCommentReborkFlag(myAddress, bork.txid),
+      this.getCounts(bork.txid),
     ])
 
     return {
-      ...post,
+      ...bork,
       ...iStuff,
       ...counts,
     }
@@ -123,10 +123,10 @@ export class PostHandler {
 
 	@Path('/:txid/users')
 	@GET
-	async indexPostUsers (
+	async indexBorkUsers (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
-    @QueryParam('type') type: 'reborks' | 'likes' | 'flags',
+    @QueryParam('type') type: BorkType,
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
@@ -148,26 +148,34 @@ export class PostHandler {
       .where(qb => {
         let subQuery: string
         switch (type) {
-          case 'reborks':
+          case BorkType.Comment:
             subQuery = qb.subQuery()
               .select('sender_address')
-              .from(Post, 'posts')
+              .from(Bork, 'borks')
               .where('parent_txid = :txid', { txid })
               .andWhere('type = :type', { type })
               .getQuery()
             break
-          case 'likes':
+          case BorkType.Rebork:
+            subQuery = qb.subQuery()
+              .select('sender_address')
+              .from(Bork, 'borks')
+              .where('parent_txid = :txid', { txid })
+              .andWhere('type = :type', { type })
+              .getQuery()
+            break
+          case BorkType.Like:
             subQuery = qb.subQuery()
               .select('user_address')
               .from('likes', 'likes')
-              .where('post_txid = :txid', { txid })
+              .where('bork_txid = :txid', { txid })
               .getQuery()
             break
-          case 'flags':
+          case BorkType.Flag:
             subQuery = qb.subQuery()
               .select('user_address')
               .from('flags', 'flags')
-              .where('post_txid = :txid', { txid })
+              .where('bork_txid = :txid', { txid })
               .getQuery()
             break
           default:
@@ -196,17 +204,17 @@ export class PostHandler {
   }> {
 
     const [ commentsCount, reborksCount, likesCount, flagsCount ] = await Promise.all([
-      getRepository(Post).count({ parent: { txid }, type: BorkType.Comment, deletedAt: null }),
-      getRepository(Post).count({ parent: { txid }, type: BorkType.Rebork, deletedAt: null }),
+      getRepository(Bork).count({ parent: { txid }, type: BorkType.Comment, deletedAt: null }),
+      getRepository(Bork).count({ parent: { txid }, type: BorkType.Rebork, deletedAt: null }),
       getManager().createQueryBuilder()
         .select('likes')
         .from('likes', 'likes')
-        .where('post_txid = :txid', { txid })
+        .where('bork_txid = :txid', { txid })
         .getCount(),
       getManager().createQueryBuilder()
         .select('flags')
         .from('flags', 'flags')
-        .where('post_txid = :txid', { txid })
+        .where('bork_txid = :txid', { txid })
         .getCount(),
     ])
 
@@ -221,12 +229,12 @@ export class PostHandler {
   }> {
 
     const [comment, rebork, like, flag] = await Promise.all([
-      getRepository(Post).findOne({
+      getRepository(Bork).findOne({
         sender: { address: myAddress },
         parent: { txid },
         type: BorkType.Comment,
       }),
-      getRepository(Post).findOne({
+      getRepository(Bork).findOne({
         sender: { address: myAddress },
         parent: { txid },
         type: BorkType.Rebork,
@@ -235,13 +243,13 @@ export class PostHandler {
         .select('likes')
         .from('likes', 'likes')
         .where('user_address = :myAddress', { myAddress })
-        .andWhere('post_txid = :txid', { txid })
+        .andWhere('bork_txid = :txid', { txid })
         .getOne(),
       getManager().createQueryBuilder()
         .select('flags')
         .from('flags', 'flags')
         .where('user_address = :myAddress', { myAddress })
-        .andWhere('post_txid = :txid', { txid })
+        .andWhere('bork_txid = :txid', { txid })
         .getOne(),
     ])
 
@@ -254,7 +262,7 @@ export class PostHandler {
   }
 }
 
-export interface ApiPost extends Post {
+export interface ApiBork extends Bork {
   iComment: boolean
   iRebork: boolean
   iLike: boolean

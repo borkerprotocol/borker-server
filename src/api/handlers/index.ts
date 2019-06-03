@@ -1,4 +1,4 @@
-import { PostHandler } from './post'
+import { BorkHandler } from './bork'
 import { UserHandler } from './user'
 
-export default [UserHandler, PostHandler]
+export default [UserHandler, BorkHandler]

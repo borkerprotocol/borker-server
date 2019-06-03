@@ -1,7 +1,7 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
 import { getManager, EntityManager, Like, Not, MoreThan, LessThan, LessThanOrEqual } from 'typeorm'
-import { Post } from '../db/entities/post'
+import { Bork } from '../db/entities/bork'
 import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
 import { Tag } from '../db/entities/tag'
@@ -9,7 +9,7 @@ import { Utxo } from '../db/entities/utxo'
 import { Orphan } from '../db/entities/orphan'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
-// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
@@ -69,10 +69,10 @@ async function processBlocks () {
   }
 
   const blockHex = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
-  // const borkerTxs = getMockBorkerTxs(blockHeight)
-  // const created = getMockCreated(blockHeight)
-  // const spent = getMockSpent(blockHeight)
+  // const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
+  const borkerTxs = getMockBorkerTxs(blockHeight)
+  const created = getMockCreated(blockHeight)
+  const spent = getMockSpent(blockHeight)
 
   await getManager().transaction(async manager => {
     await Promise.all([
@@ -152,7 +152,7 @@ async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
         break
       // bork
       case BorkType.Bork:
-        await createPost(manager, tx)
+        await createBork(manager, tx)
         break
       // comment, rebork
       case BorkType.Comment:
@@ -182,7 +182,7 @@ async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
         break
       // delete
       case BorkType.Delete:
-        await manager.update(Post, { sender: { address: senderAddress }, txid: content }, { content: null, deletedAt: new Date(time) })
+        await manager.update(Bork, { sender: { address: senderAddress }, txid: content }, { content: null, deletedAt: new Date(time) })
         break
     }
 }
@@ -204,13 +204,13 @@ async function handleProfileUpdate(manager: EntityManager, type: BorkType, sende
   await manager.update(User, senderAddress, params)
 }
 
-async function createPost (manager: EntityManager, tx: any, parentTxid?: string): Promise<void> {
+async function createBork (manager: EntityManager, tx: any, parentTxid?: string): Promise<void> {
   const { txid, time, nonce, position, type, content, senderAddress, mentions } = tx
 
-  // create post
+  // create bork
   await manager.createQueryBuilder()
     .insert()
-    .into(Post)
+    .into(Bork)
     .values({
       txid,
       createdAt: new Date(time),
@@ -239,7 +239,7 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
 
   // find parent
-  const parent = await manager.findOne(Post, {
+  const parent = await manager.findOne(Bork, {
     where: {
       txid: Like(`${referenceId}%`),
       sender: { address: recipientAddress },
@@ -248,15 +248,15 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
   })
   if (!parent) { return }
 
-  // create post if parent exists
-  await createPost(manager, tx, parent.txid)
+  // create bork if parent exists
+  await createBork(manager, tx, parent.txid)
 }
 
 async function handleExtension (manager: EntityManager, tx: any): Promise<void> {
   const { txid, time, nonce, position, content, senderAddress, mentions } = tx
 
   // find parent
-  const parent = await manager.findOne(Post, {
+  const parent = await manager.findOne(Bork, {
     where: {
       nonce,
       sender: { address: senderAddress },
@@ -265,9 +265,9 @@ async function handleExtension (manager: EntityManager, tx: any): Promise<void> 
     },
     order: { createdAt: 'DESC' },
   })
-  // create post if parent exists
+  // create bork if parent exists
   if (parent) {
-    await createPost(manager, tx, parent.txid)
+    await createBork(manager, tx, parent.txid)
   // create orphan if no parent
   } else {
     await manager.createQueryBuilder()
@@ -295,7 +295,7 @@ async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void
   if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
 
   // find parent
-  const parent = await manager.findOne(Post, {
+  const parent = await manager.findOne(Bork, {
     where: {
       txid: Like(`${referenceId}%`),
       sender: { address: recipientAddress },
@@ -310,7 +310,7 @@ async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void
     .into('likes')
     .values({
       user_address: senderAddress,
-      post_txid: parent.txid,
+      bork_txid: parent.txid,
     })
     .onConflict('DO NOTHING')
     .execute()
@@ -320,7 +320,7 @@ async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void>
   const { type, content, senderAddress } = tx
 
   // find parent from content of tx
-  const parent = await manager.findOne(Post, content)
+  const parent = await manager.findOne(Bork, content)
   if (!parent) { return }
 
   // return if either party blocked
@@ -335,7 +335,7 @@ async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void>
         .into('flags')
         .values({
           user_address: senderAddress,
-          post_txid: parent.txid,
+          bork_txid: parent.txid,
         })
         .onConflict('DO NOTHING')
         .execute()
@@ -360,7 +360,7 @@ async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void>
 async function handleFUBU (manager: EntityManager, tx: BorkTxData): Promise<void> {
   const { type, senderAddress, recipientAddress } = tx
 
-  // get recipient from content of post
+  // get recipient from content of bork
   const recipient = await manager.findOne(User, recipientAddress)
   if (!recipient) { return }
 
@@ -412,10 +412,10 @@ async function cleanupOrphans (height: number): Promise<void> {
   try {
     await getManager().transaction(async manager => {
       // find orphans
-      const orphans: OrphanPost[] = await manager.query(`
-        SELECT o.txid, o.created_at as createdAt, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, p.txid as parentTxid, MIN(p.created_at)
+      const orphans: OrphanBork[] = await manager.query(`
+        SELECT o.txid, o.created_at as time, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, p.txid as parentTxid, MIN(p.created_at)
         FROM orphans o
-        INNER JOIN posts p
+        INNER JOIN borks p
         ON p.sender_address = o.sender_address
         AND p.nonce = o.nonce
         AND p.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
@@ -424,8 +424,8 @@ async function cleanupOrphans (height: number): Promise<void> {
       `, [height])
 
       await Promise.all([
-        // create posts
-        Promise.all(orphans.map(orphan => createPost(manager, Object.assign(orphan, {
+        // create borks
+        Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
           mentions: orphan.mentions.split(','),
           type: BorkType.Extension,
         }), orphan.parentTxid))),
@@ -444,10 +444,10 @@ async function attachTags (manager: EntityManager, txid: string, content: string
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
   let match: RegExpExecArray
 
-  let postTags = []
+  let borkTags = []
 
-  // limit post tags to 10
-  while ((match = regex.exec(content)) && postTags.length < 11) {
+  // limit bork tags to 10
+  while ((match = regex.exec(content)) && borkTags.length < 11) {
     const name = match[1].toLowerCase()
     // find or create tag
     await manager.createQueryBuilder()
@@ -459,14 +459,14 @@ async function attachTags (manager: EntityManager, txid: string, content: string
       .onConflict('DO NOTHING')
       .execute()
 
-    postTags.push({ tag_name: name, post_txid: txid })
+    borkTags.push({ tag_name: name, bork_txid: txid })
   }
 
-  if (postTags.length) {
+  if (borkTags.length) {
     await manager.createQueryBuilder()
       .insert()
-      .into('post_tags')
-      .values(postTags)
+      .into('bork_tags')
+      .values(borkTags)
       .onConflict('DO NOTHING')
       .execute()
   }
@@ -477,7 +477,7 @@ async function attachMentions (manager: EntityManager, txid: string, unverified:
   await Promise.all(unverified.map(async address => {
     const user = await manager.findOne(User, address)
     if (!user) { return }
-    mentions.push({ user_address: address, post_txid: txid })
+    mentions.push({ user_address: address, bork_txid: txid })
   }))
 
   if (mentions.length) {
@@ -494,7 +494,7 @@ function getCutoff (now: Date): Date {
   return new Date(now.setHours(now.getHours() - 24))
 }
 
-export interface OrphanPost {
+export interface OrphanBork {
   txid: string
   createdAt: Date
   nonce: number

@@ -1,14 +1,14 @@
 import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
-import { PostHandler } from '../../src/api/handlers/post'
-import { seedBaseUser, seedPost, seedFullUser } from '../helpers/seeds'
-import { Post } from '../../src/db/entities/post'
+import { BorkHandler } from '../../src/api/handlers/bork'
+import { seedBaseUser, seedBork, seedFullUser } from '../helpers/seeds'
+import { Bork } from '../../src/db/entities/bork'
 import { User } from '../../src/db/entities/user'
 import { database } from '../helpers/database'
 
-describe('Post Handler', async () => {
+describe('Bork Handler', async () => {
   let connections: Connection[]
-  let postHandler: PostHandler
+  let borkHandler: BorkHandler
   let user1: User
   let user2: User
 
@@ -23,28 +23,28 @@ describe('Post Handler', async () => {
     user1 = u1
     user2 = u2
 
-    postHandler = new PostHandler()
+    borkHandler = new BorkHandler()
   })
 
   after(async () => {
     await Promise.all(connections.map(c => c.close()))
   })
 
-  describe('GET /posts', async () => {
+  describe('GET /borks', async () => {
 
     it('', async () => {
 
     })
   })
 
-  describe('GET /post/:id', async () => {
+  describe('GET /borks/:id', async () => {
 
     it('', async () => {
 
     })
   })
 
-  describe('GET /posts/:id/users', async () => {
+  describe('GET /borks/:id/users', async () => {
 
     it('', async () => {
 

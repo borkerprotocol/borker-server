@@ -14,8 +14,8 @@ import { User } from './user'
 import { Tag } from './tag'
 import { BorkType } from 'borker-rs-node'
 
-@Entity({ name: 'posts' })
-export class Post {
+@Entity({ name: 'borks' })
+export class Bork {
 
   // attributes
 
@@ -45,21 +45,21 @@ export class Post {
 
   // relations
 
-  @OneToMany(() => Post, post => post.parent)
-  children: Post[]
+  @OneToMany(() => Bork, bork => bork.parent)
+  children: Bork[]
 
   @Index()
-  @ManyToOne(() => Post, post => post.children, { nullable: true })
+  @ManyToOne(() => Bork, bork => bork.children, { nullable: true })
   @JoinColumn({ name: 'parent_txid' })
-  parent: Post
-  @RelationId((post: Post) => post.parent)
+  parent: Bork
+  @RelationId((bork: Bork) => bork.parent)
   parentTxid: string
 
   @Index()
-  @ManyToOne(() => User, user => user.posts)
+  @ManyToOne(() => User, user => user.borks)
 	@JoinColumn({ name: 'sender_address' })
   sender: User
-  @RelationId((post: Post) => post.sender)
+  @RelationId((bork: Bork) => bork.sender)
   senderAddress: string
 
   @ManyToMany(() => User, user => user.likes)
@@ -68,14 +68,14 @@ export class Post {
   @ManyToMany(() => User, user => user.flags)
   flags: User[]
 
-  @ManyToMany(() => Tag, tag => tag.posts)
+  @ManyToMany(() => Tag, tag => tag.borks)
   tags: Tag[]
 
   @ManyToMany(() => User, user => user.mentions)
   mentions: User[]
 }
 
-export interface PostSeed {
+export interface BorkSeed {
   txid: string
   createdAt: Date
   nonce: number
@@ -83,9 +83,9 @@ export interface PostSeed {
   type: BorkType
   sender: User
   content?: string
-  parent?: Post
+  parent?: Bork
 }
 
-export interface PostWithParentSeed extends PostSeed {
-  parent: Post
+export interface BorkWithParentSeed extends BorkSeed {
+  parent: Bork
 }

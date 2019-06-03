@@ -1,6 +1,6 @@
 import { assert } from 'chai'
 import { User } from '../../src/db/entities/user'
-import { Post } from '../../src/db/entities/post'
+import { Bork } from '../../src/db/entities/bork'
 import { Errors } from 'typescript-rest'
 import { BorkType } from 'borker-rs-node'
 
@@ -34,40 +34,40 @@ export function assertFullUser (user: User) {
   assert.exists(user.avatarLink)
 }
 
-export function assertPost (post: Post) {
-  assert.exists(post.txid)
-  assert.exists(post.createdAt)
-  assert.exists(post.nonce)
-  assert.exists(post.type)
-  assert.exists(post.sender)
+export function assertBaseBork (bork: Bork) {
+  assert.exists(bork.txid)
+  assert.exists(bork.createdAt)
+  assert.exists(bork.nonce)
+  assert.exists(bork.type)
+  assert.exists(bork.sender)
 }
 
-export function assertBork (post: Post) {
-  assertPost(post)
-  assert.equal(post.type, BorkType.Bork)
-  assert.equal(post.position, 0)
-  assert.exists(post.content)
+export function assertBork (bork: Bork) {
+  assertBaseBork(bork)
+  assert.equal(bork.type, BorkType.Bork)
+  assert.equal(bork.position, 0)
+  assert.exists(bork.content)
 }
 
-export function assertComment (post: Post) {
-  assertPost(post)
-  assert.equal(post.type, BorkType.Comment)
-  assert.equal(post.position, 0)
-  assert.exists(post.parent)
-  assert.exists(post.content)
+export function assertComment (bork: Bork) {
+  assertBaseBork(bork)
+  assert.equal(bork.type, BorkType.Comment)
+  assert.equal(bork.position, 0)
+  assert.exists(bork.parent)
+  assert.exists(bork.content)
 }
 
-export function assertRebork (post: Post) {
-  assertPost(post)
-  assert.equal(post.type, BorkType.Rebork)
-  assert.equal(post.position, 0)
-  assert.exists(post.parent)
+export function assertRebork (bork: Bork) {
+  assertBaseBork(bork)
+  assert.equal(bork.type, BorkType.Rebork)
+  assert.equal(bork.position, 0)
+  assert.exists(bork.parent)
 }
 
-export function assertExtension (post: Post) {
-  assertPost(post)
-  assert.equal(post.type, BorkType.Extension)
-  assert.notEqual(post.position, 0)
-  assert.exists(post.parent)
-  assert.exists(post.content)
+export function assertExtension (bork: Bork) {
+  assertBaseBork(bork)
+  assert.equal(bork.type, BorkType.Extension)
+  assert.notEqual(bork.position, 0)
+  assert.exists(bork.parent)
+  assert.exists(bork.content)
 }
