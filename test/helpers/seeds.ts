@@ -69,6 +69,7 @@ export async function seedOrphan (sender: User, referencePost: Post, attributes:
   const seed: OrphanSeed = {
     createdAt: new Date(),
     txid: randomAddressOrTxid(false),
+    blockHeight: 100,
     type: BorkType.Comment,
     content: 'orphan content',
     sender,

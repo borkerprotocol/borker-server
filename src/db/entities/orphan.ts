@@ -22,6 +22,10 @@ export class Orphan {
 	@Column('datetime', { name: 'created_at' })
   createdAt: Date
 
+  @Index()
+	@Column('bigint', { name: 'block_height' })
+  blockHeight: number
+
 	@Column('int', { name: 'nonce', nullable: true })
   nonce: number | null
 
@@ -61,6 +65,7 @@ export class Orphan {
 export interface OrphanSeed {
   txid: string
   createdAt: Date
+  blockHeight: number
   nonce?: number
   position?: number
   type: BorkType

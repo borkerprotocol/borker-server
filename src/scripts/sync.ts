@@ -1,6 +1,6 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, Like, Not, MoreThan } from 'typeorm'
+import { getManager, EntityManager, Like, Not, MoreThan, LessThan, LessThanOrEqual } from 'typeorm'
 import { Post } from '../db/entities/post'
 import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
@@ -9,7 +9,7 @@ import { Utxo } from '../db/entities/utxo'
 import { eitherPartyBlocked, chunks } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 import { Orphan } from '../db/entities/orphan'
-import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
+// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
@@ -69,10 +69,10 @@ async function processBlocks () {
   }
 
   const blockHex = await rpc.getBlock(blockHash)
-  // const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
-  const borkerTxs = getMockBorkerTxs(blockHeight)
-  const created = getMockCreated(blockHeight)
-  const spent = getMockSpent(blockHeight)
+  const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
+  // const borkerTxs = getMockBorkerTxs(blockHeight)
+  // const created = getMockCreated(blockHeight)
+  // const spent = getMockSpent(blockHeight)
 
   await getManager().transaction(async manager => {
     await Promise.all([
@@ -82,7 +82,7 @@ async function processBlocks () {
     ])
   })
 
-  // cleanupOrphans()
+  // cleanupOrphans(blockHeight)
 
   blockHeight++
 
@@ -200,7 +200,7 @@ async function handleProfileUpdate(manager: EntityManager, type: BorkType, sende
   await manager.update(User, senderAddress, params)
 }
 
-async function createPost (manager: EntityManager, tx: any, parent?: Post): Promise<void> {
+async function createPost (manager: EntityManager, tx: any, parentTxid?: string): Promise<void> {
   const { txid, time, nonce, position, type, content, senderAddress, mentions } = tx
 
   // create post
@@ -215,7 +215,7 @@ async function createPost (manager: EntityManager, tx: any, parent?: Post): Prom
       type,
       content,
       sender: { address: senderAddress },
-      parent,
+      parent: { txid: parentTxid },
     })
     .onConflict('(txid) DO NOTHING')
     .execute()
@@ -237,6 +237,7 @@ async function createOrphan (manager: EntityManager, tx: any): Promise<void> {
     .values({
       txid,
       createdAt: new Date(time),
+      blockHeight,
       type,
       nonce,
       position,
@@ -265,7 +266,7 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
   })
   // create post if parent exists
   if (parent) {
-    await createPost(manager, tx, parent)
+    await createPost(manager, tx, parent.txid)
   // create orphan if no parent
   } else {
     await createOrphan(manager, tx)
@@ -287,7 +288,7 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
   })
   // create post if parent exists
   if (parent) {
-    await createPost(manager, tx, parent)
+    await createPost(manager, tx, parent.txid)
   // create orphan if no parent
   } else {
     await createOrphan(manager, tx)
@@ -438,46 +439,106 @@ async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<vo
   }
 }
 
-// async function cleanupOrphans (manager: EntityManager): Promise<void> {
+async function cleanupOrphans (height: number): Promise<void> {
 
-//   await Promise.all([
-//     // create comments and reborks
-//     manager.query(`
-//       INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
-//       SELECT txid, created_at, nonce, position, type, content, sender_address, $1
-//       FROM orphans
-//       WHERE reference_sender_address = $2
-//       AND type IN ('comment', 'rebork')
-//       AND $1 LIKE reference_id || '%'
-//     `, [txid, senderAddress]),
-//     // create extensions
-//     manager.query(`
-//       INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
-//       SELECT txid, created_at, nonce, position, type, content, sender_address, $1
-//       FROM orphans
-//       WHERE reference_sender_address = $2
-//       AND type = 'extension'
-//       AND nonce = $3
-//       AND created_at > $4
-//     `, [txid, senderAddress, nonce, getCutoff(new Date(time))]),
-//     // create likes
-//     manager.query(`
-//       INSERT INTO likes (post_txid, user_address)
-//       SELECT $1, sender_address
-//       FROM orphans
-//       WHERE reference_sender_address = $2
-//       AND $1 LIKE reference_id || '%'
-//     `, [txid, senderAddress]),
-//   ])
+  await getManager().transaction(async manager => {
+    await Promise.all([
+      // create comments and reborks
+      Promise.all((await findOrphansCRE(manager)).map(orphan => {
+        return createPost(manager, orphan, orphan.parent_txid)
+      })),
+      // manager.query(`
+      //   INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
+      //   SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
+      //   FROM orphans o
+      //   LEFT JOIN posts p
+      //   ON p.sender_address = o.reference_sender_address
+      //   AND p.txid LIKE o.reference_id || '%'
+      //   AND o.type IN ('comment', 'rebork')
+      //   GROUP BY o.txid
+      // `),
+      // create extensions
+      // manager.query(`
+      //   INSERT INTO posts (txid, created_at, nonce, position, type, content, sender_address, parent_txid)
+      //   SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
+      //   FROM orphans o
+      //   LEFT JOIN posts p
+      //   ON p.sender_address = o.sender_address
+      //   AND p.nonce = o.nonce
+      //   AND p.created_at < DATETIME(o.created_at, '+24 hours')
+      //   AND o.type = 'extension'
+      //   GROUP BY o.txid
+      //   `),
+      // create likes
+      manager.query(`
+        INSERT INTO likes (user_address, post_txid)
+        SELECT o.sender_address, p.txid, MAX(p.created_at)
+        FROM orphans o
+        LEFT JOIN posts p
+        ON p.sender_address = o.reference_sender_address
+        AND p.txid LIKE o.reference_id || '%'
+        AND o.type = 'like'
+        GROUP BY o.txid
+      `),
+      // create flags
+      manager.query(`
+        INSERT INTO flags (user_address, post_txid)
+        SELECT o.sender_address, p.txid, MAX(p.created_at)
+        FROM orphans o
+        LEFT JOIN posts p
+        ON p.sender_address = o.reference_sender_address
+        AND p.txid LIKE o.reference_id || '%'
+        AND o.type = 'flag'
+        GROUP BY o.txid
+      `),
+      // create follows
+      manager.query(`
+        INSERT INTO follows (follower_address, followed_address)
+        SELECT sender_address, content
+        FROM orphans
+        WHERE content IN (SELECT address FROM users)
+        AND type = 'follow'
+      `),
+      // create blocks
+      manager.query(`
+        INSERT INTO blocked (blocker_address, blocked_address)
+        SELECT sender_address, content
+        FROM orphans
+        WHERE content IN (SELECT address FROM users)
+        AND type = 'block'
+      `),
+    ])
 
-//   // delete orphans
-//   await manager.createQueryBuilder()
-//     .delete()
-//     .from(Orphan)
-//     .where('reference_sender_address = :senderAddress', { senderAddress })
-//     .andWhere(`nonce = :nonce OR :txid LIKE reference_id || '%'`, { nonce, txid })
-//     .execute()
-// }
+    // delete orphans
+    await manager.delete(Orphan, { blockHeight: LessThanOrEqual(height) })
+  })
+}
+
+async function findOrphansCRE (manager: EntityManager): Promise<any[]> {
+  const [rawCR, rawE]: [any[], any[]] = await Promise.all([
+    manager.query(`
+      SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MAX(p.created_at)
+      FROM orphans o
+      INNER JOIN posts p
+      ON p.sender_address = o.reference_sender_address
+      AND p.txid LIKE o.reference_id || '%'
+      AND o.type IN ('comment', 'rebork')
+      GROUP BY o.txid
+    `),
+    manager.query(`
+      SELECT o.txid, o.created_at, o.nonce, o.position, o.type, o.content, o.sender_address, p.txid, MIN(p.created_at)
+      FROM orphans o
+      INNER JOIN posts p
+      ON p.sender_address = o.sender_address
+      AND p.nonce = o.nonce
+      AND p.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
+      AND o.type = 'extension'
+      GROUP BY o.txid
+    `),
+  ])
+
+  return rawCR.concat(rawE)
+}
 
 async function attachTags (manager: EntityManager, txid: string, content: string): Promise<void> {
   const regex = /(?:^|\s)(?:#)([a-zA-Z\d]+)/gm
