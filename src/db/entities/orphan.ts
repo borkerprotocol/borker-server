@@ -25,6 +25,7 @@ export class Orphan {
 	@Column('bigint', { name: 'block_height' })
   blockHeight: number
 
+  @Index()
 	@Column('int', { name: 'nonce' })
   nonce: number
 

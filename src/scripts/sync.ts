@@ -13,6 +13,7 @@ import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'bo
 
 let config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
 let blockHeight: number
+let cleaning: number | null
 
 export async function syncChain () {
   console.log('begin sync')
@@ -58,7 +59,7 @@ async function setBlockHeight (): Promise<void> {
 }
 
 async function processBlocks () {
-  console.log(`syncing block ${blockHeight}`)
+  console.log(`syncing ${blockHeight}`)
 
   let blockHash: string
   try {
@@ -82,10 +83,10 @@ async function processBlocks () {
     ])
   })
 
-  const isCleaning = (await getManager().count(TxBlock, { isCleaning: true })) > 0
-  if (!isCleaning) {
-    await getManager().update(TxBlock, blockHeight, { isCleaning: true })
-    cleanupOrphans(blockHeight)
+  // cleanup orphans if not already cleaning
+  if (!cleaning) {
+    cleaning = blockHeight
+    cleanupOrphans()
   }
 
   blockHeight++
@@ -407,39 +408,41 @@ async function handleFUBU (manager: EntityManager, tx: BorkTxData): Promise<void
   }
 }
 
-async function cleanupOrphans (height: number): Promise<void> {
+async function cleanupOrphans (): Promise<void> {
 
   try {
-    await getManager().transaction(async manager => {
-      // find orphans
-      const orphans: OrphanBork[] = await manager.query(`
-        SELECT o.txid, o.created_at as time, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, b.txid as parentTxid, MIN(b.created_at)
-        FROM orphans o
-        INNER JOIN borks b
-        ON b.sender_address = o.sender_address
-        AND b.nonce = o.nonce
-        AND b.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
-        AND o.block_height <= $1
-        GROUP BY o.txid
-      `, [height])
-
-      await Promise.all([
-        // create borks
-        Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
-          mentions: orphan.mentions.split(','),
-          type: BorkType.Extension,
-          referenceId: null,
-          recipientAddress: null,
-        }), orphan.parentTxid))),
-        // delete orphans
-        orphans.length && manager.delete(Orphan, orphans.map(orphan => orphan.txid)),
-        // update isCleaning on block
-        manager.update(TxBlock, height, { isCleaning: false }),
-      ])
-    })
+    // find orphans
+    const orphans: OrphanBork[] = await getManager().query(`
+      SELECT o.txid, o.created_at as time, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, b.txid as parentTxid, MIN(b.created_at)
+      FROM orphans o
+      INNER JOIN borks b
+      ON b.sender_address = o.sender_address
+      AND b.nonce = o.nonce
+      AND b.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
+      AND o.block_height <= $1
+      GROUP BY o.txid
+    `, [cleaning])
+    // create extenstions and delete orphans if orpahns exist
+    if (orphans.length) {
+      await getManager().transaction(async manager => {
+        await Promise.all([
+          // create borks
+          Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
+            mentions: orphan.mentions.split(','),
+            type: BorkType.Extension,
+            referenceId: null,
+            recipientAddress: null,
+          }), orphan.parentTxid))),
+          // delete orphans
+          orphans.length && manager.delete(Orphan, orphans.map(orphan => orphan.txid)),
+        ])
+      })
+    }
   } catch (err) {
     console.error('error in cleanupOrphans(): ', err.message)
   }
+  // reset cleaning
+  cleaning = null
 }
 
 async function attachTags (manager: EntityManager, txid: string, content: string): Promise<void> {

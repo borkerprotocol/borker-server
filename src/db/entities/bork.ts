@@ -29,6 +29,7 @@ export class Bork {
 	@Column('datetime', { name: 'deleted_at', nullable: true })
   deletedAt: Date | null
 
+  @Index()
 	@Column('int', { name: 'nonce' })
   nonce: number
 
