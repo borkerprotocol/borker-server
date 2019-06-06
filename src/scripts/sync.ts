@@ -69,7 +69,7 @@ async function processBlocks () {
   }
 
   const blockHex = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(blockHex, `${blockHeight}n` as any, Network.Dogecoin)
+  const { borkerTxs, created, spent } = processBlock(blockHex, BigInt(blockHeight) as any, Network.Dogecoin)
   // const borkerTxs = getMockBorkerTxs(blockHeight)
   // const created = getMockCreated(blockHeight)
   // const spent = getMockSpent(blockHeight)
