@@ -69,7 +69,7 @@ async function processBlocks () {
   }
 
   const blockHex = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(blockHex, blockHeight, Network.Dogecoin)
+  const { borkerTxs, created, spent } = processBlock(blockHex, `${blockHeight}n` as any, Network.Dogecoin)
   // const borkerTxs = getMockBorkerTxs(blockHeight)
   // const created = getMockCreated(blockHeight)
   // const spent = getMockSpent(blockHeight)
@@ -428,7 +428,6 @@ async function cleanupOrphans (height: number): Promise<void> {
         Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
           mentions: orphan.mentions.split(','),
           type: BorkType.Extension,
-          time: orphan.createdAt.toISOString(),
           referenceId: null,
           recipientAddress: null,
         }), orphan.parentTxid))),
@@ -499,7 +498,7 @@ function getCutoff (now: Date): Date {
 
 export interface OrphanBork {
   txid: string
-  createdAt: Date
+  time: string
   nonce: number
   position: number
   content: string
