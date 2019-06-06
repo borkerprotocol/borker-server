@@ -65,7 +65,7 @@ async function processBlocks () {
   try {
     blockHash = await rpc.getBlockHash(blockHeight)
   } catch (err) {
-    console.log(err)
+    // if (JSON.parse(err.error).error.code !== -8) { console.error(err.message) }
     return
   }
 
