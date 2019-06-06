@@ -1,13 +1,13 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, Like, Not, MoreThan, LessThan, LessThanOrEqual } from 'typeorm'
+import { getManager, EntityManager, Like, Not, MoreThan } from 'typeorm'
 import { Bork } from '../db/entities/bork'
 import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
 import { Tag } from '../db/entities/tag'
 import { Utxo } from '../db/entities/utxo'
 import { Orphan } from '../db/entities/orphan'
-import { eitherPartyBlocked, chunks } from '../util/functions'
+import { eitherPartyBlocked } from '../util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../util/mocks'
 
@@ -33,7 +33,7 @@ export async function syncChain () {
 async function setBlockHeight (): Promise<void> {
   let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
   let keepGoing = true
-
+  // handle chain reorgs
   do {
     if (block) {
       const blockHash = await rpc.getBlockHash(block.height)
@@ -69,7 +69,7 @@ async function processBlocks () {
   }
 
   const blockHex = await rpc.getBlock(blockHash)
-  const { borkerTxs, created, spent } = processBlock(blockHex, Network.Dogecoin)
+  const { borkerTxs, created, spent } = processBlock(blockHex, blockHeight, Network.Dogecoin)
   // const borkerTxs = getMockBorkerTxs(blockHeight)
   // const created = getMockCreated(blockHeight)
   // const spent = getMockSpent(blockHeight)
@@ -106,10 +106,10 @@ async function createTxBlock(manager: EntityManager, hash: string) {
     .execute()
 }
 
-async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: UtxoId[]) {
+async function processUtxos(manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
   // insert created utxos
   if (created.length) {
-    await Promise.all(chunks(created, 100).map(chunk => {
+    await Promise.all(created.map(chunk => {
       return manager.createQueryBuilder()
         .insert()
         .into(Utxo)
@@ -120,7 +120,7 @@ async function processUtxos(manager: EntityManager, created: NewUtxo[], spent: U
   }
   // delete spent utxos
   if (spent.length) {
-    await Promise.all(chunks(spent, 100).map(chunk => {
+    await Promise.all(spent.map(chunk => {
       return manager.delete(Utxo, chunk)
     }))
   }
@@ -204,7 +204,7 @@ async function handleProfileUpdate(manager: EntityManager, type: BorkType, sende
   await manager.update(User, senderAddress, params)
 }
 
-async function createBork (manager: EntityManager, tx: any, parentTxid?: string): Promise<void> {
+async function createBork (manager: EntityManager, tx: BorkTxData, parentTxid?: string): Promise<void> {
   const { txid, time, nonce, position, type, content, senderAddress, mentions } = tx
 
   // create bork
@@ -252,7 +252,7 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
   await createBork(manager, tx, parent.txid)
 }
 
-async function handleExtension (manager: EntityManager, tx: any): Promise<void> {
+async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
   const { txid, time, nonce, position, content, senderAddress, mentions } = tx
 
   // find parent
@@ -413,12 +413,12 @@ async function cleanupOrphans (height: number): Promise<void> {
     await getManager().transaction(async manager => {
       // find orphans
       const orphans: OrphanBork[] = await manager.query(`
-        SELECT o.txid, o.created_at as time, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, p.txid as parentTxid, MIN(p.created_at)
+        SELECT o.txid, o.created_at as time, o.nonce, o.position, o.content, o.mentions, o.sender_address as senderAddress, b.txid as parentTxid, MIN(b.created_at)
         FROM orphans o
-        INNER JOIN borks p
-        ON p.sender_address = o.sender_address
-        AND p.nonce = o.nonce
-        AND p.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
+        INNER JOIN borks b
+        ON b.sender_address = o.sender_address
+        AND b.nonce = o.nonce
+        AND b.created_at BETWEEN o.created_at AND DATETIME(o.created_at, '+24 hours')
         AND o.block_height <= $1
         GROUP BY o.txid
       `, [height])
@@ -428,6 +428,9 @@ async function cleanupOrphans (height: number): Promise<void> {
         Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
           mentions: orphan.mentions.split(','),
           type: BorkType.Extension,
+          time: orphan.createdAt.toISOString(),
+          referenceId: null,
+          recipientAddress: null,
         }), orphan.parentTxid))),
         // delete orphans
         orphans.length && manager.delete(Orphan, orphans.map(orphan => orphan.txid)),

@@ -42,7 +42,7 @@ export function getMockSpent (blockHeight: number) {
   }
 }
 
-export const mockTxs1: any[] = [
+export const mockTxs1: BorkTxData[] = [
   {
     time: '2019-05-28T00:51:39Z',
     txid: '39128e8edacce1ada4e1df9aa5fc91431302ef951df06a78e13f4fbc3759e752',
@@ -94,7 +94,7 @@ export const mockTxs1: any[] = [
   },
 ]
 
-export const mockTxs2: any[] = [
+export const mockTxs2: BorkTxData[] = [
   {
     time: '2019-05-28T00:51:39Z',
     txid: '069aa2f138cbdc6ebd379b1e6d1cb7f86c8770ad58be27006671d528a75ba0e3',
@@ -157,7 +157,7 @@ export const mockTxs2: any[] = [
   },
 ]
 
-export const mockTxs3: any[] = [
+export const mockTxs3: BorkTxData[] = [
   {
     time: '2019-05-28T00:51:39Z',
     txid: '4cb6f18366e4a32ff69e681d192aec89a4d8721af544725fe6a02ecde4311605',
@@ -220,7 +220,7 @@ export const mockTxs3: any[] = [
   },
 ]
 
-export const mockTxs4: any[] = [
+export const mockTxs4: BorkTxData[] = [
   {
     time: '2019-05-28T00:51:39Z',
     txid: '0b692b4e683a3ea47f0b3b6a6f30e8cca6efcc78f1c2eb6e35430af9b9415eb5',
@@ -333,7 +333,7 @@ export const mockTxs4: any[] = [
   },
 ]
 
-export const mockCreated1: any[] = [
+export const mockCreated1: NewUtxo[] = [
   {
     txid: '89da78a5802eb72ba3ae4e12654b10b0223221f7f76ac915f5636394a8c463e7',
     blockHeight: 17903,
@@ -369,7 +369,7 @@ export const mockCreated1: any[] = [
   },
 ]
 
-export const mockCreated2: any[] = [
+export const mockCreated2: NewUtxo[] = [
   {
     txid: '41266e19b39dbba35128f3af72299b4636cb9250d81741b5db1987716043a7af',
     blockHeight: 17904,
@@ -389,7 +389,7 @@ export const mockCreated2: any[] = [
   },
 ]
 
-export const mockCreated3: any[] = [
+export const mockCreated3: NewUtxo[] = [
   {
     txid: 'a21f4c7f2aa418aea0a72e34aa753d5aa0bd77918053da3fe06ecb54145657f2',
     blockHeight: 17905,
@@ -400,7 +400,7 @@ export const mockCreated3: any[] = [
   },
 ]
 
-export const mockCreated4: any[] = [
+export const mockCreated4: NewUtxo[] = [
   {
     txid: '2d9509c33a8e93152a42f2aa048404b304ba858dc0ad8f305ba16223781d46fc',
     blockHeight: 17906,
@@ -427,16 +427,16 @@ export const mockCreated4: any[] = [
   },
 ]
 
-export const mockSpent1: any[] = []
+export const mockSpent1: UtxoId[] = []
 
-export const mockSpent2: any[] = [
+export const mockSpent2: UtxoId[] = [
   {
     txid: '89da78a5802eb72ba3ae4e12654b10b0223221f7f76ac915f5636394a8c463e7',
     position: 0,
   },
 ]
 
-export const mockSpent3: any[] = [
+export const mockSpent3: UtxoId[] = [
   {
     txid: '774bef2197e6394112e1ee18246f1a0137ddb19a4d2d4464c1e25217977a0460',
     position: 1,
@@ -451,7 +451,7 @@ export const mockSpent3: any[] = [
   },
 ]
 
-export const mockSpent4: any[] = [
+export const mockSpent4: UtxoId[] = [
   {
     txid: '',
     position: 0,
