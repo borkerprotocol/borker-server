@@ -39,62 +39,11 @@ export class User {
 	@OneToMany(() => Bork, bork => bork.sender)
   borks: Bork[]
 
+	@OneToMany(() => Bork, bork => bork.recipient)
+  receivedBorks: Bork[]
+
 	@OneToMany(() => Orphan, orphan => orphan.sender)
   orphans: Orphan[]
-
-  @ManyToMany(() => User, user => user.following)
-  @JoinTable({
-    name: 'follows',
-    joinColumns: [
-      { name: 'followed_address' },
-    ],
-    inverseJoinColumns: [
-      { name: 'follower_address' },
-    ],
-  })
-  followers: User[]
-
-  @ManyToMany(() => User, user => user.followers)
-  following: User[]
-
-  @ManyToMany(() => User, user => user.blocking)
-  @JoinTable({
-    name: 'blocks',
-    joinColumns: [
-      { name: 'blocked_address' },
-    ],
-    inverseJoinColumns: [
-      { name: 'blocker_address' },
-    ],
-  })
-  blockers: User[]
-
-  @ManyToMany(() => User, user => user.blockers)
-  blocking: User[]
-
-  @ManyToMany(() => Bork, bork => bork.likes)
-  @JoinTable({
-    name: 'likes',
-    joinColumns: [
-      { name: 'user_address' },
-    ],
-    inverseJoinColumns: [
-      { name: 'bork_txid' },
-    ],
-  })
-  likes: Bork[]
-
-  @ManyToMany(() => Bork, bork => bork.flags)
-  @JoinTable({
-    name: 'flags',
-    joinColumns: [
-      { name: 'user_address' },
-    ],
-    inverseJoinColumns: [
-      { name: 'bork_txid' },
-    ],
-  })
-  flags: Bork[]
 
   @ManyToMany(() => Bork, bork => bork.mentions)
   @JoinTable({

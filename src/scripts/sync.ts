@@ -1,6 +1,6 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, Like, Not, MoreThan } from 'typeorm'
+import { getManager, EntityManager, Like, MoreThan, IsNull, FindConditions, Not } from 'typeorm'
 import { Bork } from '../db/entities/bork'
 import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
@@ -129,7 +129,7 @@ async function processUtxos(manager: EntityManager, created: NewUtxo[][], spent:
 
 async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
 
-    const { time, type, content, senderAddress } = tx
+    const { time, type, senderAddress } = tx
 
     // create sender
     await manager.createQueryBuilder()
@@ -149,64 +149,62 @@ async function processBorkerTx(manager: EntityManager, tx: BorkTxData) {
       case BorkType.SetName:
       case BorkType.SetBio:
       case BorkType.SetAvatar:
-        await handleProfileUpdate(manager, type, senderAddress, content)
+        await handleProfileUpdate(manager, tx)
         break
       // bork
       case BorkType.Bork:
         await createBork(manager, tx)
         break
-      // comment, rebork
+      // comment, rebork, like
       case BorkType.Comment:
       case BorkType.Rebork:
-        await handleCR(manager, tx)
+      case BorkType.Like:
+        await handleCommentReborkLike(manager, tx)
         break
       // extension
       case BorkType.Extension:
         await handleExtension(manager, tx)
         break
-      // like
-      case BorkType.Like:
-        await handleLike(manager, tx)
-        break
-      // flag, unflag, unlike
-      case BorkType.Unlike:
+      // flag
       case BorkType.Flag:
-      case BorkType.Unflag:
-        await handleFUU(manager, tx)
+        await handleFlag(manager, tx)
         break
-      // follow, unfollow, block, unblock
+      // follow, block
       case BorkType.Follow:
-      case BorkType.Unfollow:
       case BorkType.Block:
-      case BorkType.Unblock:
-        await handleFUBU(manager, tx)
+        await handleFollowBlock(manager, tx)
         break
       // delete
       case BorkType.Delete:
-        await manager.update(Bork, { sender: { address: senderAddress }, txid: content }, { content: null, deletedAt: new Date(time) })
+        await handleDelete(manager, tx)
         break
     }
 }
 
-async function handleProfileUpdate(manager: EntityManager, type: BorkType, senderAddress: string, content: string) {
-  let params: Partial<User>
+async function handleProfileUpdate(manager: EntityManager, tx: BorkTxData) {
+  const { type, content, senderAddress } = tx
 
+  let params: Partial<User> = {}
   switch (type) {
     case BorkType.SetName:
-      params = { name: content }
+      params.name = content
       break
     case BorkType.SetBio:
-      params = { bio: content }
+      params.bio = content
       break
     case BorkType.SetAvatar:
-      params = { avatarLink: content }
+      params.avatarLink = content
       break
   }
-  await manager.update(User, senderAddress, params)
+
+  await Promise.all([
+    manager.update(User, senderAddress, params),
+    createBork(manager, tx),
+  ])
 }
 
-async function createBork (manager: EntityManager, tx: BorkTxData, parentTxid?: string): Promise<void> {
-  const { txid, time, nonce, position, type, content, senderAddress, mentions } = tx
+async function createBork (manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
+  const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions } = tx
 
   // create bork
   await manager.createQueryBuilder()
@@ -220,20 +218,23 @@ async function createBork (manager: EntityManager, tx: BorkTxData, parentTxid?: 
       type,
       content,
       sender: { address: senderAddress },
+      recipient: { address: recipientAddress },
       parent: { txid: parentTxid },
     })
     .onConflict('(txid) DO NOTHING')
     .execute()
 
+  if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(type)) {
     await Promise.all([
       // attach tags
       attachTags(manager, txid, content),
       // attach mentions
       attachMentions(manager, txid, mentions),
     ])
+  }
 }
 
-async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> {
+async function handleCommentReborkLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
   const { referenceId, senderAddress, recipientAddress } = tx
 
   // return if either party blocked
@@ -250,7 +251,10 @@ async function handleCR (manager: EntityManager, tx: BorkTxData): Promise<void> 
   if (!parent) { return }
 
   // create bork if parent exists
-  await createBork(manager, tx, parent.txid)
+  await createBork(manager, {
+    ...tx,
+    parentTxid: parent.txid,
+  })
 }
 
 async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
@@ -268,7 +272,10 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
   })
   // create bork if parent exists
   if (parent) {
-    await createBork(manager, tx, parent.txid)
+    await createBork(manager, {
+      ...tx,
+      parentTxid: parent.txid,
+    })
   // create orphan if no parent
   } else {
     await manager.createQueryBuilder()
@@ -289,123 +296,89 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
   }
 }
 
-async function handleLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { referenceId, senderAddress, recipientAddress } = tx
+async function handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void> {
+  const { content, senderAddress } = tx
 
-  // return if either party is blocked
-  if (await eitherPartyBlocked(recipientAddress, senderAddress)) { return }
-
-  // find parent
-  const parent = await manager.findOne(Bork, {
-    where: {
-      txid: Like(`${referenceId}%`),
-      sender: { address: recipientAddress },
-    },
-    order: { createdAt: 'DESC' },
-  })
-  if (!parent) { return }
-
-  // create like if parent exists
-  await manager.createQueryBuilder()
-    .insert()
-    .into('likes')
-    .values({
-      user_address: senderAddress,
-      bork_txid: parent.txid,
-    })
-    .onConflict('DO NOTHING')
-    .execute()
-}
-
-async function handleFUU (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { type, content, senderAddress } = tx
-
-  // find parent from content of tx
+  // find parent from content
   const parent = await manager.findOne(Bork, content)
   if (!parent) { return }
 
   // return if either party blocked
   if (await eitherPartyBlocked(parent.senderAddress, senderAddress)) { return }
 
-  // create flag, unflag, or unlike if parent exists
-  switch (type) {
-    // flag
-    case BorkType.Flag:
-      await manager.createQueryBuilder()
-        .insert()
-        .into('flags')
-        .values({
-          user_address: senderAddress,
-          bork_txid: parent.txid,
-        })
-        .onConflict('DO NOTHING')
-        .execute()
-      break
-    // unflag
-    case BorkType.Unflag:
-      await manager.createQueryBuilder()
-        .relation(User, 'flags')
-        .of(senderAddress)
-        .remove(parent.txid)
-      break
-    // unlike
-    case BorkType.Unlike:
-      await manager.createQueryBuilder()
-        .relation(User, 'likes')
-        .of(senderAddress)
-        .remove(parent.txid)
-      break
-  }
+  // create bork if parent exists
+  await createBork(manager, {
+    ...tx,
+    content: null,
+    parentTxid: parent.txid,
+  })
 }
 
-async function handleFUBU (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { type, senderAddress, recipientAddress } = tx
+async function handleFollowBlock (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
-  // get recipient from content of bork
-  const recipient = await manager.findOne(User, recipientAddress)
+  // find recipient from content
+  const recipient = await manager.findOne(User, tx.content)
   if (!recipient) { return }
 
-  // create follow, unfollow, block, or unblock if recipient exists
-  switch (type) {
-    // follow
+  // create bork if recipient exists
+  await createBork(manager, {
+    ...tx,
+    content: null,
+    recipientAddress: recipient.address,
+  })
+}
+
+async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<void> {
+  const { time, content, senderAddress } = tx
+
+  // find parent from sender and content
+  const bork = await manager.findOne(Bork, {
+    txid: content,
+    sender: { address: senderAddress },
+    deletedAt: IsNull(),
+  })
+  if (!bork) { return }
+
+  let conditions: FindConditions<Bork> = {}
+  let params: Partial<Bork> = { deletedAt: new Date(time) }
+  switch (bork.type) {
+    // delete single bork if bork, comment, rebork, extension
+    case BorkType.Bork:
+    case BorkType.Comment:
+    case BorkType.Rebork:
+    case BorkType.Extension:
+      conditions.txid = bork.txid
+      params.content = null
+      break
+    // delete all if like, flag, follow, block
+    case BorkType.Like:
+    case BorkType.Flag:
     case BorkType.Follow:
-      await manager.createQueryBuilder()
-        .insert()
-        .into('follows')
-        .values({
-          follower_address: senderAddress,
-          followed_address: recipient.address,
-        })
-        .onConflict('DO NOTHING')
-        .execute()
-      break
-    // unfollow
-    case BorkType.Unfollow:
-      await manager.createQueryBuilder()
-        .relation(User, 'following')
-        .of(senderAddress)
-        .remove(recipient.address)
-      break
-    // block
     case BorkType.Block:
-      await manager.createQueryBuilder()
-        .insert()
-        .into('blocks')
-        .values({
-          blocker_address: senderAddress,
-          blocked_address: recipient.address,
-        })
-        .onConflict('DO NOTHING')
-        .execute()
+      conditions.sender = { address: bork.senderAddress }
+      conditions.type = bork.type
+      conditions.deletedAt = IsNull()
+      // find by parent if like, flag
+      if ([BorkType.Like, BorkType.Flag].includes(bork.type)) {
+        conditions.parent = { txid: bork.parentTxid }
+      // find by recipient if follow, block
+      } else {
+        conditions.recipient = { address: bork.recipientAddress }
+      }
       break
-    // unblock
-    case BorkType.Unblock:
-      await manager.createQueryBuilder()
-        .relation(User, 'blocking')
-        .of(senderAddress)
-        .remove(recipient.address)
+    // do nothing if setName, setBio, setAvatar, delete
+    default:
       break
   }
+
+  await Promise.all([
+    manager.update(Bork, conditions, params),
+    createBork(manager, {
+      ...tx,
+      content: null,
+      parentTxid: bork.txid,
+    }),
+  ])
 }
 
 async function cleanupOrphans (): Promise<void> {
@@ -426,15 +399,17 @@ async function cleanupOrphans (): Promise<void> {
     if (orphans.length) {
       await getManager().transaction(async manager => {
         await Promise.all([
-          // create borks
-          Promise.all(orphans.map(orphan => createBork(manager, Object.assign(orphan, {
+          // create extensions
+          Promise.all(orphans.map(orphan => createBork(manager, {
+            ...orphan,
             mentions: orphan.mentions.split(','),
             type: BorkType.Extension,
+            parentTxid: orphan.parentTxid,
             referenceId: null,
             recipientAddress: null,
-          }), orphan.parentTxid))),
+          }))),
           // delete orphans
-          orphans.length && manager.delete(Orphan, orphans.map(orphan => orphan.txid)),
+          manager.delete(Orphan, orphans.map(orphan => orphan.txid)),
         ])
       })
     }

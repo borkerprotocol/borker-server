@@ -1,6 +1,6 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
 import { Bork } from '../../db/entities/bork'
-import { getRepository, getManager, Brackets } from 'typeorm'
+import { getRepository, IsNull, Brackets } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
@@ -39,8 +39,19 @@ export class BorkHandler {
     let query = getRepository(Bork)
       .createQueryBuilder('borks')
       .leftJoinAndSelect('borks.sender', 'sender')
-      .where('borks.sender_address NOT IN (SELECT blocked_address FROM blocks WHERE blocker_address = :myAddress)', { myAddress })
-      .andWhere('borks.sender_address NOT IN (SELECT blocker_address FROM blocks WHERE blocked_address = :myAddress)', { myAddress })
+      .where(qb => {
+        const subQuery = qb.subQuery()
+          .select('recipient_address')
+          .from(Bork, 'blocks')
+          .where('type = :blockType', { blockType: BorkType.Block })
+          .andWhere(new Brackets(qb => {
+            qb.where('sender_address = :myAddress')
+              .orWhere('recipient_address = :myAddress')
+          }))
+          .andWhere('deleted_at IS NULL')
+          .getQuery()
+        return `borks.sender_address NOT IN ${subQuery}`
+      })
       .orderBy(order)
       .take(perPage)
       .skip(perPage * (page - 1))
@@ -57,7 +68,16 @@ export class BorkHandler {
       query.andWhere('borks.txid IN (SELECT bork_txid FROM bork_tags WHERE tag_name IN (:...tags))', { tags })
     }
     if (filterFollowing) {
-      query.andWhere('borks.sender_address IN (SELECT followed_address FROM follows WHERE follower_address = :myAddress)', { myAddress })
+      query.andWhere(qb => {
+        const subQuery = qb.subQuery()
+          .select('recipient_address')
+          .from(Bork, 'borks')
+          .where('type = :followType', { followType: BorkType.Follow })
+          .andWhere('sender_address = :myAddress')
+          .andWhere('deleted_at IS NULL')
+          .getQuery()
+        return `borks.sender_address IN ${subQuery}`
+      })
     }
     if (senderAddress) {
       query.andWhere('borks.sender_address = :senderAddress', { senderAddress })
@@ -66,23 +86,22 @@ export class BorkHandler {
       query.andWhere('borks.parent_txid = :parentTxid', { parentTxid })
     }
 
-    const borks = await query.getMany()
+    const borks = await query
+      .setParameter('myAddress', myAddress)
+      .getMany()
 
     return Promise.all(borks.map(async bork => {
       if (bork.parent) {
         Object.assign(bork.parent, { ...await this.iCommentReborkFlag(myAddress, bork.parent.txid) })
       }
-
-      const [iStuff, counts] = await Promise.all([
-        this.iCommentReborkFlag(myAddress, bork.txid),
-        this.getCounts(bork.txid),
-      ])
-
-      return {
-        ...bork,
-        ...iStuff,
-        ...counts,
+      if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
+        Object.assign(bork, ...await Promise.all([
+          this.iCommentReborkFlag(myAddress, bork.txid),
+          this.getCounts(bork.txid),
+        ]))
       }
+
+      return bork
     }))
   }
 
@@ -109,16 +128,14 @@ export class BorkHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    const [iStuff, counts] = await Promise.all([
-      this.iCommentReborkFlag(myAddress, bork.txid),
-      this.getCounts(bork.txid),
-    ])
-
-    return {
-      ...bork,
-      ...iStuff,
-      ...counts,
+    if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
+      Object.assign(bork, ...await Promise.all([
+        this.iCommentReborkFlag(myAddress, bork.txid),
+        this.getCounts(bork.txid),
+      ]))
     }
+
+    return bork
   }
 
 	@Path('/:txid/users')
@@ -146,41 +163,13 @@ export class BorkHandler {
     const users = await getRepository(User)
       .createQueryBuilder('users')
       .where(qb => {
-        let subQuery: string
-        switch (type) {
-          case BorkType.Comment:
-            subQuery = qb.subQuery()
-              .select('sender_address')
-              .from(Bork, 'borks')
-              .where('parent_txid = :txid', { txid })
-              .andWhere('type = :type', { type })
-              .getQuery()
-            break
-          case BorkType.Rebork:
-            subQuery = qb.subQuery()
-              .select('sender_address')
-              .from(Bork, 'borks')
-              .where('parent_txid = :txid', { txid })
-              .andWhere('type = :type', { type })
-              .getQuery()
-            break
-          case BorkType.Like:
-            subQuery = qb.subQuery()
-              .select('user_address')
-              .from('likes', 'likes')
-              .where('bork_txid = :txid', { txid })
-              .getQuery()
-            break
-          case BorkType.Flag:
-            subQuery = qb.subQuery()
-              .select('user_address')
-              .from('flags', 'flags')
-              .where('bork_txid = :txid', { txid })
-              .getQuery()
-            break
-          default:
-            throw new Errors.BadRequestError('query param "type" must be "reborks", "likes", or "flags"')
-        }
+        const subQuery = qb.subQuery()
+          .select('sender_address')
+          .from(Bork, 'borks')
+          .where('parent_txid = :txid', { txid })
+          .andWhere('type = :type', { type })
+          .andWhere('deleted_at IS NULL')
+          .getQuery()
         return `address IN ${subQuery}`
       })
       .orderBy(order)
@@ -191,7 +180,7 @@ export class BorkHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        ...(await iFollowBlock(myAddress, user.address)),
+        ...await iFollowBlock(myAddress, user.address),
       }
     }))
   }
@@ -203,19 +192,16 @@ export class BorkHandler {
     flagsCount: number
   }> {
 
+    const conditions = {
+      parent: { txid },
+      deletedAt: IsNull(),
+    }
+
     const [ commentsCount, reborksCount, likesCount, flagsCount ] = await Promise.all([
-      getRepository(Bork).count({ parent: { txid }, type: BorkType.Comment, deletedAt: null }),
-      getRepository(Bork).count({ parent: { txid }, type: BorkType.Rebork, deletedAt: null }),
-      getManager().createQueryBuilder()
-        .select('likes')
-        .from('likes', 'likes')
-        .where('bork_txid = :txid', { txid })
-        .getCount(),
-      getManager().createQueryBuilder()
-        .select('flags')
-        .from('flags', 'flags')
-        .where('bork_txid = :txid', { txid })
-        .getCount(),
+      getRepository(Bork).count({ ...conditions, type: BorkType.Comment }),
+      getRepository(Bork).count({ ...conditions, type: BorkType.Rebork }),
+      getRepository(Bork).count({ ...conditions, type: BorkType.Like }),
+      getRepository(Bork).count({ ...conditions, type: BorkType.Flag }),
     ])
 
     return { commentsCount, reborksCount, likesCount, flagsCount }
@@ -228,29 +214,17 @@ export class BorkHandler {
     iFlag: boolean
   }> {
 
+    const conditions = {
+      sender: { address: myAddress },
+      parent: { txid },
+      deletedAt: IsNull(),
+    }
+
     const [comment, rebork, like, flag] = await Promise.all([
-      getRepository(Bork).findOne({
-        sender: { address: myAddress },
-        parent: { txid },
-        type: BorkType.Comment,
-      }),
-      getRepository(Bork).findOne({
-        sender: { address: myAddress },
-        parent: { txid },
-        type: BorkType.Rebork,
-      }),
-      getManager().createQueryBuilder()
-        .select('likes')
-        .from('likes', 'likes')
-        .where('user_address = :myAddress', { myAddress })
-        .andWhere('bork_txid = :txid', { txid })
-        .getOne(),
-      getManager().createQueryBuilder()
-        .select('flags')
-        .from('flags', 'flags')
-        .where('user_address = :myAddress', { myAddress })
-        .andWhere('bork_txid = :txid', { txid })
-        .getOne(),
+      getRepository(Bork).findOne({ ...conditions, type: BorkType.Comment }),
+      getRepository(Bork).findOne({ ...conditions, type: BorkType.Rebork }),
+      getRepository(Bork).findOne({ ...conditions, type: BorkType.Like }),
+      getRepository(Bork).findOne({ ...conditions, type: BorkType.Flag }),
     ])
 
     return {
@@ -263,12 +237,12 @@ export class BorkHandler {
 }
 
 export interface ApiBork extends Bork {
-  iComment: boolean
-  iRebork: boolean
-  iLike: boolean
-  iFlag: boolean
-  commentsCount: number
-  reborksCount: number
-  likesCount: number
-  flagsCount: number
+  iComment?: boolean
+  iRebork?: boolean
+  iLike?: boolean
+  iFlag?: boolean
+  commentsCount?: number
+  reborksCount?: number
+  likesCount?: number
+  flagsCount?: number
 }

@@ -7,7 +7,6 @@ import {
 	JoinColumn,
   ManyToMany,
   RelationId,
-  OneToOne,
   Index,
 } from 'typeorm'
 import { User } from './user'
@@ -30,16 +29,16 @@ export class Bork {
   deletedAt: Date | null
 
   @Index()
-	@Column('int', { name: 'nonce' })
+	@Column('text', { name: 'type' })
+  type: BorkType
+
+  @Index()
+	@Column('int', { name: 'nonce', nullable: true })
   nonce: number
 
   @Index()
-	@Column('int', { name: 'position' })
+	@Column('int', { name: 'position', nullable: true })
   position: number
-
-  @Index()
-	@Column('text', { name: 'type' })
-  type: BorkType
 
 	@Column('text', { name: 'content', nullable: true })
   content: string | null
@@ -63,11 +62,12 @@ export class Bork {
   @RelationId((bork: Bork) => bork.sender)
   senderAddress: string
 
-  @ManyToMany(() => User, user => user.likes)
-  likes: User[]
-
-  @ManyToMany(() => User, user => user.flags)
-  flags: User[]
+  @Index()
+  @ManyToOne(() => User, user => user.receivedBorks, { nullable: true })
+	@JoinColumn({ name: 'recipient_address' })
+  recipient: User
+  @RelationId((bork: Bork) => bork.recipient)
+  recipientAddress: string
 
   @ManyToMany(() => Tag, tag => tag.borks)
   tags: Tag[]
@@ -79,14 +79,12 @@ export class Bork {
 export interface BorkSeed {
   txid: string
   createdAt: Date
-  nonce: number
-  position: number
   type: BorkType
   sender: User
+  deletedAt?: Date
+  nonce?: number
+  position?: number
   content?: string
-  parent?: Bork
-}
-
-export interface BorkWithParentSeed extends BorkSeed {
-  parent: Bork
+  parent?: Partial<Bork>
+  recipient?: Partial<User>
 }

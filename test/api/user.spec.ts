@@ -1,11 +1,12 @@
-import { createConnections, getConnection, Connection, getManager } from 'typeorm'
+import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
-import { seedBaseUser, seedFullUser, seedUtxo, seedFollow } from '../helpers/seeds'
+import { seedBaseUser, seedFullUser, seedUtxo, seedFollowBlock } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
 import { assertBaseUser, assertFullUser, assertThrows } from '../helpers/assertions'
 import { database } from '../helpers/database'
 import { Errors } from 'typescript-rest'
+import { BorkType } from 'borker-rs-node'
 
 describe('User Handler', async () => {
   let connections: Connection[]
@@ -23,7 +24,7 @@ describe('User Handler', async () => {
     ])
     user1 = u1
     user2 = u2
-    await seedFollow(user1, user2)
+    await seedFollowBlock(user1, user2, BorkType.Follow)
 
     userHandler = new UserHandler()
   })

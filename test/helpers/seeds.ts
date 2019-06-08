@@ -81,26 +81,23 @@ export async function seedOrphan (sender: User, attributes: Partial<OrphanSeed> 
   return getManager().save(bork)
 }
 
-export async function seedFlag (user: User, bork: Bork): Promise<void> {
-  return getManager()
-    .createQueryBuilder()
-    .relation(User, 'flags')
-    .of(user)
-    .add(bork)
+export async function seedLikeFlag (sender: User, bork: Bork, type: BorkType.Like | BorkType.Flag): Promise<Bork> {
+  return seedBork(sender, {
+    nonce: null,
+    position: null,
+    type,
+    content: null,
+    parent: bork,
+    recipient: { address: bork.senderAddress },
+  })
 }
 
-export async function seedFollow (follower: User, followed: User): Promise<void> {
-  return getManager()
-    .createQueryBuilder()
-    .relation(User, 'following')
-    .of(follower)
-    .add(followed)
-}
-
-export async function seedBlock (blocker: User, blocked: User): Promise<void> {
-  return getManager()
-    .createQueryBuilder()
-    .relation(User, 'blocking')
-    .of(blocker)
-    .add(blocked)
+export async function seedFollowBlock (sender: User, recipient: User, type: BorkType.Follow | BorkType.Block): Promise<Bork> {
+  return seedBork(sender, {
+    nonce: null,
+    position: null,
+    type,
+    content: null,
+    recipient,
+  })
 }

@@ -248,10 +248,10 @@ export const mockTxs4: BorkTxData[] = [
   {
     time: '2019-05-28T00:51:39Z',
     txid: '20d721480d0450a1b9666618ee618bfbacde74a4bade40908063c6c344bc7214',
-    type: BorkType.Unfollow,
+    type: BorkType.Delete,
     nonce: null,
     position: null,
-    content: 'D65dwxsVdaCFHUGqAVWKgdddsa9ADxXcGk',
+    content: 'c7c4e2977cc67cc16ee8fec757a61219deddcc8edfb6e20ab818af29f4be9373',
     referenceId: null,
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,

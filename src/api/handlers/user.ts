@@ -4,6 +4,8 @@ import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/misc-types'
 import { Utxo } from '../../db/entities/utxo'
+import { Bork } from '../../db/entities/bork'
+import { BorkType } from 'borker-rs-node'
 
 @Path('/users')
 export class UserHandler {
@@ -32,7 +34,7 @@ export class UserHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        ...(await iFollowBlock(myAddress, user.address)),
+        ...await iFollowBlock(myAddress, user.address),
       }
     }))
   }
@@ -145,17 +147,28 @@ export class UserHandler {
 
     let query = getRepository(User)
       .createQueryBuilder('users')
+      .where(qb => {
+        let subquery = qb.subQuery()
+          .from(Bork, 'borks')
+          .where('type = :type', { type: BorkType.Follow })
+          .andWhere('deleted_at IS NULL')
+
+        if (type === 'following') {
+          subquery.select('recipient_address')
+          subquery.andWhere('sender_address = :address')
+        } else if (type === 'followers') {
+          subquery.select('sender_address')
+          subquery.andWhere('recipient_address = :address')
+        } else {
+          throw new Errors.BadRequestError('query param "type" must be "following" or "followers"')
+        }
+
+        return `address IN ${subquery.getQuery()}`
+      })
       .orderBy(order)
       .take(perPage)
       .offset(perPage * (page - 1))
-
-    if (type === 'following') {
-      query.where('address IN (SELECT followed_address FROM follows WHERE follower_address = :address)', { address })
-    } else if (type === 'followers') {
-      query.where('address IN (SELECT follower_address FROM follows WHERE followed_address = :address)', { address })
-    } else {
-      throw new Errors.BadRequestError('query param "type" must be "following" or "followers"')
-    }
+      .setParameter('address', address)
 
     const [blocked, users] = await Promise.all([
       checkBlocked(myAddress, address),
@@ -169,7 +182,7 @@ export class UserHandler {
     return Promise.all(users.map(async user => {
       return {
         ...user,
-        ...(await iFollowBlock(myAddress, user.address)),
+        ...await iFollowBlock(myAddress, user.address),
       }
     }))
   }
