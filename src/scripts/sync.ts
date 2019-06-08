@@ -329,13 +329,16 @@ async function handleFollowBlock (manager: EntityManager, tx: BorkTxData): Promi
 }
 
 async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { time, content, senderAddress } = tx
+  const { time, referenceId, senderAddress } = tx
 
   // find parent from sender and content
   const bork = await manager.findOne(Bork, {
-    txid: content,
-    sender: { address: senderAddress },
-    deletedAt: IsNull(),
+    where: {
+      txid: Like(`${referenceId}%`),
+      sender: { address: senderAddress },
+      deletedAt: IsNull(),
+    },
+    order: { createdAt: 'DESC' },
   })
   if (!bork) { return }
 
