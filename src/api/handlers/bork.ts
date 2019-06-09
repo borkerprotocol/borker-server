@@ -126,10 +126,6 @@ export class BorkHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    if (bork.parent) {
-
-    }
-
     if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
       Object.assign(bork, ...await Promise.all([
         this.iCommentReborkFlag(myAddress, bork.txid),
@@ -137,8 +133,8 @@ export class BorkHandler {
       ]))
       if (bork.parent) {
         Object.assign(bork.parent, ...await Promise.all([
-          this.iCommentReborkFlag(myAddress, bork.txid),
-          this.getCounts(bork.txid),
+          this.iCommentReborkFlag(myAddress, bork.parent.txid),
+          this.getCounts(bork.parent.txid),
         ]))
       }
     }
