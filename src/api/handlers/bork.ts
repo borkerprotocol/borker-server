@@ -119,7 +119,7 @@ export class BorkHandler {
       i++
     } while (moreThanOne)
 
-    return ref + 'foo'
+    return ref.toString()
   }
 
 	@Path('/broadcast')
