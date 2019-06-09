@@ -108,7 +108,7 @@ export class BorkHandler {
 	async getReferenceId (
     @QueryParam('txid') txid: string,
     @QueryParam('address') address: string,
-  ): Promise<string> {
+  ): Promise<{ referenceId: string }> {
     let ref = ''
     let moreThanOne = false
     let i = 1
@@ -119,7 +119,7 @@ export class BorkHandler {
       i++
     } while (moreThanOne)
 
-    return ref.toString()
+    return { referenceId: ref }
   }
 
 	@Path('/broadcast')
