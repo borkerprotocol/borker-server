@@ -4,8 +4,8 @@ import { Bork } from '../../src/db/entities/bork'
 import { Errors } from 'typescript-rest'
 import { BorkType } from 'borker-rs-node'
 
-export async function assertThrows<T> (func: Promise<T>, expectedError?: Errors.HttpError) {
-  let error: Errors.HttpError
+export async function assertThrows<T> (func: Promise<T>, expectedError: Errors.HttpError) {
+  let error: Errors.HttpError | null = null
 
   try {
     await func
@@ -13,12 +13,12 @@ export async function assertThrows<T> (func: Promise<T>, expectedError?: Errors.
     error = err
   }
 
-  assert(error, `expected error: "${expectedError.message}"`)
-
   if (error) {
     assert.equal(error.statusCode, expectedError.statusCode)
     assert.equal(error.message, expectedError.message)
   }
+
+  assert(error, `expected error: "${expectedError.message}"`)
 }
 
 export function assertBaseUser (user: User) {

@@ -39,6 +39,9 @@ export class Orphan {
   @Column('text', { name: 'mentions', nullable: true })
   mentions: string | null
 
+  @Column('text', { name: 'tags', nullable: true })
+  tags: string | null
+
   // relations
 
   @Index()

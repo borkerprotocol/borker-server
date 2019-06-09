@@ -46,9 +46,10 @@ export class UserHandler {
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
 
-    const [user, blocked, iStuff] = await Promise.all([
+    const [user, blocked, counts, iStuff] = await Promise.all([
       getRepository(User).findOne(address),
       checkBlocked(myAddress, address),
+      this.getCounts(address),
       iFollowBlock(myAddress, address),
     ])
 
@@ -61,6 +62,7 @@ export class UserHandler {
 
     return {
       ...user,
+      ...counts,
       ...iStuff,
     }
   }
@@ -164,7 +166,7 @@ export class UserHandler {
 
         return `address IN ${subquery.getQuery()}`
       })
-      .orderBy(order)
+      .orderBy(order as any)
       .take(perPage)
       .offset(perPage * (page - 1))
       .setParameter('address', address)
@@ -185,9 +187,28 @@ export class UserHandler {
       }
     }))
   }
+
+  private async getCounts (address: string): Promise<{
+    followersCount: number
+    followingCount: number
+  }> {
+
+    const conditions = {
+      type: BorkType.Follow,
+    }
+
+    const [ followersCount, followingCount ] = await Promise.all([
+      getRepository(Bork).count({ ...conditions, recipient: { address } }),
+      getRepository(Bork).count({ ...conditions, sender: { address } }),
+    ])
+
+    return { followersCount, followingCount }
+  }
 }
 
 export interface ApiUser extends User {
   iFollow: boolean
   iBlock: boolean
+  followersCount?: number
+  followingCount?: number
 }

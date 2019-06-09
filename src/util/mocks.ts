@@ -54,6 +54,7 @@ export const mockTxs1: BorkTxData[] = [
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -66,6 +67,7 @@ export const mockTxs1: BorkTxData[] = [
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -78,6 +80,7 @@ export const mockTxs1: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     mentions: [],
+    tags: [],
   },
   // this extension will be orphaned and then cleaned up later
   {
@@ -91,6 +94,7 @@ export const mockTxs1: BorkTxData[] = [
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,
     mentions: ['DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7', 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV'],
+    tags: [],
   },
 ]
 
@@ -106,6 +110,7 @@ export const mockTxs2: BorkTxData[] = [
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     recipientAddress: null,
     mentions: [],
+    tags: ['tomorrow'],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -118,6 +123,7 @@ export const mockTxs2: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -130,6 +136,7 @@ export const mockTxs2: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -142,6 +149,7 @@ export const mockTxs2: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: ['DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7'],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -154,6 +162,7 @@ export const mockTxs2: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
 ]
 
@@ -169,6 +178,7 @@ export const mockTxs3: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -181,6 +191,7 @@ export const mockTxs3: BorkTxData[] = [
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -193,6 +204,7 @@ export const mockTxs3: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -205,6 +217,7 @@ export const mockTxs3: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -217,6 +230,7 @@ export const mockTxs3: BorkTxData[] = [
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
 ]
 
@@ -232,6 +246,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -244,6 +259,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -256,6 +272,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DDVFpYk4BHKvXQRshzxdaxJ4S13J2YPBfK',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -268,6 +285,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
     recipientAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -280,6 +298,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     recipientAddress: null,
     mentions: [],
+    tags: ['tomorrow'],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -292,6 +311,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     recipientAddress: 'DCTeBNWY5TGfBjFSZwjS47WaoBHWwY3DXV',
     mentions: [],
+    tags: [],
   },
   // this comment will be ignored. No parent
   {
@@ -305,6 +325,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
     recipientAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     mentions: [],
+    tags: [],
   },
   {
     time: '2019-05-28T00:51:39Z',
@@ -317,6 +338,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DSJdZogGLmREMZTyJGSzSs2RL9UJjeqKd7',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
   // this flag will not save because sender is blocked
   {
@@ -330,6 +352,7 @@ export const mockTxs4: BorkTxData[] = [
     senderAddress: 'DG7z89QMNB7xJr7Z44TwZPd8BUFSBoamW7',
     recipientAddress: null,
     mentions: [],
+    tags: [],
   },
 ]
 

@@ -51,7 +51,7 @@ export class BorkHandler {
           .getQuery()
         return `borks.sender_address NOT IN ${subQuery}`
       })
-      .orderBy(order)
+      .orderBy(order as any)
       .take(perPage)
       .skip(perPage * (page - 1))
 
@@ -170,7 +170,7 @@ export class BorkHandler {
           .getQuery()
         return `address IN ${subQuery}`
       })
-      .orderBy(order)
+      .orderBy(order as any)
       .take(perPage)
       .offset(perPage * (page - 1))
       .getMany()

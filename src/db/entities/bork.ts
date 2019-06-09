@@ -34,11 +34,11 @@ export class Bork {
 
   @Index()
 	@Column('int', { name: 'nonce', nullable: true })
-  nonce: number
+  nonce: number | null
 
   @Index()
 	@Column('int', { name: 'position', nullable: true })
-  position: number
+  position: number | null
 
 	@Column('text', { name: 'content', nullable: true })
   content: string | null
@@ -49,13 +49,6 @@ export class Bork {
   children: Bork[]
 
   @Index()
-  @ManyToOne(() => Bork, bork => bork.children, { nullable: true })
-  @JoinColumn({ name: 'parent_txid' })
-  parent: Bork
-  @RelationId((bork: Bork) => bork.parent)
-  parentTxid: string
-
-  @Index()
   @ManyToOne(() => User, user => user.borks)
 	@JoinColumn({ name: 'sender_address' })
   sender: User
@@ -63,11 +56,18 @@ export class Bork {
   senderAddress: string
 
   @Index()
+  @ManyToOne(() => Bork, bork => bork.children, { nullable: true })
+  @JoinColumn({ name: 'parent_txid' })
+  parent: Bork | null
+  @RelationId((bork: Bork) => bork.parent)
+  parentTxid: string | null
+
+  @Index()
   @ManyToOne(() => User, user => user.receivedBorks, { nullable: true })
 	@JoinColumn({ name: 'recipient_address' })
-  recipient: User
+  recipient: User | null
   @RelationId((bork: Bork) => bork.recipient)
-  recipientAddress: string
+  recipientAddress: string | null
 
   @ManyToMany(() => Tag, tag => tag.borks)
   tags: Tag[]
@@ -81,10 +81,10 @@ export interface BorkSeed {
   createdAt: Date
   type: BorkType
   sender: User
-  deletedAt?: Date
-  nonce?: number
-  position?: number
-  content?: string
-  parent?: Partial<Bork>
-  recipient?: Partial<User>
+  deletedAt?: Date | null
+  nonce?: number | null
+  position?: number | null
+  content?: string | null
+  parent?: Partial<Bork> | null
+  recipient?: Partial<User> | null
 }

@@ -2,6 +2,11 @@ import { getManager } from 'typeorm'
 import { Bork } from '../db/entities/bork'
 import { BorkType } from 'borker-rs-node'
 
+export function NullToUndefined<T> (a: T | null): T | undefined {
+  if (a === null) return undefined
+  return a
+}
+
 export async function checkFollowed (followedAddress: string, followerAddress: string): Promise<boolean> {
   return (await getManager().count(Bork, {
     where: {

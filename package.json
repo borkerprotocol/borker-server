@@ -17,7 +17,7 @@
 		"test": "mocha -r ts-node/register test/**/*.spec.ts"
 	},
 	"dependencies": {
-		"borker-rs-node": "0.1.17",
+		"borker-rs-node": "0.1.21",
 		"cors": "^2.8.5",
 		"express": "^4.17.1",
 		"reflect-metadata": "^0.1.13",
