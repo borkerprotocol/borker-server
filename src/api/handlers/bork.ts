@@ -112,13 +112,14 @@ export class BorkHandler {
     let ref = ''
     let moreThanOne = false
     let i = 1
+
     do {
       ref = txid.substr(0, i * 2)
       moreThanOne = (await getRepository(Bork).count({ where: { sender: { address }, txid: Like(ref) } })) > 1
       i++
     } while (moreThanOne)
 
-    return ref
+    return ref + 'foo'
   }
 
 	@Path('/broadcast')
