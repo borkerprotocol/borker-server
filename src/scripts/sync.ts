@@ -197,10 +197,7 @@ async function handleProfileUpdate(manager: EntityManager, tx: BorkTxData) {
       break
   }
 
-  await Promise.all([
-    manager.update(User, senderAddress, params),
-    createBork(manager, tx),
-  ])
+  await manager.update(User, senderAddress, params)
 }
 
 async function createBork (manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
@@ -250,10 +247,11 @@ async function handleCommentReborkLike (manager: EntityManager, tx: BorkTxData):
   })
   if (!parent) { return }
 
-  // create bork if parent exists
+  // create bork if parent exists, no need to save recipient
   await createBork(manager, {
     ...tx,
     parentTxid: parent.txid,
+    recipientAddress: null,
   })
 }
 
@@ -342,25 +340,26 @@ async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<vo
   })
   if (!bork) { return }
 
-  let conditions: FindConditions<Bork> = {}
-  let params: Partial<Bork> = { deletedAt: new Date(time) }
   switch (bork.type) {
-    // delete single bork if bork, comment, rebork, extension
+    // soft delete single bork if bork, comment, rebork, extension
     case BorkType.Bork:
     case BorkType.Comment:
     case BorkType.Rebork:
     case BorkType.Extension:
-      conditions.txid = bork.txid
-      params.content = null
+      await manager.update(Bork, bork.txid, {
+        deletedAt: new Date(time),
+        content: null,
+      })
       break
-    // delete all if like, flag, follow, block
+    // hard delete all if like, flag, follow, block
     case BorkType.Like:
     case BorkType.Flag:
     case BorkType.Follow:
     case BorkType.Block:
-      conditions.sender = { address: bork.senderAddress }
-      conditions.type = bork.type
-      conditions.deletedAt = IsNull()
+      const conditions: FindConditions<Bork> = {
+        sender: { address: bork.senderAddress },
+        type: bork.type,
+      }
       // find by parent if like, flag
       if ([BorkType.Like, BorkType.Flag].includes(bork.type)) {
         conditions.parent = { txid: bork.parentTxid }
@@ -368,20 +367,12 @@ async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<vo
       } else {
         conditions.recipient = { address: bork.recipientAddress }
       }
+      await manager.delete(Bork, conditions)
       break
     // do nothing if setName, setBio, setAvatar, delete
     default:
       break
   }
-
-  await Promise.all([
-    manager.update(Bork, conditions, params),
-    createBork(manager, {
-      ...tx,
-      content: null,
-      parentTxid: bork.txid,
-    }),
-  ])
 }
 
 async function cleanupOrphans (): Promise<void> {

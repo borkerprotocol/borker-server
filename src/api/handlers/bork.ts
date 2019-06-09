@@ -48,7 +48,6 @@ export class BorkHandler {
             qb.where('sender_address = :myAddress')
               .orWhere('recipient_address = :myAddress')
           }))
-          .andWhere('deleted_at IS NULL')
           .getQuery()
         return `borks.sender_address NOT IN ${subQuery}`
       })
@@ -74,7 +73,6 @@ export class BorkHandler {
           .from(Bork, 'borks')
           .where('type = :followType', { followType: BorkType.Follow })
           .andWhere('sender_address = :myAddress')
-          .andWhere('deleted_at IS NULL')
           .getQuery()
         return `borks.sender_address IN ${subQuery}`
       })

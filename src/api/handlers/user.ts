@@ -151,7 +151,6 @@ export class UserHandler {
         let subquery = qb.subQuery()
           .from(Bork, 'borks')
           .where('type = :type', { type: BorkType.Follow })
-          .andWhere('deleted_at IS NULL')
 
         if (type === 'following') {
           subquery.select('recipient_address')
