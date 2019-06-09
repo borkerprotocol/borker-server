@@ -1,6 +1,6 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
 import { Bork } from '../../db/entities/bork'
-import { getRepository, IsNull, Brackets } from 'typeorm'
+import { getRepository, IsNull, Brackets, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
@@ -101,6 +101,24 @@ export class BorkHandler {
 
       return bork
     }))
+  }
+
+	@Path('/referenceId')
+	@GET
+	async getReferenceId (
+    @QueryParam('txid') txid: string,
+    @QueryParam('address') address: string,
+  ): Promise<string> {
+    let ref = ''
+    let moreThanOne = false
+    let i = 1
+    do {
+      ref = txid.substr(0, i * 2)
+      moreThanOne = (await getRepository(Bork).count({ where: { sender: { address }, txid: Like(ref) } })) > 1
+      i++
+    } while (moreThanOne)
+
+    return ref
   }
 
 	@Path('/broadcast')
