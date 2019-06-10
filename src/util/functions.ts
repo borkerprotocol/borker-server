@@ -7,24 +7,26 @@ export function NullToUndefined<T> (a: T | null): T | undefined {
   return a
 }
 
-export async function checkFollowed (followedAddress: string, followerAddress: string): Promise<boolean> {
-  return (await getManager().count(Bork, {
+export async function checkFollowed (followedAddress: string, followerAddress: string): Promise<string | null> {
+  const bork = await getManager().findOne(Bork, {
     where: {
       type: BorkType.Follow,
       sender: { address: followerAddress },
       recipient: { address: followedAddress },
     },
-  })) > 0
+  })
+  return bork ? bork.txid : null
 }
 
-export async function checkBlocked (blockedAddress: string, blockerAddress: string): Promise<boolean> {
-  return (await getManager().count(Bork, {
+export async function checkBlocked (blockedAddress: string, blockerAddress: string): Promise<string | null> {
+  const bork = await getManager().findOne(Bork, {
     where: {
       type: BorkType.Block,
       sender: { address: blockerAddress },
       recipient: { address: blockedAddress },
     },
-  })) > 0
+  })
+  return bork ? bork.txid : null
 }
 
 export async function eitherPartyBlocked (address1: string, address2: string): Promise<boolean> {
@@ -44,7 +46,7 @@ export async function eitherPartyBlocked (address1: string, address2: string): P
   })) > 0
 }
 
-export async function iFollowBlock (myAddress: string, address: string): Promise<{ iFollow: boolean, iBlock: boolean }> {
+export async function iFollowBlock (myAddress: string, address: string): Promise<{ iFollow: string | null, iBlock: string | null }> {
   const [iFollow, iBlock] = await Promise.all([
     checkFollowed(address, myAddress),
     checkBlocked(address, myAddress),

@@ -233,8 +233,8 @@ export class BorkHandler {
   private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
     iComment: boolean
     iRebork: boolean
-    iLike: boolean
-    iFlag: boolean
+    iLike: string | null
+    iFlag: string | null
   }> {
 
     const conditions = {
@@ -253,8 +253,8 @@ export class BorkHandler {
     return {
       iComment: !!comment,
       iRebork: !!rebork,
-      iLike: !!like,
-      iFlag: !!flag,
+      iLike: like ? like.txid : null,
+      iFlag: flag ? flag.txid : null,
     }
   }
 }

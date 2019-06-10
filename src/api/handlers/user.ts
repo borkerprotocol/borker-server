@@ -207,8 +207,8 @@ export class UserHandler {
 }
 
 export interface ApiUser extends User {
-  iFollow: boolean
-  iBlock: boolean
+  iFollow: string | null
+  iBlock: string | null
   followersCount?: number
   followingCount?: number
 }
