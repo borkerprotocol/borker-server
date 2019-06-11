@@ -231,8 +231,8 @@ export class BorkHandler {
   }
 
   private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
-    iComment: boolean
-    iRebork: boolean
+    iComment: string | null
+    iRebork: string | null
     iLike: string | null
     iFlag: string | null
   }> {
@@ -251,8 +251,8 @@ export class BorkHandler {
     ])
 
     return {
-      iComment: !!comment,
-      iRebork: !!rebork,
+      iComment: comment ? comment.txid : null,
+      iRebork: rebork ? rebork.txid : null,
       iLike: like ? like.txid : null,
       iFlag: flag ? flag.txid : null,
     }
@@ -260,10 +260,10 @@ export class BorkHandler {
 }
 
 export interface ApiBork extends Bork {
-  iComment?: boolean
-  iRebork?: boolean
-  iLike?: boolean
-  iFlag?: boolean
+  iComment?: string | null
+  iRebork?: string | null
+  iLike?: string | null
+  iFlag?: string | null
   commentsCount?: number
   reborksCount?: number
   likesCount?: number
