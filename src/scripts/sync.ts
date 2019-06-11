@@ -296,10 +296,10 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
 }
 
 async function handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { content, senderAddress } = tx
+  const { referenceId, senderAddress } = tx
 
   // find parent from content
-  const parent = await manager.findOne(Bork, content!)
+  const parent = await manager.findOne(Bork, referenceId!)
   if (!parent) { return }
 
   // return if either party blocked
