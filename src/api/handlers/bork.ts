@@ -90,7 +90,10 @@ export class BorkHandler {
 
     return Promise.all(borks.map(async bork => {
       if (bork.parent) {
-        Object.assign(bork.parent, { ...await this.iCommentReborkFlag(myAddress, bork.parent.txid) })
+        Object.assign(bork.parent, ...await Promise.all([
+          this.iCommentReborkFlag(myAddress, bork.parent.txid),
+          this.getCounts(bork.parent.txid),
+        ]))
       }
       if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
         Object.assign(bork, ...await Promise.all([
