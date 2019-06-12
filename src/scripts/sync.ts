@@ -1,6 +1,6 @@
 import * as rpc from '../util/rpc-requests'
 import * as fs from 'fs'
-import { getManager, EntityManager, Like, MoreThan, IsNull, FindConditions, Not } from 'typeorm'
+import { getManager, EntityManager, Like, MoreThan, IsNull, FindConditions, Not, In } from 'typeorm'
 import { Bork } from '../db/entities/bork'
 import { TxBlock } from '../db/entities/tx-block'
 import { User } from '../db/entities/user'
@@ -242,8 +242,9 @@ async function handleCommentReborkLike (manager: EntityManager, tx: BorkTxData):
     where: {
       txid: Like(`${referenceId}%`),
       sender: { address: recipientAddress },
+      type: In([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension]),
     },
-    order: { createdAt: 'DESC' },
+    order: { createdAt: 'ASC' },
   })
   if (!parent) { return }
 
@@ -299,7 +300,10 @@ async function handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void
   const { referenceId, senderAddress } = tx
 
   // find parent from content
-  const parent = await manager.findOne(Bork, referenceId!)
+  const parent = await manager.findOne(Bork, {
+    txid: referenceId!,
+    type: In([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension]),
+  })
   if (!parent) { return }
 
   // return if either party blocked
@@ -337,7 +341,7 @@ async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<vo
       sender: { address: senderAddress },
       deletedAt: IsNull(),
     },
-    order: { createdAt: 'DESC' },
+    order: { createdAt: 'ASC' },
   })
   if (!bork) { return }
 
