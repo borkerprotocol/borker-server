@@ -11,9 +11,9 @@ import { BorkType } from 'borker-rs-node'
 @Path('/borks')
 export class BorkHandler {
 
-	@Path('/')
-	@GET
-	async index (
+  @Path('/')
+  @GET
+  async index(
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
@@ -103,9 +103,9 @@ export class BorkHandler {
     }))
   }
 
-	@Path('/referenceId')
-	@GET
-	async getReferenceId (
+  @Path('/referenceId')
+  @GET
+  async getReferenceId(
     @QueryParam('txid') txid: string,
     @QueryParam('address') address: string,
   ): Promise<{ referenceId: string }> {
@@ -122,16 +122,19 @@ export class BorkHandler {
     return { referenceId: ref }
   }
 
-	@Path('/broadcast')
-	@POST
-	async broadcast (txs: string[]): Promise<string[]> {
-
-    return Promise.all(txs.map(rpc.broadcast))
+  @Path('/broadcast')
+  @POST
+  async broadcast(txs: string[]): Promise<string[]> {
+    let txids: string[] = []
+    for (let tx of txs) {
+      txids.push(await rpc.broadcast(tx))
+    }
+    return txids
   }
 
-	@Path('/:txid')
-	@GET
-	async get (
+  @Path('/:txid')
+  @GET
+  async get(
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiBork> {
@@ -161,9 +164,9 @@ export class BorkHandler {
     return bork
   }
 
-	@Path('/:txid/users')
-	@GET
-	async indexBorkUsers (
+  @Path('/:txid/users')
+  @GET
+  async indexBorkUsers(
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('type') type: BorkType,
@@ -208,7 +211,7 @@ export class BorkHandler {
     }))
   }
 
-  private async getCounts (txid: string): Promise<{
+  private async getCounts(txid: string): Promise<{
     commentsCount: number
     reborksCount: number
     likesCount: number
@@ -220,7 +223,7 @@ export class BorkHandler {
       deletedAt: IsNull(),
     }
 
-    const [ commentsCount, reborksCount, likesCount, flagsCount ] = await Promise.all([
+    const [commentsCount, reborksCount, likesCount, flagsCount] = await Promise.all([
       getRepository(Bork).count({ ...conditions, type: BorkType.Comment }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Rebork }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Like }),
@@ -230,7 +233,7 @@ export class BorkHandler {
     return { commentsCount, reborksCount, likesCount, flagsCount }
   }
 
-  private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
+  private async iCommentReborkFlag(myAddress: string, txid: string): Promise<{
     iComment: string | null
     iRebork: string | null
     iLike: string | null
