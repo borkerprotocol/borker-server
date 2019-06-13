@@ -1,6 +1,12 @@
-# borker-server  - UNRELEASED
+# borker-server
 
-Censorship-resistant news sharing on Dogecoin.
+Open, decentralized, immutable, unstoppable, microblogging on Dogecoin.
+
+## API Documentation
+### Users API:
+https://documenter.getpostman.com/view/7663576/S1ZufC5D
+### Borks API:
+https://documenter.getpostman.com/view/7663576/S1ZufBzu
 
 ## Installation Instructions:
 
@@ -17,7 +23,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```npm install -g typescript```
 
 ### Clone the repository
-```git clone https://github.com/MattDHill/borker-server.git```
+```git clone https://github.com/borkerprotocol/borker-server.git```
 
 ### Go into the directory
 ```cd borker-server```
