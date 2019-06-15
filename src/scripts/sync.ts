@@ -62,14 +62,15 @@ async function processBlocks() {
   console.log(`syncing ${blockHeight}`)
 
   let blockHash: string
+  let blockHex: string
   try {
     blockHash = await rpc.getBlockHash(blockHeight)
+    blockHex = await rpc.getBlock(blockHash)
   } catch (err) {
     // if (JSON.parse(err.error).error.code !== -8) { console.error(err.message) }
     return
   }
 
-  const blockHex = await rpc.getBlock(blockHash)
   const { borkerTxs, created, spent } = processBlock(blockHex, BigInt(blockHeight) as any, Network.Dogecoin)
   // const borkerTxs = getMockBorkerTxs(blockHeight)
   // const created = getMockCreated(blockHeight)
