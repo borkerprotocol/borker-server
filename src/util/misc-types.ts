@@ -1,1 +1,0 @@
-export type OrderBy<Entity> = { [P in keyof Entity]?: 'ASC' | 'DESC' }

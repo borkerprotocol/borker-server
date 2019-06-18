@@ -4,12 +4,16 @@ import { getRepository, IsNull, Brackets, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { OrderBy } from '../../util/misc-types'
-import * as rpc from '../../util/rpc-requests'
+import { OrderBy } from '../../util/types'
+import { Client } from '../../util/client'
 import { BorkType } from 'borker-rs-node'
 
 @Path('/borks')
 export class BorkHandler {
+
+  constructor (
+    private readonly client: Client = new Client(),
+  ) {}
 
   @Path('/')
   @GET
@@ -130,7 +134,7 @@ export class BorkHandler {
   async broadcast(txs: string[]): Promise<string[]> {
     let txids: string[] = []
     for (let tx of txs) {
-      txids.push(await rpc.broadcast(tx))
+      txids.push(await this.client.broadcast(tx))
     }
     return txids
   }

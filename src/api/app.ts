@@ -3,7 +3,7 @@ import * as cors from 'cors'
 import * as bodyParser from 'body-parser'
 import { Server } from 'typescript-rest'
 import handlers from './handlers'
-import { RPD } from './handlers/status';
+import { RPD } from './handlers/status'
 
 // express app and router
 const app: express.Application = express()

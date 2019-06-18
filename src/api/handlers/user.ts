@@ -2,13 +2,18 @@ import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescrip
 import { getRepository, FindManyOptions } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { OrderBy } from '../../util/misc-types'
+import { OrderBy } from '../../util/types'
 import { Utxo } from '../../db/entities/utxo'
 import { Bork } from '../../db/entities/bork'
 import { BorkType } from 'borker-rs-node'
+import { Client } from '../../util/client'
 
 @Path('/users')
 export class UserHandler {
+
+  constructor (
+    private readonly client: Client = new Client(),
+  ) {}
 
 	@Path('/')
 	@GET
