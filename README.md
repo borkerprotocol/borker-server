@@ -1,6 +1,6 @@
 # borker-server
 
-Open, decentralized, immutable, unstoppable, microblogging on Dogecoin.
+Borker is a first-of-its-kind, Twitter-like microblogging platform built on top of the Bitcoin p2p network. Borker is open-source, decentralized, borderless, permissionless, pseudonymous, and immutable - affording it a degree of censorship-resistance unparalled in human history.
 
 ## API Documentation
 ### Users API:
@@ -23,10 +23,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```npm install -g typescript```
 
 ### Clone the repository
-```git clone https://github.com/borkerprotocol/borker-server.git```
-
-### Go into the directory
-```cd borker-server```
+```git clone https://github.com/borkerprotocol/borker-server.git && cd borker-server```
 
 ### Copy borkerconfig.json and ormconfig.json from samples
 ```cp borkerconfig-sample.json borkerconfig.json```
