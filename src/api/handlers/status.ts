@@ -2,7 +2,7 @@ import { Path, GET } from 'typescript-rest'
 
 export let RPD = {
   count: 0,
-  last: new Date(),
+  last: new Date().getTime(),
 }
 
 @Path('status')
