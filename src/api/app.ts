@@ -13,7 +13,7 @@ const router: express.Router = express.Router()
 router.use('/', (req, res, next) => {
   const now = new Date().getTime()
   const elapsed = ((now - RPD.last) / 86400000)
-  RPD.count = (RPD.count + (1 / elapsed)) / 2
+  RPD.count = (RPD.count + 1) / (1 + elapsed)
   RPD.last = now
   if (!req.headers['my-address'] && !req.path.startsWith('/status')) {
     return res.status(403).json({ error: 'missing "my-address" header' })
