@@ -17,6 +17,10 @@ createConnection()
 			a = https.createServer({
 				key: fs.readFileSync(cfg.key),
 				cert: fs.readFileSync(cfg.cert),
+                ca: [
+                    fs.readFileSync(cfg.caRoot),
+                    fs.readFileSync(cfg.caBundle)
+                ]
 			}, app)
 		}
 		a.listen(PORT, () => {
