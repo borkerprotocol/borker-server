@@ -1,6 +1,6 @@
 # Borker-Server
 
-Borker is a first-of-its-kind, Twitter-like microblogging platform built on top of the Dogecoin p2p network. Borker is open-source, decentralized, borderless, permissionless, pseudonymous, immutable, and censorship-resistant..
+Borker is a first-of-its-kind, Twitter-like microblogging platform built on top of the Dogecoin p2p network. Borker is open-source, decentralized, borderless, permissionless, pseudonymous, immutable, and censorship-resistant.
 
 **Borker-Server serves three purposes:**
   1. Syncing blocks from the dogecoin blockchain, finding transactions that conform to the borker protocol spec, and parsing them out.
