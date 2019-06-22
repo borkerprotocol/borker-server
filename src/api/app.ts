@@ -9,7 +9,7 @@ import * as config from '../../borkerconfig.json'
 import * as fs from 'fs'
 
 // express app and router
-const app: express.Application = express()
+let app: express.Application | https.Server = express()
 const router: express.Router = express.Router()
 
 // middleware
@@ -36,8 +36,8 @@ app.use('/', router)
 Server.ignoreNextMiddlewares(true)
 
 // set up https server
-if (config.cert) {
-  https.createServer({
+if (config.cert && config.key && config.caBundle && config.caBundle) {
+  app = https.createServer({
     key: fs.readFileSync(config.key),
     cert: fs.readFileSync(config.cert),
     ca: [
