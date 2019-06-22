@@ -5,6 +5,7 @@ import {
   Index,
 } from 'typeorm'
 
+// @DELETE file
 @Entity({ name: 'utxos' })
 export class Utxo {
 

@@ -14,6 +14,7 @@ export function getMockBorkerTxs (blockHeight: number) {
   }
 }
 
+// @DELETE
 export function getMockCreated (blockHeight: number) {
   if (blockHeight === 17903) {
     return mockCreated1
@@ -28,6 +29,7 @@ export function getMockCreated (blockHeight: number) {
   }
 }
 
+// @DELETE
 export function getMockSpent (blockHeight: number) {
   if (blockHeight === 17903) {
     return mockSpent1
@@ -356,6 +358,7 @@ export const mockTxs4: BorkTxData[] = [
   },
 ]
 
+// @DELETE everything below
 export const mockCreated1: NewUtxo[][] = [
   [
     {

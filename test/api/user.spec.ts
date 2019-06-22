@@ -65,38 +65,26 @@ describe('User Handler', async () => {
   describe('GET /users/:address/balance', async () => {
 
     beforeEach(async () => {
-      await Promise.all([
-        seedUtxo({ address: user1.address }),
-        seedUtxo({ address: user1.address }),
-      ])
+
     })
 
     it('returns user balance', async () => {
-      const balance = await userHandler.getBalance(user1.address)
 
-      assert.equal(balance, 200000000)
     })
   })
 
   describe('GET /users/:address/utxos', async () => {
 
     beforeEach(async () => {
-      await Promise.all([
-        seedUtxo({ address: user1.address }),
-        seedUtxo({ address: user1.address }),
-        seedUtxo({ address: user1.address }),
-      ])
+
     })
 
     it('returns enough utxos to satisfy requirement', async () => {
-      const utxos = await userHandler.getUtxos(user1.address, '150000000', 1)
 
-      assert.equal(utxos.length, 2)
     })
 
     it('throws for unsuffient funds', async () => {
 
-      await assertThrows(userHandler.getUtxos(user1.address, '350000000', 2), new Errors.BadRequestError(`insufficient funds. 3 DOGE available.`))
     })
   })
 })

@@ -35,6 +35,7 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}): Promise
   return getManager().save(user)
 }
 
+// @DELETE
 export async function seedUtxo (attributes: Partial<UtxoSeed> = {}): Promise<Utxo> {
   const seed: UtxoSeed = Object.assign({
     txid: randomAddressOrTxid(false),

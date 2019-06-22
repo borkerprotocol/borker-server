@@ -42,14 +42,21 @@ export class Main {
     // handle chain reorgs
     do {
       if (block) {
+        // @ADD
+        // const { blockHash } = await this.client.getBlock(block.height)
         const blockHash = await this.client.getBlockHash(block.height)
           .catch(err => console.error(err))
         if (blockHash !== block.hash) {
           this.blockHeight = block.height - 6
           console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
+
+          // @ADD
+          // block = await getManager().findOne(TxBlock, this.blockHeight)
+
+          // @DELETE
           const [nextBlock] = await Promise.all([
             getManager().findOne(TxBlock, this.blockHeight),
-            // delete all Utxos to prevent double spend
+            // delete all Utxos to prevent double spend.
             getManager().delete(Utxo, { blockHeight: MoreThan(this.blockHeight) }),
           ])
           block = nextBlock
@@ -67,6 +74,10 @@ export class Main {
   async processBlocks() {
     console.log(`syncing ${this.blockHeight}`)
 
+    // @ADD
+    // const { blockHash, blockHex } = await this.client.getBlock(this.blockHeight)
+
+    // @DELETE
     let blockHash: string
     let blockHex: string
     try {
@@ -76,16 +87,21 @@ export class Main {
       return
     }
 
+    // @ADD
+    // const borkerTxs = await processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
+    // @DELETE
     const { borkerTxs, created, spent } = processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
     // const borkerTxs = getMockBorkerTxs(this.blockHeight)
+    // @DELETE
     // const created = getMockCreated(this.blockHeight)
     // const spent = getMockSpent(this.blockHeight)
 
     await getManager().transaction(async manager => {
       await Promise.all([
         this.createTxBlock(manager, blockHash),
-        this.processUtxos(manager, created, spent),
         this.processBorks(manager, borkerTxs),
+        // @DELETE
+        this.processUtxos(manager, created, spent),
       ])
     })
 
@@ -113,6 +129,7 @@ export class Main {
       .execute()
   }
 
+  // @DELETE
   async processUtxos(manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
     // insert created utxos
     if (created.length) {

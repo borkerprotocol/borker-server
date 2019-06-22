@@ -1,35 +1,65 @@
 import * as rp from 'request-promise'
 import * as config from '../../borkerconfig.json'
+import { Utxo } from '../db/entities/utxo.js'
 
 export class Client {
 
-  constructor () {}
-
-  // RPC REQUESTS
-
-  async getBlockHash (blockHeight: number): Promise<string> {
+  async getBlockHash (height: number): Promise<string> {
     // return blockHeight.toString()
-    return this.rpcRequest('getblockhash', `${blockHeight}`, [blockHeight])
+
+    return this.rpcRequest('getblockhash', `${height}`, [height])
   }
 
-  async getBlock (blockHash: string): Promise<string> {
+  // async getBlock (height: number): Promise<{ hash: string, block: string }> {
+  //   return this.httpRequest({
+  //     method: 'GET',
+  //     url: '/block',
+  //     qs: { height },
+  //   })
+  // }
+
+  async getBlock (hash: string): Promise<string> {
     // return blockHash
-    return this.rpcRequest('getblock', `${blockHash}`, [blockHash, false])
+
+    // return this.httpRequest({
+    //   method: 'GET',
+    //   url: '/block',
+    //   qs: { hash },
+    // })
+
+    return this.rpcRequest('getblock', `${hash}`, [hash, false])
   }
 
-  async broadcast (txHex: string): Promise<string> {
+  async broadcast (txs: string[]): Promise<string[]> {
     // return txHex
-    return this.rpcRequest('sendrawtransaction', `${txHex}`, [txHex])
-  }
 
-  // HTTP REQUESTS
+    // return this.httpRequest({
+    //   method: 'POST',
+    //   url: '/transactions',
+    //   body: txs,
+    // })
+
+    let txids: string[] = []
+    for (let tx of txs) {
+      txids.push(await this.rpcRequest('sendrawtransaction', `${tx}`, [tx]))
+    }
+    return txids
+  }
 
   async getBalance (address: string): Promise<number> {
-    return this.httpRequest('GET', '/balance', { address })
+    return this.httpRequest({
+      method: 'GET',
+      url: '/balance',
+      qs: { address },
+    })
   }
 
-  async getUtxos (address: string, amount: number, batchSize?: number): Promise<number> {
-    return this.httpRequest('GET', '/utxos', { address, amount, batchSize })
+  async getUtxos (address: string, amount: number, batchSize?: number): Promise<Utxo[]> {
+    return this.httpRequest({
+      method: 'GET',
+      url: '/utxos',
+      qs: { address, amount, batchSize },
+    })
   }
 
   // private
@@ -54,15 +84,15 @@ export class Client {
     return res.result
   }
 
-  private async httpRequest (method: string, url: string, params?: object): Promise<any> {
+  private async httpRequest (options: rp.OptionsWithUrl): Promise<any> {
+
+    Object.assign(options, {
+      json: true,
+      url: config.externalip + options.url,
+    })
 
     try {
-      return await rp({
-        method,
-        uri: `${config.externalip}/${url}`,
-        json: true,
-        qs: params,
-      })
+      return rp(options)
     } catch (err) {
       console.error(err)
     }

@@ -132,11 +132,7 @@ export class BorkHandler {
   @Path('/broadcast')
   @POST
   async broadcast(txs: string[]): Promise<string[]> {
-    let txids: string[] = []
-    for (let tx of txs) {
-      txids.push(await this.client.broadcast(tx))
-    }
-    return txids
+    return this.client.broadcast(txs)
   }
 
   @Path('/:txid')

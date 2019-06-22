@@ -78,6 +78,8 @@ export class UserHandler {
     @PathParam('address') address: string,
   ): Promise<number> {
 
+    // return this.client.getBalance(address)
+
     const { sum } = await getRepository(Utxo)
       .createQueryBuilder('utxos')
       .select('SUM(value)', 'sum')
@@ -91,9 +93,11 @@ export class UserHandler {
 	@GET
 	async getUtxos (
     @PathParam('address') address: string,
-    @QueryParam('amount') amount: string | number,
-    @QueryParam('batchSize') batchSize: string | number = 100,
+    @QueryParam('amount') amount: number,
+    @QueryParam('batchSize') batchSize: number = 100,
   ): Promise<Utxo[]> {
+
+    // return this.client.getUtxos(address, amount, batchSize)
 
     batchSize = Number(batchSize)
     amount = Number(amount)
