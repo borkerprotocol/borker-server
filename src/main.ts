@@ -18,9 +18,9 @@ export class Main {
 
   constructor (
     private client: Client = new Client(),
-  ) {}
+  ) { }
 
-  async sync () {
+  async sync() {
     console.log('begin sync')
     await this.setBlockHeight()
 
@@ -32,11 +32,11 @@ export class Main {
       console.error('error in processBlocks(): ', err.message)
     }
     finally {
-      setTimeout(this.sync, 4000)
+      setTimeout(() => this.sync(), 4000)
     }
   }
 
-  async setBlockHeight (): Promise<void> {
+  async setBlockHeight(): Promise<void> {
     let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
     let keepGoing = true
     // handle chain reorgs
@@ -64,7 +64,7 @@ export class Main {
     } while (keepGoing)
   }
 
-  async processBlocks () {
+  async processBlocks() {
     console.log(`syncing ${this.blockHeight}`)
 
     let blockHash: string
@@ -100,7 +100,7 @@ export class Main {
     await this.processBlocks()
   }
 
-  async createTxBlock (manager: EntityManager, hash: string) {
+  async createTxBlock(manager: EntityManager, hash: string) {
     await manager.createQueryBuilder()
       .insert()
       .into(TxBlock)
@@ -113,7 +113,7 @@ export class Main {
       .execute()
   }
 
-  async processUtxos (manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
+  async processUtxos(manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
     // insert created utxos
     if (created.length) {
       await Promise.all(created.map(chunk => {
@@ -133,7 +133,7 @@ export class Main {
     }
   }
 
-  async processBorks (manager: EntityManager, txs: BorkTxData[]): Promise<void> {
+  async processBorks(manager: EntityManager, txs: BorkTxData[]): Promise<void> {
     for (let tx of txs) {
       await this.processBorkerTx(manager, tx)
     }
@@ -193,7 +193,7 @@ export class Main {
     }
   }
 
-  async handleProfileUpdate (manager: EntityManager, tx: BorkTxData) {
+  async handleProfileUpdate(manager: EntityManager, tx: BorkTxData) {
     const { type, content, senderAddress } = tx
 
     let params: Partial<User> = {}
@@ -212,7 +212,7 @@ export class Main {
     await manager.update(User, senderAddress, params)
   }
 
-  async createBork (manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
+  async createBork(manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
     const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions, tags } = tx
 
     // create bork
@@ -243,7 +243,7 @@ export class Main {
     }
   }
 
-  async handleCommentReborkLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleCommentReborkLike(manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { referenceId, senderAddress, recipientAddress } = tx
 
     // return if either party blocked
@@ -268,7 +268,7 @@ export class Main {
     })
   }
 
-  async handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleExtension(manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { txid, time, nonce, position, content, senderAddress, mentions, tags } = tx
 
     // find parent
@@ -308,7 +308,7 @@ export class Main {
     }
   }
 
-  async handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleFlag(manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { referenceId, senderAddress } = tx
 
     // find parent from content
