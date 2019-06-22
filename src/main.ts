@@ -1,4 +1,3 @@
-import * as fs from 'fs'
 import { getManager, EntityManager, Like, MoreThan, IsNull, FindConditions, Not, In } from 'typeorm'
 import { Bork } from './db/entities/bork'
 import { TxBlock } from './db/entities/tx-block'
@@ -9,11 +8,11 @@ import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
 import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
 import { Client } from './util/client'
-import { Config, OrphanBork } from './util/types'
+import { OrphanBork } from './util/types'
+import * as config from '../borkerconfig.json'
 // import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../test/helpers/mocks'
 
 export class Main {
-  config: Config = JSON.parse(fs.readFileSync('borkerconfig.json', 'utf8'))
   blockHeight: number
   cleaning: number | null
 
@@ -44,6 +43,7 @@ export class Main {
     do {
       if (block) {
         const blockHash = await this.client.getBlockHash(block.height)
+          .catch(err => console.error(err))
         if (blockHash !== block.hash) {
           this.blockHeight = block.height - 6
           console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
@@ -58,7 +58,7 @@ export class Main {
           keepGoing = false
         }
       } else {
-        this.blockHeight = this.config.startBlockSync
+        this.blockHeight = config.startBlockSync
         keepGoing = false
       }
     } while (keepGoing)
@@ -199,7 +199,7 @@ export class Main {
     let params: Partial<User> = {}
     switch (type) {
       case BorkType.SetName:
-        params.name = NullToUndefined(content)
+        params.name = NullToUndefined(content) // content || undefined (instead?)
         break
       case BorkType.SetBio:
         params.bio = content
