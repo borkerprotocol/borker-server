@@ -36,8 +36,8 @@ app.use('/', router)
 Server.ignoreNextMiddlewares(true)
 
 // set up https server
-let ssl = config.ssl
-if (config.ssl.cert) {
+const ssl = config.ssl
+if (ssl.cert) {
   app = https.createServer({
     key: fs.readFileSync(ssl.key),
     cert: fs.readFileSync(ssl.cert),

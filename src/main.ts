@@ -37,22 +37,20 @@ export class Main {
   async setBlockHeight(): Promise<void> {
     let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
     let keepGoing = true
-    // handle chain reorgs
     do {
       if (block) {
-
         const { blockHash } = await this.client.getBlock(block.height)
-
+        // handle chain reorgs
         if (blockHash !== block.hash) {
           this.blockHeight = block.height - 6
           console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
-
           block = await getManager().findOne(TxBlock, this.blockHeight)
-
+        // next if no reorg
         } else {
           this.blockHeight = block.height + 1
           keepGoing = false
         }
+      // config.start if no block
       } else {
         this.blockHeight = config.start
         keepGoing = false
@@ -64,7 +62,6 @@ export class Main {
     console.log(`syncing ${this.blockHeight}`)
 
     const { blockHash, blockHex } = await this.client.getBlock(this.blockHeight)
-
     const { borkerTxs } = await processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
 
     await getManager().transaction(async manager => {

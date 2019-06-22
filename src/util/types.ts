@@ -1,4 +1,5 @@
-import { User } from '../db/entities/user';
+import { User } from '../db/entities/user'
+import { Bork } from '../db/entities/bork'
 
 export type OrderBy<Entity> = { [P in keyof Entity]?: 'ASC' | 'DESC' }
 
@@ -19,6 +20,17 @@ export interface ApiUser extends User {
   iBlock: string | null
   followersCount?: number
   followingCount?: number
+}
+
+export interface ApiBork extends Bork {
+  iComment?: string | null
+  iRebork?: string | null
+  iLike?: string | null
+  iFlag?: string | null
+  commentsCount?: number
+  reborksCount?: number
+  likesCount?: number
+  flagsCount?: number
 }
 
 export interface Utxo {

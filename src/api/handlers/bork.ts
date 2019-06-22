@@ -3,7 +3,7 @@ import { Bork } from '../../db/entities/bork'
 import { getRepository, IsNull, Brackets, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { OrderBy, ApiUser } from '../../util/types'
+import { OrderBy, ApiUser, ApiBork } from '../../util/types'
 import { Client } from '../../util/client'
 import { BorkType } from 'borker-rs-node'
 
@@ -262,15 +262,4 @@ export class BorkHandler {
       iFlag: flag ? flag.txid : null,
     }
   }
-}
-
-export interface ApiBork extends Bork {
-  iComment?: string | null
-  iRebork?: string | null
-  iLike?: string | null
-  iFlag?: string | null
-  commentsCount?: number
-  reborksCount?: number
-  likesCount?: number
-  flagsCount?: number
 }

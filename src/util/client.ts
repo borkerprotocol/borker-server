@@ -1,6 +1,7 @@
 import * as rp from 'request-promise'
 import * as config from '../../borkerconfig.json'
 import { Utxo } from './types.js'
+import { HttpError } from 'typescript-rest/dist/server/model/errors'
 
 export class Client {
 
@@ -43,12 +44,16 @@ export class Client {
     Object.assign(options, {
       json: true,
       url: config.host + options.url,
+      headers: { 'my-address': '123' },
     })
 
     try {
-      return rp(options)
-    } catch (err) {
-      console.error(err)
+      return await rp(options)
+    } catch (e) {
+      let err: HttpError = e
+      console.error(`Error connecting to ${options.url}
+Status Code: ${err.statusCode}
+Message: ${err.message}`)
     }
   }
 }
