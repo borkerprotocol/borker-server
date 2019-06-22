@@ -6,7 +6,7 @@ import { Tag } from './db/entities/tag'
 import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
 import { processBlock, Network, BorkType, BorkTxData } from 'borker-rs-node'
-import { Client } from './util/client'
+import { Superdoge } from './util/superdoge'
 import { OrphanBork } from './util/types'
 import * as config from '../borkerconfig.json'
 
@@ -15,7 +15,7 @@ export class Main {
   cleaning: number | null
 
   constructor (
-    private client: Client = new Client(),
+    private readonly superdoge: Superdoge = new Superdoge(),
   ) { }
 
   async sync() {
@@ -26,11 +26,11 @@ export class Main {
       await this.processBlocks()
       console.log('sync complete')
     }
-    catch (err) {
-      console.error('error in processBlocks(): ', err.message)
+    catch (e) {
+      console.error('error in processBlocks(): ', e.message)
     }
     finally {
-      setTimeout(() => this.sync(), 4000)
+      setTimeout(this.sync.bind(this), 4000)
     }
   }
 
@@ -39,9 +39,16 @@ export class Main {
     let keepGoing = true
     do {
       if (block) {
-        const { blockHash } = await this.client.getBlock(block.height)
+        let hash: string
+        try {
+          const { blockHash } = await this.superdoge.getBlock(block.height)
+          hash = blockHash
+        } catch (e) {
+          console.error('error in superdoge.getBlock()', e.message)
+          return
+        }
         // handle chain reorgs
-        if (blockHash !== block.hash) {
+        if (hash !== block.hash) {
           this.blockHeight = block.height - 6
           console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
           block = await getManager().findOne(TxBlock, this.blockHeight)
@@ -61,12 +68,22 @@ export class Main {
   async processBlocks() {
     console.log(`syncing ${this.blockHeight}`)
 
-    const { blockHash, blockHex } = await this.client.getBlock(this.blockHeight)
-    const { borkerTxs } = await processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
+    let hash: string
+    let hex: string
+    try {
+      const { blockHash, blockHex } = await this.superdoge.getBlock(this.blockHeight)
+      hash = blockHash
+      hex = blockHex
+    } catch (e) {
+      console.error('error in superdoge.getBlock()', e.message)
+      return
+    }
+
+    const { borkerTxs } = await processBlock(hex, BigInt(this.blockHeight) as any, Network.Dogecoin)
 
     await getManager().transaction(async manager => {
       await Promise.all([
-        this.createTxBlock(manager, blockHash),
+        this.createTxBlock(manager, hash),
         this.processBorks(manager, borkerTxs),
       ])
     })
@@ -387,8 +404,8 @@ export class Main {
           ])
         })
       }
-    } catch (err) {
-      console.error('error in cleanupOrphans(): ', err.message)
+    } catch (e) {
+      console.error('error in cleanupOrphans(): ', e.message)
     }
     // reset cleaning
     this.cleaning = null

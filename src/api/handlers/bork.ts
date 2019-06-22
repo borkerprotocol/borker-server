@@ -4,14 +4,14 @@ import { getRepository, IsNull, Brackets, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
-import { Client } from '../../util/client'
+import { Superdoge } from '../../util/superdoge'
 import { BorkType } from 'borker-rs-node'
 
 @Path('/borks')
 export class BorkHandler {
 
   constructor (
-    private readonly client: Client = new Client(),
+    private readonly superdoge: Superdoge = new Superdoge(),
   ) {}
 
   @Path('/')
@@ -131,7 +131,7 @@ export class BorkHandler {
   @Path('/broadcast')
   @POST
   async broadcast(txs: string[]): Promise<string[]> {
-    return this.client.broadcast(txs)
+    return this.superdoge.broadcast(txs)
   }
 
   @Path('/:txid')

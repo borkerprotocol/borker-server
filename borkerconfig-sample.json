@@ -1,10 +1,12 @@
 {
-  "host": "",
-  "start": 2742726,
+  "superdogeURL": "",
+  "registryURL": "",
+  "discover": true,
+  "start": 2776580,
   "ssl": {
     "cert": "",
     "key": "",
-    "caRoot": "",
-    "caBundle": ""
+    "root": "",
+    "bundle": ""
   }
 }

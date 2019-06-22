@@ -40,3 +40,15 @@ export interface Utxo {
   value: number
   raw: string
 }
+
+export interface RequestOpts {
+  method: string
+  url: string
+  qs?: object
+  body?: object
+}
+
+export enum HostType {
+  superdoge = 'superdoge',
+  registry = 'registry',
+}

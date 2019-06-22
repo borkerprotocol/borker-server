@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class Init1561217190694 implements MigrationInterface {
+export class Init1561243745643 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "block_height" bigint NOT NULL, "nonce" integer NOT NULL, "position" integer NOT NULL, "content" text NOT NULL, "mentions" text, "tags" text, "sender_address" text)`)
@@ -20,6 +20,9 @@ export class Init1561217190694 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_6d695ba01f87a7cefa3617a85c" ON "borks" ("sender_address") `)
         await queryRunner.query(`CREATE INDEX "IDX_2873c3b06729583654b6b70fe9" ON "borks" ("parent_txid") `)
         await queryRunner.query(`CREATE INDEX "IDX_e4d51394b5757b0d74482ab356" ON "borks" ("recipient_address") `)
+        await queryRunner.query(`CREATE TABLE "hosts" ("url" text PRIMARY KEY NOT NULL, "last_used" datetime NOT NULL, "type" text NOT NULL)`)
+        await queryRunner.query(`CREATE INDEX "IDX_1b2595e349a75fe135bd8a500e" ON "hosts" ("last_used") `)
+        await queryRunner.query(`CREATE INDEX "IDX_53b8f3ebb65b63aacf45ec5aa9" ON "hosts" ("type") `)
         await queryRunner.query(`CREATE TABLE "tx_blocks" ("height" bigint PRIMARY KEY NOT NULL, "hash" text NOT NULL, CONSTRAINT "UQ_d16046b3c22e0ac37b9367ba8d4" UNIQUE ("hash"))`)
         await queryRunner.query(`CREATE INDEX "IDX_d16046b3c22e0ac37b9367ba8d" ON "tx_blocks" ("hash") `)
         await queryRunner.query(`CREATE TABLE "mentions" ("user_address" text NOT NULL, "bork_txid" text NOT NULL, PRIMARY KEY ("user_address", "bork_txid"))`)
@@ -111,6 +114,9 @@ export class Init1561217190694 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "mentions"`)
         await queryRunner.query(`DROP INDEX "IDX_d16046b3c22e0ac37b9367ba8d"`)
         await queryRunner.query(`DROP TABLE "tx_blocks"`)
+        await queryRunner.query(`DROP INDEX "IDX_53b8f3ebb65b63aacf45ec5aa9"`)
+        await queryRunner.query(`DROP INDEX "IDX_1b2595e349a75fe135bd8a500e"`)
+        await queryRunner.query(`DROP TABLE "hosts"`)
         await queryRunner.query(`DROP INDEX "IDX_e4d51394b5757b0d74482ab356"`)
         await queryRunner.query(`DROP INDEX "IDX_2873c3b06729583654b6b70fe9"`)
         await queryRunner.query(`DROP INDEX "IDX_6d695ba01f87a7cefa3617a85c"`)

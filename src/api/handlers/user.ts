@@ -5,13 +5,13 @@ import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, Utxo } from '../../util/types'
 import { Bork } from '../../db/entities/bork'
 import { BorkType } from 'borker-rs-node'
-import { Client } from '../../util/client'
+import { Superdoge } from '../../util/superdoge'
 
 @Path('/users')
 export class UserHandler {
 
   constructor (
-    private readonly client: Client = new Client(),
+    private readonly superdoge: Superdoge = new Superdoge(),
   ) {}
 
 	@Path('/')
@@ -74,7 +74,7 @@ export class UserHandler {
 	@Path('/:address/balance')
 	@GET
 	async getBalance (@PathParam('address') address: string): Promise<number> {
-    return this.client.getBalance(address)
+    return this.superdoge.getBalance(address)
   }
 
 	@Path('/:address/utxos')
@@ -84,7 +84,7 @@ export class UserHandler {
     @QueryParam('amount') amount: number,
     @QueryParam('batchSize') batchSize: number = 100,
   ): Promise<Utxo[]> {
-    return this.client.getUtxos(address, amount, batchSize)
+    return this.superdoge.getUtxos(address, amount, batchSize)
   }
 
 	@Path('/:address/users')
