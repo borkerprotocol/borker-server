@@ -3,14 +3,12 @@ import { Bork } from './db/entities/bork'
 import { TxBlock } from './db/entities/tx-block'
 import { User } from './db/entities/user'
 import { Tag } from './db/entities/tag'
-import { Utxo } from './db/entities/utxo'
 import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
-import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
+import { processBlock, Network, BorkType, BorkTxData } from 'borker-rs-node'
 import { Client } from './util/client'
 import { OrphanBork } from './util/types'
 import * as config from '../borkerconfig.json'
-// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../test/helpers/mocks'
 
 export class Main {
   blockHeight: number
@@ -42,30 +40,21 @@ export class Main {
     // handle chain reorgs
     do {
       if (block) {
-        // @ADD
-        // const { blockHash } = await this.client.getBlock(block.height)
-        const blockHash = await this.client.getBlockHash(block.height)
-          .catch(err => console.error(err))
+
+        const { blockHash } = await this.client.getBlock(block.height)
+
         if (blockHash !== block.hash) {
           this.blockHeight = block.height - 6
           console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
 
-          // @ADD
-          // block = await getManager().findOne(TxBlock, this.blockHeight)
+          block = await getManager().findOne(TxBlock, this.blockHeight)
 
-          // @DELETE
-          const [nextBlock] = await Promise.all([
-            getManager().findOne(TxBlock, this.blockHeight),
-            // delete all Utxos to prevent double spend.
-            getManager().delete(Utxo, { blockHeight: MoreThan(this.blockHeight) }),
-          ])
-          block = nextBlock
         } else {
           this.blockHeight = block.height + 1
           keepGoing = false
         }
       } else {
-        this.blockHeight = config.startBlockSync
+        this.blockHeight = config.start
         keepGoing = false
       }
     } while (keepGoing)
@@ -74,34 +63,14 @@ export class Main {
   async processBlocks() {
     console.log(`syncing ${this.blockHeight}`)
 
-    // @ADD
-    // const { blockHash, blockHex } = await this.client.getBlock(this.blockHeight)
+    const { blockHash, blockHex } = await this.client.getBlock(this.blockHeight)
 
-    // @DELETE
-    let blockHash: string
-    let blockHex: string
-    try {
-      blockHash = await this.client.getBlockHash(this.blockHeight)
-      blockHex = await this.client.getBlock(blockHash)
-    } catch (err) {
-      return
-    }
-
-    // @ADD
-    // const borkerTxs = await processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
-    // @DELETE
-    const { borkerTxs, created, spent } = processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
-    // const borkerTxs = getMockBorkerTxs(this.blockHeight)
-    // @DELETE
-    // const created = getMockCreated(this.blockHeight)
-    // const spent = getMockSpent(this.blockHeight)
+    const { borkerTxs } = await processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
 
     await getManager().transaction(async manager => {
       await Promise.all([
         this.createTxBlock(manager, blockHash),
         this.processBorks(manager, borkerTxs),
-        // @DELETE
-        this.processUtxos(manager, created, spent),
       ])
     })
 
@@ -127,27 +96,6 @@ export class Main {
       .onConflict('(height) DO UPDATE SET hash = :hash')
       .setParameter('hash', hash)
       .execute()
-  }
-
-  // @DELETE
-  async processUtxos(manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
-    // insert created utxos
-    if (created.length) {
-      await Promise.all(created.map(chunk => {
-        return manager.createQueryBuilder()
-          .insert()
-          .into(Utxo)
-          .values(chunk)
-          .onConflict('(txid, position) DO NOTHING')
-          .execute()
-      }))
-    }
-    // delete spent utxos
-    if (spent.length) {
-      await Promise.all(spent.map(chunk => {
-        return manager.delete(Utxo, chunk)
-      }))
-    }
   }
 
   async processBorks(manager: EntityManager, txs: BorkTxData[]): Promise<void> {

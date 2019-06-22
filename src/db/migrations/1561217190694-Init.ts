@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class Init1560112455733 implements MigrationInterface {
+export class Init1561217190694 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "block_height" bigint NOT NULL, "nonce" integer NOT NULL, "position" integer NOT NULL, "content" text NOT NULL, "mentions" text, "tags" text, "sender_address" text)`)
@@ -22,9 +22,6 @@ export class Init1560112455733 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_e4d51394b5757b0d74482ab356" ON "borks" ("recipient_address") `)
         await queryRunner.query(`CREATE TABLE "tx_blocks" ("height" bigint PRIMARY KEY NOT NULL, "hash" text NOT NULL, CONSTRAINT "UQ_d16046b3c22e0ac37b9367ba8d4" UNIQUE ("hash"))`)
         await queryRunner.query(`CREATE INDEX "IDX_d16046b3c22e0ac37b9367ba8d" ON "tx_blocks" ("hash") `)
-        await queryRunner.query(`CREATE TABLE "utxos" ("txid" text NOT NULL, "position" integer NOT NULL, "block_height" bigint NOT NULL, "address" text NOT NULL, "value" bigint NOT NULL, "raw" text NOT NULL, PRIMARY KEY ("txid", "position"))`)
-        await queryRunner.query(`CREATE INDEX "IDX_f4ddf5596761915d4415c18040" ON "utxos" ("block_height") `)
-        await queryRunner.query(`CREATE INDEX "IDX_7ee003620e5c4dc41c8020c3a4" ON "utxos" ("address") `)
         await queryRunner.query(`CREATE TABLE "mentions" ("user_address" text NOT NULL, "bork_txid" text NOT NULL, PRIMARY KEY ("user_address", "bork_txid"))`)
         await queryRunner.query(`CREATE TABLE "bork_tags" ("tag_name" text NOT NULL, "bork_txid" text NOT NULL, PRIMARY KEY ("tag_name", "bork_txid"))`)
         await queryRunner.query(`DROP INDEX "IDX_4149b5d28a9d574cb35ac0b880"`)
@@ -112,9 +109,6 @@ export class Init1560112455733 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_4149b5d28a9d574cb35ac0b880" ON "orphans" ("created_at") `)
         await queryRunner.query(`DROP TABLE "bork_tags"`)
         await queryRunner.query(`DROP TABLE "mentions"`)
-        await queryRunner.query(`DROP INDEX "IDX_7ee003620e5c4dc41c8020c3a4"`)
-        await queryRunner.query(`DROP INDEX "IDX_f4ddf5596761915d4415c18040"`)
-        await queryRunner.query(`DROP TABLE "utxos"`)
         await queryRunner.query(`DROP INDEX "IDX_d16046b3c22e0ac37b9367ba8d"`)
         await queryRunner.query(`DROP TABLE "tx_blocks"`)
         await queryRunner.query(`DROP INDEX "IDX_e4d51394b5757b0d74482ab356"`)

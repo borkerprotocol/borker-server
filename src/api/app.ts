@@ -36,13 +36,14 @@ app.use('/', router)
 Server.ignoreNextMiddlewares(true)
 
 // set up https server
-if (config.cert && config.key && config.caBundle && config.caBundle) {
+let ssl = config.ssl
+if (config.ssl.cert) {
   app = https.createServer({
-    key: fs.readFileSync(config.key),
-    cert: fs.readFileSync(config.cert),
+    key: fs.readFileSync(ssl.key),
+    cert: fs.readFileSync(ssl.cert),
     ca: [
-      fs.readFileSync(config.caRoot),
-      fs.readFileSync(config.caBundle),
+      fs.readFileSync(ssl.caRoot),
+      fs.readFileSync(ssl.caBundle),
     ],
   }, app)
 }

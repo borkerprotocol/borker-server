@@ -2,9 +2,8 @@ import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typ
 import { Bork } from '../../db/entities/bork'
 import { getRepository, IsNull, Brackets, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
-import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { OrderBy } from '../../util/types'
+import { OrderBy, ApiUser } from '../../util/types'
 import { Client } from '../../util/client'
 import { BorkType } from 'borker-rs-node'
 

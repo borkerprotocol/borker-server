@@ -1,7 +1,7 @@
 import { createConnections, getConnection, Connection } from 'typeorm'
 import { assert } from 'chai'
 import { UserHandler } from '../../src/api/handlers/user'
-import { seedBaseUser, seedFullUser, seedUtxo, seedFollowBlock } from '../helpers/seeds'
+import { seedBaseUser, seedFullUser, seedFollowBlock } from '../helpers/seeds'
 import { User } from '../../src/db/entities/user'
 import { assertBaseUser, assertFullUser, assertThrows } from '../helpers/assertions'
 import { database } from '../helpers/database'
