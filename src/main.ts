@@ -305,6 +305,7 @@ export class Main {
       ...tx,
       content: null,
       parentTxid: parent.txid,
+      recipientAddress: parent.senderAddress,
     })
   }
 
