@@ -54,15 +54,6 @@ export class BorkHandler {
           .getQuery()
         return `borks.sender_address NOT IN ${subQuery}`
       })
-      .andWhere(qb => {
-        const subQuery = qb.subQuery()
-          .select('recipient_address')
-          .from(Bork, 'followslikes')
-          .where('type IN (:...likeFlagTypes)', { likeFlagTypes: [BorkType.Like, BorkType.Flag] })
-          .andWhere('sender_address = :myAddress')
-          .getQuery()
-        return `borks.recipient_address NOT IN ${subQuery}`
-      })
       .orderBy(order as any)
       .take(perPage)
       .skip(perPage * (page - 1))
@@ -82,7 +73,7 @@ export class BorkHandler {
       query.andWhere(qb => {
         const subQuery = qb.subQuery()
           .select('recipient_address')
-          .from(Bork, 'borks')
+          .from(Bork, 'follows')
           .where('type = :followType', { followType: BorkType.Follow })
           .andWhere('sender_address = :myAddress')
           .getQuery()
