@@ -5,19 +5,20 @@ import { Host } from '../db/entities/host'
 import * as config from '../../borkerconfig.json'
 
 export class Superdoge {
-  private superdogeURL: string | undefined
-  private registryURL: string | undefined
+  private superdogeHost: Host | undefined
+  private registryHost: Host | undefined
+  private lockedTo: number = 0
 
   async getBlock (height: number): Promise<{ blockHash: string, blockHex: string }> {
-    return this.request({
+    return this.superdogeRequest({
       method: 'GET',
       url: '/block',
       qs: { height },
-    })
+    }, height)
   }
 
   async broadcast (txs: string[]): Promise<string[]> {
-    return this.request({
+    return this.superdogeRequest({
       method: 'POST',
       url: '/transactions',
       body: txs,
@@ -25,7 +26,7 @@ export class Superdoge {
   }
 
   async getBalance (address: string): Promise<number> {
-    return this.request({
+    return this.superdogeRequest({
       method: 'GET',
       url: '/balance',
       qs: { address },
@@ -33,7 +34,7 @@ export class Superdoge {
   }
 
   async getUtxos (address: string, amount: number, batchSize?: number): Promise<Utxo[]> {
-    return this.request({
+    return this.superdogeRequest({
       method: 'GET',
       url: '/utxos',
       qs: { address, amount, batchSize },
@@ -42,82 +43,96 @@ export class Superdoge {
 
   // private
 
-  private async request (options: RequestOpts, type = HostType.superdoge, count = 0): Promise<any> {
-    let url = type === HostType.registry ? this.registryURL : this.superdogeURL
+  private async superdogeRequest (options: RequestOpts, id = Math.floor(Math.random() * 10000) + 1, count = 0): Promise<any> {
+    if (this.lockedTo && this.lockedTo !== id) { throw new Error('superdoge unavailable. try again soon.') }
 
-    // set local varibale if not set
-    if (!url) {
-      const setURL = type === HostType.registry ? this.setRegistryURL.bind(this) : this.setSuperdogeURL.bind(this)
-      await setURL(count)
-    }
-    url = type === HostType.registry ? this.registryURL : this.superdogeURL
+    this.superdogeHost = this.superdogeHost || await this.getSuperdogeHost(count)
+    const url = this.superdogeHost.url
 
     try {
+      if (count > 1) {
+        console.log('SUPERDOGE trying: ' + url)
+      }
+      const res = await rp({ ...options, url: url + options.url })
+      if (count > 1 || !this.superdogeHost.lastGraduated) {
+        this.superdogeHost.lastGraduated = new Date()
+        this.superdogeHost = await getManager().save(this.superdogeHost)
+        this.lockedTo = 0
+      }
+      return res
+    } catch (e) {
+      console.error('SUPERDOGE request failed: ' + url)
+
+      this.lockedTo = id
+      this.superdogeHost = undefined
+
+      await this.superdogeRequest(options, count + 1)
+    }
+  }
+
+  private async registryRequest (options: RequestOpts, count = 0): Promise<any> {
+
+    this.registryHost = this.registryHost || await this.getRegistryHost(count)
+    const url = this.registryHost.url
+
+    try {
+      if (count > 1) { console.log('REGISTRY trying: ' + url) }
       return await rp({ ...options, url: url + options.url })
     } catch (e) {
-      console.error(
-        'REQUEST ERROR: ' + url +
-        '\ncode: ' + e.statusCode +
-        '\nmessage: ' + e.message,
-      )
+      console.error('REGISTRY request failed: ' + url)
 
-      if (type === HostType.registry) {
-        this.registryURL = undefined
-      } else {
-        this.superdogeURL = undefined
-      }
+      this.registryHost = undefined
 
-      await this.request(options, type, count + 1)
+      await this.registryRequest(options, count + 1)
     }
   }
 
   // private
 
-  private async setSuperdogeURL (count: number): Promise<void> {
-    // find existing host
+  private async getSuperdogeHost (count: number): Promise<Host> {
+    // find superdoge host in DB
     let host = (await getManager().find(Host, {
       where: {
         type: HostType.superdoge,
       },
       take: 1,
       skip: count,
-      order: { lastUsed: 'DESC' },
+      order: { priority: 'DESC', lastGraduated: 'DESC' },
     }))[0]
     // discover new superdoge host if not exists
     if (!host) {
       if (!config.discover) {
-        throw new Error('discover disabled')
+        throw new Error('discover disabled. to enable superdoge discovery through the borker registry, set "discovery": true in borkerconfig.json')
       }
-      const url = await this.request({
+      const url = await this.registryRequest({
         method: 'GET',
         url: '/node/superdoge',
-      }, HostType.registry)
-      // save host
+        qs: { page: count },
+      })
+      // instantiate host
       host = new Host()
       host.type = HostType.superdoge
       host.url = url
-      host.lastUsed = new Date()
-      await getManager().save(host)
     }
     // set local variable
-    this.superdogeURL = host.url
+    return host
   }
 
-  private async setRegistryURL (count: number): Promise<void> {
-    // find existing host
+  private async getRegistryHost (count: number): Promise<Host> {
+    // find registry host in DB
     let host = (await getManager().find(Host, {
       where: {
         type: HostType.registry,
       },
       take: 1,
       skip: count,
-      order: { lastUsed: 'DESC' },
+      order: { priority: 'DESC', lastGraduated: 'DESC' },
     }))[0]
 
     if (!host) {
-      throw new Error('registry host not found')
+      throw new Error(`failed to discover a valid registry url. ${count} registry hosts in the DB.`)
     }
 
-    this.registryURL = host.url
+    return host
   }
 }

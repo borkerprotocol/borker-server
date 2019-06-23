@@ -17,19 +17,18 @@ async function startServer () {
 }
 
 async function upsertHosts () {
-  const now = new Date()
   if (config.registryURL) {
     const host = new Host()
     host.type = HostType.registry
     host.url = config.registryURL
-    host.lastUsed = now
+    host.priority = 1
     await getManager().save(host)
   }
   if (config.superdogeURL) {
     const host = new Host()
     host.type = HostType.superdoge
     host.url = config.superdogeURL
-    host.lastUsed = now
+    host.priority = 1
     await getManager().save(host)
   }
 }
