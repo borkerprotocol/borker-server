@@ -1,6 +1,6 @@
 {
-  "superdogeURL": "",
-  "registryURL": "",
+  "superdogeURLs": [],
+  "registryURLs": [],
   "discover": true,
   "start": 2776580,
   "ssl": {

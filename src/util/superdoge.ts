@@ -44,7 +44,7 @@ export class Superdoge {
   // private
 
   private async superdogeRequest (options: RequestOpts, id = Math.floor(Math.random() * 10000) + 1, count = 0): Promise<any> {
-    if (this.lockedTo && this.lockedTo !== id) { throw new Error('superdoge unavailable. try again soon.') }
+    if (this.lockedTo && this.lockedTo !== id) { throw new Error('Superdoge unavailable. Try again soon.') }
 
     this.superdogeHost = this.superdogeHost || await this.getSuperdogeHost(count)
     const url = this.superdogeHost.url
@@ -66,7 +66,7 @@ export class Superdoge {
       this.lockedTo = id
       this.superdogeHost = undefined
 
-      await this.superdogeRequest(options, count + 1)
+      await this.superdogeRequest(options, id, count + 1)
     }
   }
 
@@ -97,12 +97,12 @@ export class Superdoge {
       },
       take: 1,
       skip: count,
-      order: { priority: 'DESC', lastGraduated: 'DESC' },
+      order: { priority: 'ASC', lastGraduated: 'DESC' },
     }))[0]
     // discover new superdoge host if not exists
     if (!host) {
       if (!config.discover) {
-        throw new Error('discover disabled. to enable superdoge discovery through the borker registry, set "discovery": true in borkerconfig.json')
+        throw new Error('Discover disabled. To enable superdoge discovery through the borker registry, set "discovery": true in borkerconfig.json')
       }
       const url = await this.registryRequest({
         method: 'GET',
@@ -126,11 +126,11 @@ export class Superdoge {
       },
       take: 1,
       skip: count,
-      order: { priority: 'DESC', lastGraduated: 'DESC' },
+      order: { priority: 'ASC', lastGraduated: 'DESC' },
     }))[0]
 
     if (!host) {
-      throw new Error(`failed to discover a valid registry url. ${count} registry hosts in the DB.`)
+      throw new Error(`Failed to discover a responsive registry. ${count} registry hosts in the DB.`)
     }
 
     return host

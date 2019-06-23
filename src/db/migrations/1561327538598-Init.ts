@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class Init1561301114151 implements MigrationInterface {
+export class Init1561327538598 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "block_height" bigint NOT NULL, "nonce" integer NOT NULL, "position" integer NOT NULL, "content" text NOT NULL, "mentions" text, "tags" text, "sender_address" text)`)
@@ -20,7 +20,7 @@ export class Init1561301114151 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_6d695ba01f87a7cefa3617a85c" ON "borks" ("sender_address") `)
         await queryRunner.query(`CREATE INDEX "IDX_2873c3b06729583654b6b70fe9" ON "borks" ("parent_txid") `)
         await queryRunner.query(`CREATE INDEX "IDX_e4d51394b5757b0d74482ab356" ON "borks" ("recipient_address") `)
-        await queryRunner.query(`CREATE TABLE "hosts" ("url" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL DEFAULT (datetime('now')), "last_graduated" datetime, "type" text NOT NULL, "priority" integer NOT NULL DEFAULT (0))`)
+        await queryRunner.query(`CREATE TABLE "hosts" ("url" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL DEFAULT (datetime('now')), "last_graduated" datetime, "type" text NOT NULL, "priority" integer NOT NULL)`)
         await queryRunner.query(`CREATE INDEX "IDX_b60027594c9c02f7cd33adf405" ON "hosts" ("last_graduated") `)
         await queryRunner.query(`CREATE INDEX "IDX_53b8f3ebb65b63aacf45ec5aa9" ON "hosts" ("type") `)
         await queryRunner.query(`CREATE TABLE "tx_blocks" ("height" bigint PRIMARY KEY NOT NULL, "hash" text NOT NULL, CONSTRAINT "UQ_d16046b3c22e0ac37b9367ba8d4" UNIQUE ("hash"))`)

@@ -26,6 +26,6 @@ export class Host {
 	@Column('text', { name: 'type' })
   type: HostType
 
-	@Column('int', { name: 'priority', default: 0 })
+	@Column('int', { name: 'priority' })
   priority: number
 }

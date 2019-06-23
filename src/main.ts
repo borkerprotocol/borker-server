@@ -19,15 +19,15 @@ export class Main {
   ) { }
 
   async sync() {
-    console.log('begin sync')
+    console.log('Begin sync')
     await this.setBlockHeight()
 
     try {
       await this.processBlocks()
-      console.log('sync complete')
+      console.log('Sync complete')
     }
     catch (e) {
-      console.error('error in processBlocks(): ', e.message)
+      console.error('Error in processBlocks(): ', e.message)
     }
     finally {
       setTimeout(this.sync.bind(this), 4000)
@@ -44,13 +44,13 @@ export class Main {
           const { blockHash } = await this.superdoge.getBlock(block.height)
           hash = blockHash
         } catch (e) {
-          console.error('error in superdoge.getBlock()', e.message)
+          console.error('Error in superdoge.getBlock()', e.message)
           return
         }
         // handle chain reorgs
         if (hash !== block.hash) {
           this.blockHeight = block.height - 6
-          console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
+          console.log(`Block ${block.height} hash mismatch. Rolling back to ${this.blockHeight}`)
           block = await getManager().findOne(TxBlock, this.blockHeight)
         // next if no reorg
         } else {
@@ -75,7 +75,7 @@ export class Main {
       hash = blockHash
       hex = blockHex
     } catch (e) {
-      console.error('error in superdoge.getBlock()', e.message)
+      console.error('Error in superdoge.getBlock()', e.message)
       return
     }
 
@@ -405,7 +405,7 @@ export class Main {
         })
       }
     } catch (e) {
-      console.error('error in cleanupOrphans(): ', e.message)
+      console.error('Error in cleanupOrphans(): ', e.message)
     }
     // reset cleaning
     this.cleaning = null

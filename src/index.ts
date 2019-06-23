@@ -12,25 +12,45 @@ async function startServer () {
   await createConnection()
   await app.listen(PORT)
   await upsertHosts()
-  console.log(`borker server listening on port ${PORT}`)
+  console.log(`Borker Server listening on port ${PORT}`)
   new Main().sync()
 }
 
 async function upsertHosts () {
-  if (config.registryURL) {
-    const host = new Host()
-    host.type = HostType.registry
-    host.url = config.registryURL
-    host.priority = 1
-    await getManager().save(host)
-  }
-  if (config.superdogeURL) {
-    const host = new Host()
-    host.type = HostType.superdoge
-    host.url = config.superdogeURL
-    host.priority = 1
-    await getManager().save(host)
-  }
+  const hosts: Partial<Host>[] = [
+    {
+      url: 'http://localhost:4444',
+      type: HostType.superdoge,
+      priority: 0,
+    },
+    {
+      url: 'http://localhost:2222',
+      type: HostType.registry,
+      priority: 0,
+    },
+  ]
+
+  config.superdogeURLs.forEach(url => {
+    hosts.push({
+      url,
+      type: HostType.superdoge,
+      priority: 1,
+    })
+  })
+  config.registryURLs.forEach(url => {
+    hosts.push({
+      url,
+      type: HostType.registry,
+      priority: 1,
+    })
+  })
+
+  await getManager().createQueryBuilder()
+    .insert()
+    .into(Host)
+    .values(hosts)
+    .onConflict('DO NOTHING')
+    .execute()
 }
 
 startServer()
