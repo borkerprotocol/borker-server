@@ -1,6 +1,6 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
 import { Bork } from '../../db/entities/bork'
-import { getRepository, IsNull, Brackets, Like } from 'typeorm'
+import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
@@ -12,11 +12,11 @@ export class BorkHandler {
 
   constructor (
     private readonly superdoge: Superdoge = new Superdoge(),
-  ) {}
+  ) { }
 
   @Path('/')
   @GET
-  async index(
+  async index (
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
@@ -70,14 +70,20 @@ export class BorkHandler {
       query.andWhere('borks.txid IN (SELECT bork_txid FROM bork_tags WHERE tag_name IN (:...tags))', { tags })
     }
     if (filterFollowing) {
+      let follows = (qb: SelectQueryBuilder<Bork>) => qb.subQuery()
+        .select('recipient_address')
+        .from(Bork, 'borks')
+        .where('type = :followType', { followType: BorkType.Follow })
+        .andWhere('sender_address = :myAddress')
+        .getQuery()
+
       query.andWhere(qb => {
-        const subQuery = qb.subQuery()
-          .select('recipient_address')
-          .from(Bork, 'follows')
-          .where('type = :followType', { followType: BorkType.Follow })
-          .andWhere('sender_address = :myAddress')
-          .getQuery()
-        return `borks.sender_address IN ${subQuery}`
+        const subQuery = follows(qb)
+        return `borks.sender_address IN ${subQuery} OR borks.sender_address = :myAddress`
+      })
+      query.andWhere(qb => {
+        const subQuery = follows(qb)
+        return `NOT (borks.type IN (${BorkType.Like}, ${BorkType.Flag}) AND recipient_address IN ${subQuery})`
       })
     }
     if (senderAddress) {
@@ -93,16 +99,23 @@ export class BorkHandler {
 
     return Promise.all(borks.map(async bork => {
       if (bork.parent) {
-        Object.assign(bork.parent, ...await Promise.all([
-          this.iCommentReborkFlag(myAddress, bork.parent.txid),
-          this.getCounts(bork.parent.txid),
-        ]))
+        parentTxid = bork.parent.txid
+        bork.parent = {
+          ...bork.parent, ...await Promise.all([
+            this.iCommentReborkFlag(myAddress, parentTxid),
+            this.getCounts(parentTxid),
+            this.getExtensionCount(bork.parent)
+          ])
+        }
       }
       if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
-        Object.assign(bork, ...await Promise.all([
-          this.iCommentReborkFlag(myAddress, bork.txid),
-          this.getCounts(bork.txid),
-        ]))
+        bork = {
+          ...bork, ...await Promise.all([
+            this.iCommentReborkFlag(myAddress, bork.txid),
+            this.getCounts(bork.txid),
+            this.getExtensionCount(bork)
+          ])
+        }
       }
 
       return bork
@@ -111,7 +124,7 @@ export class BorkHandler {
 
   @Path('/referenceId')
   @GET
-  async getReferenceId(
+  async getReferenceId (
     @QueryParam('txid') txid: string,
     @QueryParam('address') address: string,
   ): Promise<{ referenceId: string }> {
@@ -130,13 +143,13 @@ export class BorkHandler {
 
   @Path('/broadcast')
   @POST
-  async broadcast(txs: string[]): Promise<string[]> {
+  async broadcast (txs: string[]): Promise<string[]> {
     return this.superdoge.broadcast(txs)
   }
 
   @Path('/:txid')
   @GET
-  async get(
+  async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
   ): Promise<ApiBork> {
@@ -168,7 +181,7 @@ export class BorkHandler {
 
   @Path('/:txid/users')
   @GET
-  async indexBorkUsers(
+  async indexBorkUsers (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('type') type: BorkType,
@@ -213,7 +226,7 @@ export class BorkHandler {
     }))
   }
 
-  private async getCounts(txid: string): Promise<{
+  private async getCounts (txid: string): Promise<{
     commentsCount: number
     reborksCount: number
     likesCount: number
@@ -235,7 +248,7 @@ export class BorkHandler {
     return { commentsCount, reborksCount, likesCount, flagsCount }
   }
 
-  private async iCommentReborkFlag(myAddress: string, txid: string): Promise<{
+  private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
     iComment: string | null
     iRebork: string | null
     iLike: string | null
@@ -261,5 +274,15 @@ export class BorkHandler {
       iLike: like ? like.txid : null,
       iFlag: flag ? flag.txid : null,
     }
+  }
+
+  private async getExtensionCount (bork: Bork): Promise<{ extensionsCount: number }> {
+    let txid: string
+    if (bork.type === BorkType.Extension) {
+      txid = bork.parentTxid!
+    } else {
+      txid = bork.txid
+    }
+    return { extensionsCount: 1 + await getRepository(Bork).count({ type: BorkType.Extension, parent: { txid } }) }
   }
 }

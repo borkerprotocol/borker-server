@@ -31,6 +31,7 @@ export interface ApiBork extends Bork {
   reborksCount?: number
   likesCount?: number
   flagsCount?: number
+  extensionsCount?: number
 }
 
 export interface Utxo {
