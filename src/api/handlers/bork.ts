@@ -98,22 +98,18 @@ export class BorkHandler {
     return Promise.all(borks.map(async bork => {
       if (bork.parent) {
         parentTxid = bork.parent.txid
-        bork.parent = {
-          ...bork.parent, ...await Promise.all([
-            this.iCommentReborkFlag(myAddress, parentTxid),
-            this.getCounts(parentTxid),
-            this.getExtensionCount(bork.parent)
-          ])
-        }
+        bork.parent = Object.assign(bork.parent, ...await Promise.all([
+          this.iCommentReborkFlag(myAddress, parentTxid),
+          this.getCounts(parentTxid),
+          this.getExtensionCount(bork.parent)
+        ]))
       }
       if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
-        bork = {
-          ...bork, ...await Promise.all([
-            this.iCommentReborkFlag(myAddress, bork.txid),
-            this.getCounts(bork.txid),
-            this.getExtensionCount(bork)
-          ])
-        }
+        bork = Object.assign(bork, ...await Promise.all([
+          this.iCommentReborkFlag(myAddress, bork.txid),
+          this.getCounts(bork.txid),
+          this.getExtensionCount(bork)
+        ]))
       }
 
       return bork
