@@ -1,5 +1,5 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
-import { getRepository, FindManyOptions } from 'typeorm'
+import { getRepository, FindManyOptions, Like } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy } from '../../util/types'
@@ -13,12 +13,13 @@ export class UserHandler {
 
   constructor (
     private readonly client: Client = new Client(),
-  ) {}
+  ) { }
 
-	@Path('/')
-	@GET
-	async index (
+  @Path('/')
+  @GET
+  async index (
     @HeaderParam('my-address') myAddress: string,
+    @QueryParam('name') name: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
@@ -34,6 +35,9 @@ export class UserHandler {
       skip: perPage * (page - 1),
       order,
     }
+    if (name) {
+      options.where = ({ name: Like(`%${name.split('').map(n => `${n}%`).join('')}`) })
+    }
     const users = await getRepository(User).find(options)
 
     return Promise.all(users.map(async user => {
@@ -44,14 +48,14 @@ export class UserHandler {
     }))
   }
 
-	@Path('/:address')
-	@GET
-	async get (
+  @Path('/:address')
+  @GET
+  async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
 
-    const [user, blocked, counts, iStuff] = await Promise.all([
+    let [user, blocked, counts, iStuff] = await Promise.all([
       getRepository(User).findOne(address),
       checkBlocked(myAddress, address),
       this.getCounts(address),
@@ -59,7 +63,9 @@ export class UserHandler {
     ])
 
     if (!user) {
-      throw new Errors.NotFoundError('user not found')
+      user = new User()
+      user.address = address
+      user.name = address.substr(0, 9)
     }
     if (blocked) {
       throw new Errors.NotAcceptableError('blocked')
@@ -72,9 +78,9 @@ export class UserHandler {
     }
   }
 
-	@Path('/:address/balance')
-	@GET
-	async getBalance (
+  @Path('/:address/balance')
+  @GET
+  async getBalance (
     @PathParam('address') address: string,
   ): Promise<number> {
 
@@ -87,9 +93,9 @@ export class UserHandler {
     return sum || 0
   }
 
-	@Path('/:address/utxos')
-	@GET
-	async getUtxos (
+  @Path('/:address/utxos')
+  @GET
+  async getUtxos (
     @PathParam('address') address: string,
     @QueryParam('amount') amount: string | number,
     @QueryParam('batchSize') batchSize: string | number = 100,
@@ -130,9 +136,9 @@ export class UserHandler {
     return utxos
   }
 
-	@Path('/:address/users')
-	@GET
-	async indexFollows (
+  @Path('/:address/users')
+  @GET
+  async indexFollows (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
@@ -202,7 +208,7 @@ export class UserHandler {
       type: BorkType.Follow,
     }
 
-    const [ followersCount, followingCount ] = await Promise.all([
+    const [followersCount, followingCount] = await Promise.all([
       getRepository(Bork).count({ ...conditions, recipient: { address } }),
       getRepository(Bork).count({ ...conditions, sender: { address } }),
     ])
