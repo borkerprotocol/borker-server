@@ -27,14 +27,18 @@ export class Registry {
     })
 
     if (!urls.length) {
-      // @TODO find more registries in this case and only throw error if those are gone
-      throw new Error(`Registry tapped out`)
+      if (type === HostType.registry) {
+        throw new Error(`Registry tapped out of registry hosts. End of the line`)
+      } else {
+        this.host = await this.getHost(0)
+        await this.discoverHosts(HostType.superdoge, limit, offset)
+      }
     }
 
     let hosts: Partial<Host>[] = []
     urls.forEach(url => {
       hosts.push({
-        type: HostType.superdoge,
+        type,
         url,
         priority: 2,
       })
@@ -58,12 +62,12 @@ export class Registry {
       },
       take: 1,
       skip: count,
-      order: { priority: 'ASC', lastGraduated: 'DESC', createdAt: 'ASC' },
+      order: { priority: 'ASC', lastGraduated: 'DESC' },
     }))[0]
 
     // discover new hosts if needed
     if (!host) {
-      await this.discoverHosts(HostType.superdoge, 1, count)
+      await this.discoverHosts(HostType.registry, 1, count)
       host = await this.getHost(count)
     }
 

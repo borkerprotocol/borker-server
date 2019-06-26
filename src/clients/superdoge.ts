@@ -3,7 +3,6 @@ import { Utxo, RequestOpts, HostType } from '../util/types'
 import { getManager } from 'typeorm'
 import { Host } from '../db/entities/host'
 import { Registry } from './registry'
-import * as config from '../../borkerconfig.json'
 
 export class Superdoge {
   private host: Host | undefined
@@ -76,7 +75,7 @@ export class Superdoge {
       },
       take: 1,
       skip: count,
-      order: { priority: 'ASC', lastGraduated: 'DESC', createdAt: 'ASC' },
+      order: { priority: 'ASC', lastGraduated: 'DESC' },
     }))[0]
     // discover new hosts if needed
     if (!host) {
