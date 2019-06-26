@@ -57,11 +57,11 @@ export class Superdoge {
     })
   }
 
-  async getUtxos (address: string, amount: number, batchSize?: number): Promise<Utxo[]> {
+  async getUtxos (address: string, amount: number, minimum?: number): Promise<Utxo[]> {
     return this.request({
       method: 'GET',
       url: '/utxos',
-      qs: { address, amount, batchSize },
+      qs: { address, amount, minimum },
     })
   }
 

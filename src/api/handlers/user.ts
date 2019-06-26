@@ -88,9 +88,9 @@ export class UserHandler {
   async getUtxos (
     @PathParam('address') address: string,
     @QueryParam('amount') amount: number,
-    @QueryParam('batchSize') batchSize: number = 100,
+    @QueryParam('minimum') minimum: number = 100,
   ): Promise<Utxo[]> {
-    return this.superdoge.getUtxos(address, amount, batchSize)
+    return this.superdoge.getUtxos(address, amount, minimum)
   }
 
   @Path('/:address/users')
