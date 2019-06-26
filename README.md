@@ -32,14 +32,25 @@ https://github.com/nodesource/distributions/blob/master/README.md
 
 ```cd borker-server```
 
-### Copy borkerconfig.json and ormconfig.json from samples
+### Create borkerconfig.json and ormconfig.json from samples
 ```cp borkerconfig-sample.json borkerconfig.json```
 
 ```cp ormconfig-sample.json ormconfig.json```
 
-### Edit borkerconfig.json to contain your own Dogecoin values and starting block preference
-*If you are connecting to a remote Dogecoin node, make sure the node is configured to allow your local IP in dogecoin.conf*: ```rpcallowip=```
-
+### Edit borkerconfig.json
+```"superdogeURLs": [], // array of preferred superdoge urls
+"registryURLs": [], // array of prefered registry urls
+"discover": true, // should the node use a registry to discover superdoge nodes?
+"register": true, // should the node register itself with a registry?
+"start": 2776580, // starting block height to begin sync. Cannot be below 2776580 (borker genesis)
+"ssl": { // ssl information to run node over https
+  "cert": "",
+  "key": "",
+  "root": "",
+  "bundle": "",
+  "domain": ""
+}
+```
 ### Install packages
 ```npm install```
 
@@ -48,6 +59,3 @@ https://github.com/nodesource/distributions/blob/master/README.md
 
 ### Start the server and Bork on
 ```npm start```
-
-## * To run tests *
-```npm test```
