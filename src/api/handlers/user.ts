@@ -18,7 +18,7 @@ export class UserHandler {
   @GET
   async index (
     @HeaderParam('my-address') myAddress: string,
-    @QueryParam('name') name: string,
+    @QueryParam('name') name?: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
