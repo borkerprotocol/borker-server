@@ -2,11 +2,13 @@
   "superdogeURLs": [],
   "registryURLs": [],
   "discover": true,
+  "register": true,
   "start": 2776580,
   "ssl": {
     "cert": "",
     "key": "",
     "root": "",
-    "bundle": ""
+    "bundle": "",
+    "domain": ""
   }
 }

@@ -5,26 +5,32 @@ import * as config from '../borkerconfig.json'
 import { Main } from './main'
 import { Host } from './db/entities/host'
 import { HostType } from './util/types'
+import { Superdoge } from './util/superdoge'
 
-const PORT = process.env.PORT || 4422
+const PORT = process.env.PORT || '11020'
 
 async function startServer () {
   await createConnection()
   await app.listen(PORT)
   await upsertHosts()
+  if (config.register) { await registerNode() }
   console.log(`Borker Server listening on port ${PORT}`)
   new Main().sync()
 }
 
-async function upsertHosts () {
+async function registerNode (): Promise<void> {
+  await new Superdoge().registerNode(Number(PORT), config.ssl.domain)
+}
+
+async function upsertHosts (): Promise<void> {
   const hosts: Partial<Host>[] = [
     {
-      url: 'http://localhost:4444',
+      url: 'http://localhost:11021',
       type: HostType.superdoge,
       priority: 0,
     },
     {
-      url: 'http://localhost:2222',
+      url: 'http://localhost:11023',
       type: HostType.registry,
       priority: 0,
     },

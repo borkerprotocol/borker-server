@@ -9,20 +9,41 @@ export class Superdoge {
   private registryHost: Host | undefined
   private lockedTo: number = 0
 
-  async getBlock (height: number): Promise<{ blockHash: string, blockHex: string }> {
+  async getBlockHash (height: number): Promise<string> {
     return this.superdogeRequest({
-      method: 'GET',
-      url: '/block',
-      qs: { height },
-    }, height)
+      method: 'POST',
+      url: '/',
+      body: {
+        method: 'getblockhash',
+        params: [height]
+      },
+    })
+  }
+
+  async getBlock (hash: number): Promise<string> {
+    return this.superdogeRequest({
+      method: 'POST',
+      url: '/',
+      body: {
+        method: 'getblock',
+        params: [hash]
+      },
+    })
   }
 
   async broadcast (txs: string[]): Promise<string[]> {
-    return this.superdogeRequest({
-      method: 'POST',
-      url: '/transactions',
-      body: txs,
-    })
+    let txids: string[] = []
+    for (let tx of txs) {
+      txids.push(await this.superdogeRequest({
+        method: 'POST',
+        url: '/',
+        body: {
+          method: 'sendrawtransaction',
+          params: [tx]
+        },
+      }))
+    }
+    return txids
   }
 
   async getBalance (address: string): Promise<number> {
@@ -38,6 +59,14 @@ export class Superdoge {
       method: 'GET',
       url: '/utxos',
       qs: { address, amount, batchSize },
+    })
+  }
+
+  async registerNode (port: number, domain: string): Promise<void> {
+    return this.registryRequest({
+      method: 'POST',
+      url: '/register/borker',
+      body: { port, domain },
     })
   }
 
@@ -104,15 +133,20 @@ export class Superdoge {
       if (!config.discover) {
         throw new Error('Discover disabled. To enable superdoge discovery through the borker registry, set "discovery": true in borkerconfig.json')
       }
-      const url = await this.registryRequest({
+      const url = (await this.registryRequest({
         method: 'GET',
         url: '/node/superdoge',
-        qs: { page: count },
-      })
+        qs: { offset: count },
+      }))[0]
+      if (!url) {
+        throw new Error(`Registry tapped out. Registry contains a total of ${count} superdoge hosts.`)
+      }
       // instantiate host
       host = new Host()
       host.type = HostType.superdoge
       host.url = url
+      host.priority = 2
+      host = await getManager().save(host)
     }
     // set local variable
     return host
