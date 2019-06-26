@@ -5,7 +5,7 @@ import * as config from '../borkerconfig.json'
 import { Main } from './main'
 import { Host } from './db/entities/host'
 import { HostType } from './util/types'
-import { Superdoge } from './util/superdoge'
+import { Registry } from './clients/registry'
 
 const PORT = process.env.PORT || '11020'
 
@@ -19,7 +19,7 @@ async function startServer () {
 }
 
 async function registerNode (): Promise<void> {
-  await new Superdoge().registerNode(Number(PORT), config.ssl.domain)
+  await new Registry().register(Number(PORT), config.ssl.domain)
 }
 
 async function upsertHosts (): Promise<void> {

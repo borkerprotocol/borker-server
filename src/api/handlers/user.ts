@@ -5,7 +5,7 @@ import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, Utxo } from '../../util/types'
 import { Bork } from '../../db/entities/bork'
 import { BorkType } from 'borker-rs-node'
-import { Superdoge } from '../../util/superdoge'
+import { Superdoge } from '../../clients/superdoge'
 
 @Path('/users')
 export class UserHandler {

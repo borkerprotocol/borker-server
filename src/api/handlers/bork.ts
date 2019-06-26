@@ -4,7 +4,7 @@ import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder } from 'typeo
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
-import { Superdoge } from '../../util/superdoge'
+import { Superdoge } from '../../clients/superdoge'
 import { BorkType } from 'borker-rs-node'
 
 @Path('/borks')
