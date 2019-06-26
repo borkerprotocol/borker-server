@@ -7,11 +7,11 @@ import * as config from '../../borkerconfig.json'
 export class Registry {
   private host: Host | undefined
 
-  async register (port: number, domain: string): Promise<void> {
+  async register (url: string): Promise<void> {
     return this.request({
       method: 'POST',
       url: '/register/borker',
-      body: { port, domain },
+      body: { url },
     })
   }
 

@@ -2,6 +2,8 @@ import 'reflect-metadata'
 import { createConnection, getManager } from 'typeorm'
 import app from './api/app'
 import * as config from '../borkerconfig.json'
+import * as IP from 'public-ip'
+import * as x509 from 'x509'
 import { Main } from './main'
 import { Host } from './db/entities/host'
 import { HostType } from './util/types'
@@ -19,7 +21,13 @@ async function startServer () {
 }
 
 async function registerNode (): Promise<void> {
-  await new Registry().register(Number(PORT), config.ssl.domain)
+  let url: string
+  if (config.ssl.cert) {
+    url = `https://${x509.getSubject(config.ssl.cert).commonName.replace('*.', '')}`
+  } else {
+    url = `http://${await IP.v4()}`
+  }
+  await new Registry().register(`${url}:${PORT}`)
 }
 
 async function upsertHosts (): Promise<void> {
