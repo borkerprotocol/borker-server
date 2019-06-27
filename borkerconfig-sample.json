@@ -1,10 +1,14 @@
 {
-  "externalip": "",
-  "rpcuser": "",
-  "rpcpassword": "",
-  "startBlockSync": 2742726,
-  "cert": "",
-  "key": "",
-  "caRoot": "",
-  "caBundle": ""
+  "superdogeURLs": [],
+  "registryURLs": [],
+  "discover": true,
+  "register": true,
+  "start": 2776580,
+  "ssl": {
+    "cert": "",
+    "key": "",
+    "root": "",
+    "bundle": "",
+    "domain": ""
+  }
 }

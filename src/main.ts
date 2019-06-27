@@ -3,88 +3,88 @@ import { Bork } from './db/entities/bork'
 import { TxBlock } from './db/entities/tx-block'
 import { User } from './db/entities/user'
 import { Tag } from './db/entities/tag'
-import { Utxo } from './db/entities/utxo'
 import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
-import { processBlock, Network, BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
-import { Client } from './util/client'
+import { processBlock, Network, BorkType, BorkTxData } from 'borker-rs-node'
+import { Superdoge } from './clients/superdoge'
 import { OrphanBork } from './util/types'
 import * as config from '../borkerconfig.json'
-// import { getMockBorkerTxs, getMockCreated, getMockSpent } from '../test/helpers/mocks'
 
 export class Main {
   blockHeight: number
   cleaning: number | null
 
   constructor (
-    private client: Client = new Client(),
+    private readonly superdoge: Superdoge = new Superdoge(),
   ) { }
 
-  async sync() {
-    console.log('begin sync')
+  async sync () {
+    console.log('Begin sync')
     await this.setBlockHeight()
 
     try {
       await this.processBlocks()
-      console.log('sync complete')
+      console.log('Sync complete')
     }
-    catch (err) {
-      console.error('error in processBlocks(): ', err.message)
+    catch (e) {
+      console.error('Error in processBlocks(): ', e.message)
     }
     finally {
-      setTimeout(() => this.sync(), 4000)
+      setTimeout(this.sync.bind(this), 4000)
     }
   }
 
-  async setBlockHeight(): Promise<void> {
+  async setBlockHeight (): Promise<void> {
     let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
     let keepGoing = true
-    // handle chain reorgs
     do {
       if (block) {
-        const blockHash = await this.client.getBlockHash(block.height)
-          .catch(err => console.error(err))
-        if (blockHash !== block.hash) {
+        let hash: string
+        try {
+          const blockHash = await this.superdoge.getBlockHash(block.height)
+          hash = blockHash
+        } catch (e) {
+          console.error('Error in superdoge.getBlock()', e.message)
+          return
+        }
+        // handle chain reorgs
+        if (hash !== block.hash) {
           this.blockHeight = block.height - 6
-          console.log(`block ${block.height} hash mismatch, rolling back to ${this.blockHeight}`)
-          const [nextBlock] = await Promise.all([
-            getManager().findOne(TxBlock, this.blockHeight),
-            // delete all Utxos to prevent double spend
-            getManager().delete(Utxo, { blockHeight: MoreThan(this.blockHeight) }),
-          ])
-          block = nextBlock
+          console.log(`Block ${block.height} hash mismatch. Rolling back to ${this.blockHeight}`)
+          block = await getManager().findOne(TxBlock, this.blockHeight)
+          // next if no reorg
         } else {
           this.blockHeight = block.height + 1
           keepGoing = false
         }
+        // config.start if no block
       } else {
-        this.blockHeight = config.startBlockSync
+        this.blockHeight = config.start
         keepGoing = false
       }
     } while (keepGoing)
   }
 
-  async processBlocks() {
+  async processBlocks () {
     console.log(`syncing ${this.blockHeight}`)
 
-    let blockHash: string
-    let blockHex: string
+    let hash: string
+    let hex: string
     try {
-      blockHash = await this.client.getBlockHash(this.blockHeight)
-      blockHex = await this.client.getBlock(blockHash)
-    } catch (err) {
+      const blockHash = await this.superdoge.getBlockHash(this.blockHeight)
+      const blockHex = await this.superdoge.getBlock(blockHash)
+      hash = blockHash
+      hex = blockHex
+    } catch (e) {
+      console.error('Error in superdoge.getBlock()', e.message)
       return
     }
 
-    const { borkerTxs, created, spent } = processBlock(blockHex, BigInt(this.blockHeight) as any, Network.Dogecoin)
-    // const borkerTxs = getMockBorkerTxs(this.blockHeight)
-    // const created = getMockCreated(this.blockHeight)
-    // const spent = getMockSpent(this.blockHeight)
+    const { borkerTxs } = await processBlock(hex, BigInt(this.blockHeight) as any, Network.Dogecoin)
 
     await getManager().transaction(async manager => {
       await Promise.all([
-        this.createTxBlock(manager, blockHash),
-        this.processUtxos(manager, created, spent),
+        this.createTxBlock(manager, hash),
         this.processBorks(manager, borkerTxs),
       ])
     })
@@ -100,7 +100,7 @@ export class Main {
     await this.processBlocks()
   }
 
-  async createTxBlock(manager: EntityManager, hash: string) {
+  async createTxBlock (manager: EntityManager, hash: string) {
     await manager.createQueryBuilder()
       .insert()
       .into(TxBlock)
@@ -113,33 +113,13 @@ export class Main {
       .execute()
   }
 
-  async processUtxos(manager: EntityManager, created: NewUtxo[][], spent: UtxoId[][]) {
-    // insert created utxos
-    if (created.length) {
-      await Promise.all(created.map(chunk => {
-        return manager.createQueryBuilder()
-          .insert()
-          .into(Utxo)
-          .values(chunk)
-          .onConflict('(txid, position) DO NOTHING')
-          .execute()
-      }))
-    }
-    // delete spent utxos
-    if (spent.length) {
-      await Promise.all(spent.map(chunk => {
-        return manager.delete(Utxo, chunk)
-      }))
-    }
-  }
-
-  async processBorks(manager: EntityManager, txs: BorkTxData[]): Promise<void> {
+  async processBorks (manager: EntityManager, txs: BorkTxData[]): Promise<void> {
     for (let tx of txs) {
       await this.processBorkerTx(manager, tx)
     }
   }
 
-  async processBorkerTx(manager: EntityManager, tx: BorkTxData) {
+  async processBorkerTx (manager: EntityManager, tx: BorkTxData) {
 
     const { time, type, senderAddress } = tx
 
@@ -193,7 +173,7 @@ export class Main {
     }
   }
 
-  async handleProfileUpdate(manager: EntityManager, tx: BorkTxData) {
+  async handleProfileUpdate (manager: EntityManager, tx: BorkTxData) {
     const { type, content, senderAddress } = tx
 
     let params: Partial<User> = {}
@@ -212,7 +192,7 @@ export class Main {
     await manager.update(User, senderAddress, params)
   }
 
-  async createBork(manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
+  async createBork (manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
     const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions, tags } = tx
 
     // create bork
@@ -243,7 +223,7 @@ export class Main {
     }
   }
 
-  async handleCommentReborkLike(manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleCommentReborkLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { referenceId, senderAddress, recipientAddress } = tx
 
     // return if either party blocked
@@ -268,7 +248,7 @@ export class Main {
     })
   }
 
-  async handleExtension(manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { txid, time, nonce, position, content, senderAddress, mentions, tags } = tx
 
     // find parent
@@ -308,7 +288,7 @@ export class Main {
     }
   }
 
-  async handleFlag(manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { referenceId, senderAddress } = tx
 
     // find parent from content
@@ -326,10 +306,11 @@ export class Main {
       ...tx,
       content: null,
       parentTxid: parent.txid,
+      recipientAddress: parent.senderAddress,
     })
   }
 
-  async handleFollowBlock(manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleFollowBlock (manager: EntityManager, tx: BorkTxData): Promise<void> {
 
     // find recipient from content
     const recipient = await manager.findOne(User, tx.content!)
@@ -343,7 +324,7 @@ export class Main {
     })
   }
 
-  async handleDelete(manager: EntityManager, tx: BorkTxData): Promise<void> {
+  async handleDelete (manager: EntityManager, tx: BorkTxData): Promise<void> {
     const { time, referenceId, senderAddress } = tx
 
     // find parent from sender and content
@@ -392,7 +373,7 @@ export class Main {
     }
   }
 
-  async cleanupOrphans(): Promise<void> {
+  async cleanupOrphans (): Promise<void> {
 
     try {
       // find orphans
@@ -425,14 +406,14 @@ export class Main {
           ])
         })
       }
-    } catch (err) {
-      console.error('error in cleanupOrphans(): ', err.message)
+    } catch (e) {
+      console.error('Error in cleanupOrphans(): ', e.message)
     }
     // reset cleaning
     this.cleaning = null
   }
 
-  async attachTags(manager: EntityManager, txid: string, tags: string[]): Promise<void> {
+  async attachTags (manager: EntityManager, txid: string, tags: string[]): Promise<void> {
 
     const borkTags: {
       tag_name: string,
@@ -461,7 +442,7 @@ export class Main {
     }
   }
 
-  async attachMentions(manager: EntityManager, txid: string, unverified: string[]): Promise<void> {
+  async attachMentions (manager: EntityManager, txid: string, unverified: string[]): Promise<void> {
 
     const mentions: {
       user_address: string,
@@ -486,7 +467,7 @@ export class Main {
     }
   }
 
-  getCutoff(now: Date): Date {
+  getCutoff (now: Date): Date {
     return new Date(now.setHours(now.getHours() - 24))
   }
 }

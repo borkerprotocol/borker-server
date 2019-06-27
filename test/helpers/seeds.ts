@@ -2,7 +2,6 @@ import { getManager } from 'typeorm'
 import { UserSeed, User } from '../../src/db/entities/user'
 import { Bork, BorkSeed } from '../../src/db/entities/bork'
 import { randomAddressOrTxid } from './random-generators'
-import { UtxoSeed, Utxo } from '../../src/db/entities/utxo'
 import { OrphanSeed, Orphan } from '../../src/db/entities/orphan'
 import { BorkType } from 'borker-rs-node'
 
@@ -33,20 +32,6 @@ export async function seedFullUser (attributes: Partial<UserSeed> = {}): Promise
 
   const user = getManager().create(User, Object.assign(seed, attributes))
   return getManager().save(user)
-}
-
-export async function seedUtxo (attributes: Partial<UtxoSeed> = {}): Promise<Utxo> {
-  const seed: UtxoSeed = Object.assign({
-    txid: randomAddressOrTxid(false),
-    position: 0,
-    createdAt: new Date(),
-    address: randomAddressOrTxid(true),
-    value: 100000000,
-    raw: 'thisisarawtxhex',
-  }, attributes)
-
-  const utxo = getManager().create(Utxo, seed)
-  return getManager().save(utxo)
 }
 
 export async function seedBork (sender: User, attributes: Partial<BorkSeed> = {}): Promise<Bork> {

@@ -2,17 +2,16 @@ import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typ
 import { Bork } from '../../db/entities/bork'
 import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder } from 'typeorm'
 import { User } from '../../db/entities/user'
-import { ApiUser } from './user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
-import { OrderBy } from '../../util/types'
-import { Client } from '../../util/client'
+import { OrderBy, ApiUser, ApiBork } from '../../util/types'
+import { Superdoge } from '../../clients/superdoge'
 import { BorkType } from 'borker-rs-node'
 
 @Path('/borks')
 export class BorkHandler {
 
   constructor (
-    private readonly client: Client = new Client(),
+    private readonly superdoge: Superdoge = new Superdoge(),
   ) { }
 
   @Path('/')
@@ -138,11 +137,7 @@ export class BorkHandler {
   @Path('/broadcast')
   @POST
   async broadcast (txs: string[]): Promise<string[]> {
-    let txids: string[] = []
-    for (let tx of txs) {
-      txids.push(await this.client.broadcast(tx))
-    }
-    return txids
+    return this.superdoge.broadcast(txs)
   }
 
   @Path('/:txid')
@@ -283,16 +278,4 @@ export class BorkHandler {
     }
     return { extensionsCount: 1 + await getRepository(Bork).count({ type: BorkType.Extension, parent: { txid } }) }
   }
-}
-
-export interface ApiBork extends Bork {
-  iComment?: string | null
-  iRebork?: string | null
-  iLike?: string | null
-  iFlag?: string | null
-  commentsCount?: number
-  reborksCount?: number
-  likesCount?: number
-  flagsCount?: number
-  extensionsCount?: number
 }
