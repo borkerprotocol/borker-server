@@ -69,18 +69,18 @@ export class Main {
     console.log(`syncing ${this.blockHeight}`)
 
     let hash: string
-    let hex: string
+    let bytes: string
     try {
       const blockHash = await this.superdoge.getBlockHash(this.blockHeight)
-      const blockHex = await this.superdoge.getBlock(blockHash)
+      const blockBytes = await this.superdoge.getBlock(blockHash)
       hash = blockHash
-      hex = blockHex
+      bytes = blockBytes
     } catch (e) {
       console.error('Error in superdoge.getBlock()', e.message)
       return
     }
 
-    const { borkerTxs } = await processBlock(hex, BigInt(this.blockHeight) as any, Network.Dogecoin)
+    const { borkerTxs } = await processBlock(bytes, this.blockHeight, Network.Dogecoin)
 
     await getManager().transaction(async manager => {
       await Promise.all([
