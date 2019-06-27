@@ -8,7 +8,7 @@ export class Superdoge {
   private host: Host | undefined
 
   async getBlockHash (height: number): Promise<string> {
-    return this.request({
+    return this.rpcRequest({
       method: 'POST',
       url: '/',
       body: {
@@ -19,7 +19,7 @@ export class Superdoge {
   }
 
   async getBlock (hash: string): Promise<string> {
-    return this.request({
+    return this.rpcRequest({
       method: 'POST',
       url: '/',
       body: {
@@ -32,7 +32,7 @@ export class Superdoge {
   async broadcast (txs: string[]): Promise<string[]> {
     let txids: string[] = []
     for (let tx of txs) {
-      txids.push(await this.request({
+      txids.push(await this.rpcRequest({
         method: 'POST',
         url: '/',
         body: {
@@ -77,10 +77,22 @@ export class Superdoge {
     let host = await query.getOne()
 
     if (!host) {
-      throw new Error('Known hosts exhausted')
+      throw new Error('Superdoge hosts exhausted')
     }
 
     return host
+  }
+
+  private async rpcRequest (options: RequestOpts): Promise<any> {
+    const raw: string = await this.request(options)
+
+    const parsed: {
+      id: string
+      result: string
+      error: string
+    } = JSON.parse(raw)
+
+    return parsed.result
   }
 
   private async request (options: RequestOpts, retry = false): Promise<any> {
@@ -92,23 +104,24 @@ export class Superdoge {
     const url = this.host.url
 
     try {
-      if (retry) {
-        console.log('SUPERDOGE trying: ' + url)
-      }
-      console.log(options, url)
+      if (retry) { console.log('Trying: ' + url) }
+
       const res = await rp({
         ...options,
         json: true,
         url
       })
+
+      // set lastGraduated if never been used or subbing in
       if (!this.host.lastGraduated || retry) {
         this.host.lastGraduated = new Date()
         this.host = await getManager().save(this.host)
         this.locked = false
       }
+
       return res
     } catch (e) {
-      console.error('SUPERDOGE request failed: ' + url)
+      console.error('Request failed: ' + url)
 
       await this.request(options, true)
     }
