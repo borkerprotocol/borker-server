@@ -6,7 +6,7 @@ import { Tag } from './db/entities/tag'
 import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
 import { processBlock, Network, BorkType, BorkTxData } from 'borker-rs-node'
-import { Superdoge } from './clients/superdoge'
+import { Superdoge } from './util/superdoge'
 import { OrphanBork } from './util/types'
 import * as config from '../borkerconfig.json'
 

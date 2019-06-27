@@ -48,8 +48,3 @@ export interface RequestOpts {
   qs?: object
   body?: object
 }
-
-export enum HostType {
-  superdoge = 'superdoge',
-  registry = 'registry',
-}

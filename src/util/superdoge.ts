@@ -1,16 +1,11 @@
 import * as rp from 'request-promise'
-import { Utxo, RequestOpts, HostType } from '../util/types'
+import { Utxo, RequestOpts } from './types'
 import { getManager } from 'typeorm'
 import { Host } from '../db/entities/host'
-import { Registry } from './registry'
 
 export class Superdoge {
+  private locked = false
   private host: Host | undefined
-  private lockedTo: number = 0
-
-  constructor (
-    public registry = new Registry()
-  ) { }
 
   async getBlockHash (height: number): Promise<string> {
     return this.request({
@@ -67,49 +62,55 @@ export class Superdoge {
 
   // private
 
-  private async getHost (count: number): Promise<Host> {
+  private async getHost (): Promise<Host> {
     // find host in DB
-    let host = (await getManager().find(Host, {
-      where: {
-        type: HostType.superdoge,
-      },
-      take: 1,
-      skip: count,
-      order: { priority: 'ASC', lastGraduated: 'DESC' },
-    }))[0]
-    // discover new hosts if needed
+    let query = getManager().createQueryBuilder()
+      .select('hosts')
+      .from(Host, 'hosts')
+      .orderBy({ last_graduated: 'DESC' })
+
+    if (this.host) {
+      query
+        .andWhere('last_graduated < :time OR last_graduated IS NULL', { time: this.host.lastGraduated })
+        .andWhere('priority <> :priority', { priority: 0 })
+    }
+    let host = await query.getOne()
+
     if (!host) {
-      await this.registry.discoverHosts(HostType.superdoge, 1, count)
-      host = await this.getHost(count)
+      throw new Error('Known hosts exhausted')
     }
 
     return host
   }
 
-  private async request (options: RequestOpts, id = Math.floor(Math.random() * 10000) + 1, count = 0): Promise<any> {
-    if (this.lockedTo && this.lockedTo !== id) { throw new Error('Superdoge unavailable. Try again soon.') }
+  private async request (options: RequestOpts, retry = false): Promise<any> {
+    if (this.locked && !retry) { throw new Error('Borker Server temporarily unavailable') }
 
-    this.host = this.host || await this.getHost(count)
+    if (!this.host || retry) {
+      this.host = await this.getHost()
+    }
     const url = this.host.url
 
     try {
-      if (count > 1) {
+      if (retry) {
         console.log('SUPERDOGE trying: ' + url)
       }
-      const res = await rp({ ...options, url: url + options.url })
-      if (count > 1 || !this.host.lastGraduated) {
+      console.log(options, url)
+      const res = await rp({
+        ...options,
+        json: true,
+        url
+      })
+      if (!this.host.lastGraduated || retry) {
         this.host.lastGraduated = new Date()
         this.host = await getManager().save(this.host)
-        this.lockedTo = 0
+        this.locked = false
       }
       return res
     } catch (e) {
       console.error('SUPERDOGE request failed: ' + url)
 
-      this.lockedTo = id
-      this.host = undefined
-
-      await this.request(options, id, count + 1)
+      await this.request(options, true)
     }
   }
 }
