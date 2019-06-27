@@ -24,7 +24,7 @@ export class Superdoge {
       url: '/',
       body: {
         method: 'getblock',
-        params: [hash]
+        params: [hash, 0]
       },
     })
   }
@@ -89,8 +89,6 @@ export class Superdoge {
       result: string
       error: string | null
     } = await this.request(options)
-
-    console.log(res)
 
     return res.result
   }
