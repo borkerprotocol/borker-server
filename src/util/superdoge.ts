@@ -84,15 +84,13 @@ export class Superdoge {
   }
 
   private async rpcRequest (options: RequestOpts): Promise<any> {
-    const raw: string = await this.request(options)
-
-    const parsed: {
+    const res: {
       id: string
       result: string
-      error: string
-    } = JSON.parse(raw)
+      error: string | null
+    } = await this.request(options)
 
-    return parsed.result
+    return res.result
   }
 
   private async request (options: RequestOpts, retry = false): Promise<any> {
