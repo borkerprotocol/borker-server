@@ -1,4 +1,4 @@
-import { BorkType, BorkTxData, UtxoId, NewUtxo } from 'borker-rs-node'
+import { BorkType, BorkTxData } from 'borker-rs-node'
 
 export function getMockBorkerTxs (blockHeight: number) {
   if (blockHeight === 17903) {
