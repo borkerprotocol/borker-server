@@ -20,6 +20,7 @@
 		"borker-rs-node": "0.1.25",
 		"cors": "^2.8.5",
 		"express": "^4.17.1",
+		"node-gyp": "3.7.0",
 		"public-ip": "^3.1.0",
 		"reflect-metadata": "^0.1.13",
 		"request": "^2.88.0",
