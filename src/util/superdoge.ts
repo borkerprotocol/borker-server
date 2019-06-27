@@ -90,6 +90,8 @@ export class Superdoge {
       error: string | null
     } = await this.request(options)
 
+    console.log(res)
+
     return res.result
   }
 
