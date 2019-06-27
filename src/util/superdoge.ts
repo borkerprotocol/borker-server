@@ -119,6 +119,7 @@ export class Superdoge {
 
       return res
     } catch (e) {
+      console.log(e)
       console.error('Request failed: ' + url)
 
       await this.request(options, true)
