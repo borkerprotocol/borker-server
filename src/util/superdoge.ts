@@ -24,7 +24,7 @@ export class Superdoge {
       url: '/',
       body: {
         method: 'getblock',
-        params: [hash, 0]
+        params: [hash, false]
       },
     })
   }
