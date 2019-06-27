@@ -80,12 +80,12 @@ export class Main {
       return
     }
 
-    const { borkerTxs } = await processBlock(bytes, this.blockHeight, Network.Dogecoin)
+    const txs = await processBlock(bytes, this.blockHeight, Network.Dogecoin)
 
     await getManager().transaction(async manager => {
       await Promise.all([
         this.createTxBlock(manager, hash),
-        this.processBorks(manager, borkerTxs),
+        this.processBorks(manager, txs),
       ])
     })
 
