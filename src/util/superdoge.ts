@@ -2,6 +2,8 @@ import * as rp from 'request-promise'
 import { Utxo, RequestOpts } from './types'
 import * as config from '../../borkerconfig.json'
 
+const base = config.externalip || 'http://localhost:11021'
+
 export async function getBlockHashReq (height: number): Promise<string> {
   return rpcRequest({
     method: 'POST',
@@ -71,6 +73,6 @@ async function request (options: RequestOpts): Promise<any> {
   return rp({
     ...options,
     json: true,
-    url: config.externalip || 'http://localhost:11021',
+    url: base + options.url,
   })
 }
