@@ -4,8 +4,8 @@ import { getManager } from 'typeorm'
 import { Host } from '../db/entities/host'
 
 export class Superdoge {
-  private locked = false
-  private host: Host | undefined
+  private static locked = false
+  private static host: Host | undefined
 
   async getBlockHash (height: number): Promise<string> {
     return this.rpcRequest({
@@ -13,7 +13,7 @@ export class Superdoge {
       url: '/',
       body: {
         method: 'getblockhash',
-        params: [height]
+        params: [height],
       },
     })
   }
@@ -24,7 +24,7 @@ export class Superdoge {
       url: '/',
       body: {
         method: 'getblock',
-        params: [hash, false]
+        params: [hash, false],
       },
     })
   }
@@ -37,7 +37,7 @@ export class Superdoge {
         url: '/',
         body: {
           method: 'sendrawtransaction',
-          params: [tx]
+          params: [tx],
         },
       }))
     }
@@ -67,11 +67,12 @@ export class Superdoge {
     let query = getManager().createQueryBuilder()
       .select('hosts')
       .from(Host, 'hosts')
-      .orderBy({ last_graduated: 'DESC' })
+      .orderBy({ priority: 'ASC', last_graduated: 'DESC' })
 
-    if (this.host) {
+    // if host skip union of localhost and host
+    if (Superdoge.host) {
       query
-        .andWhere('last_graduated < :time OR last_graduated IS NULL', { time: this.host.lastGraduated })
+        .andWhere('last_graduated < :time OR last_graduated IS NULL', { time: Superdoge.host.lastGraduated })
         .andWhere('priority <> :priority', { priority: 0 })
     }
     let host = await query.getOne()
@@ -94,33 +95,32 @@ export class Superdoge {
   }
 
   private async request (options: RequestOpts, retry = false): Promise<any> {
-    if (this.locked && !retry) { throw new Error('Borker Server temporarily unavailable') }
+    if (Superdoge.locked && !retry) { throw new Error('Borker Server temporarily unavailable') }
 
-    if (!this.host || retry) {
-      this.host = await this.getHost()
+    if (!Superdoge.host || retry) {
+      Superdoge.host = await this.getHost()
     }
-    const url = this.host.url
 
     try {
-      if (retry) { console.log('Trying: ' + url) }
+      if (retry) { console.log(`Trying: ${Superdoge.host.url}`) }
 
       const res = await rp({
         ...options,
         json: true,
-        url
+        url: `${Superdoge.host.url}${options.url}`,
       })
 
-      // set lastGraduated if never been used or subbing in
-      if (!this.host.lastGraduated || retry) {
-        this.host.lastGraduated = new Date()
-        this.host = await getManager().save(this.host)
-        this.locked = false
+      // set lastGraduated if first time used or subbing in
+      if (!Superdoge.host.lastGraduated || retry) {
+        Superdoge.host.lastGraduated = new Date()
+        Superdoge.host = await getManager().save(Superdoge.host)
+
+        Superdoge.locked = false
       }
 
       return res
     } catch (e) {
-      console.log(e)
-      console.error('Request failed: ' + url)
+      console.error(`Request failed: ${Superdoge.host.url}`)
 
       await this.request(options, true)
     }
