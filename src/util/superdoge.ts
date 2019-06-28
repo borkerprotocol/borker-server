@@ -71,6 +71,6 @@ async function request (options: RequestOpts): Promise<any> {
   return rp({
     ...options,
     json: true,
-    url: config.superdogeip || 'http://localhost:11021',
+    url: config.externalip || 'http://localhost:11021',
   })
 }
