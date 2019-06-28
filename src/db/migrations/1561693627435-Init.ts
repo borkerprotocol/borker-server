@@ -1,8 +1,8 @@
-import { MigrationInterface, QueryRunner } from "typeorm"
+import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class Init1561645060539 implements MigrationInterface {
+export class Init1561693627435 implements MigrationInterface {
 
-    public async up (queryRunner: QueryRunner): Promise<any> {
+    public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "orphans" ("txid" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL, "block_height" bigint NOT NULL, "nonce" integer NOT NULL, "position" integer NOT NULL, "content" text NOT NULL, "mentions" text, "tags" text, "sender_address" text)`)
         await queryRunner.query(`CREATE INDEX "IDX_4149b5d28a9d574cb35ac0b880" ON "orphans" ("created_at") `)
         await queryRunner.query(`CREATE INDEX "IDX_08f49bf2cacd532e2e10eb5779" ON "orphans" ("block_height") `)
@@ -20,8 +20,6 @@ export class Init1561645060539 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_6d695ba01f87a7cefa3617a85c" ON "borks" ("sender_address") `)
         await queryRunner.query(`CREATE INDEX "IDX_2873c3b06729583654b6b70fe9" ON "borks" ("parent_txid") `)
         await queryRunner.query(`CREATE INDEX "IDX_e4d51394b5757b0d74482ab356" ON "borks" ("recipient_address") `)
-        await queryRunner.query(`CREATE TABLE "hosts" ("url" text PRIMARY KEY NOT NULL, "created_at" datetime NOT NULL DEFAULT (datetime('now')), "last_graduated" datetime, "priority" integer NOT NULL)`)
-        await queryRunner.query(`CREATE INDEX "IDX_b60027594c9c02f7cd33adf405" ON "hosts" ("last_graduated") `)
         await queryRunner.query(`CREATE TABLE "tx_blocks" ("height" bigint PRIMARY KEY NOT NULL, "hash" text NOT NULL, CONSTRAINT "UQ_d16046b3c22e0ac37b9367ba8d4" UNIQUE ("hash"))`)
         await queryRunner.query(`CREATE INDEX "IDX_d16046b3c22e0ac37b9367ba8d" ON "tx_blocks" ("hash") `)
         await queryRunner.query(`CREATE TABLE "mentions" ("user_address" text NOT NULL, "bork_txid" text NOT NULL, PRIMARY KEY ("user_address", "bork_txid"))`)
@@ -68,7 +66,7 @@ export class Init1561645060539 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "temporary_bork_tags" RENAME TO "bork_tags"`)
     }
 
-    public async down (queryRunner: QueryRunner): Promise<any> {
+    public async down(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`ALTER TABLE "bork_tags" RENAME TO "temporary_bork_tags"`)
         await queryRunner.query(`CREATE TABLE "bork_tags" ("tag_name" text NOT NULL, "bork_txid" text NOT NULL, PRIMARY KEY ("tag_name", "bork_txid"))`)
         await queryRunner.query(`INSERT INTO "bork_tags"("tag_name", "bork_txid") SELECT "tag_name", "bork_txid" FROM "temporary_bork_tags"`)
@@ -113,8 +111,6 @@ export class Init1561645060539 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "mentions"`)
         await queryRunner.query(`DROP INDEX "IDX_d16046b3c22e0ac37b9367ba8d"`)
         await queryRunner.query(`DROP TABLE "tx_blocks"`)
-        await queryRunner.query(`DROP INDEX "IDX_b60027594c9c02f7cd33adf405"`)
-        await queryRunner.query(`DROP TABLE "hosts"`)
         await queryRunner.query(`DROP INDEX "IDX_e4d51394b5757b0d74482ab356"`)
         await queryRunner.query(`DROP INDEX "IDX_2873c3b06729583654b6b70fe9"`)
         await queryRunner.query(`DROP INDEX "IDX_6d695ba01f87a7cefa3617a85c"`)

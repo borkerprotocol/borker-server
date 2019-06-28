@@ -1,11 +1,9 @@
 import * as rp from 'request-promise'
 import { Utxo, RequestOpts } from './types'
 import { getManager } from 'typeorm'
-import { Host } from '../db/entities/host'
+import * as config from '../../borkerconfig.json'
 
 export class Superdoge {
-  private static locked = false
-  private static host: Host | undefined
 
   async getBlockHash (height: number): Promise<string> {
     return this.rpcRequest({
@@ -62,28 +60,6 @@ export class Superdoge {
 
   // private
 
-  private async getHost (): Promise<Host> {
-    // find host in DB
-    let query = getManager().createQueryBuilder()
-      .select('hosts')
-      .from(Host, 'hosts')
-      .orderBy({ priority: 'ASC', last_graduated: 'DESC' })
-
-    // if host skip union of localhost and host
-    if (Superdoge.host) {
-      query
-        .andWhere('last_graduated < :time OR last_graduated IS NULL', { time: Superdoge.host.lastGraduated })
-        .andWhere('priority <> :priority', { priority: 0 })
-    }
-    let host = await query.getOne()
-
-    if (!host) {
-      throw new Error('Superdoge hosts exhausted')
-    }
-
-    return host
-  }
-
   private async rpcRequest (options: RequestOpts): Promise<any> {
     const res: {
       id: string
@@ -94,35 +70,11 @@ export class Superdoge {
     return res.result
   }
 
-  private async request (options: RequestOpts, retry = false): Promise<any> {
-    if (Superdoge.locked && !retry) { throw new Error('Borker Server temporarily unavailable') }
-
-    if (!Superdoge.host || retry) {
-      Superdoge.host = await this.getHost()
-    }
-
-    try {
-      if (retry) { console.log(`Trying: ${Superdoge.host.url}`) }
-
-      const res = await rp({
-        ...options,
-        json: true,
-        url: `${Superdoge.host.url}${options.url}`,
-      })
-
-      // set lastGraduated if first time used or subbing in
-      if (!Superdoge.host.lastGraduated || retry) {
-        Superdoge.host.lastGraduated = new Date()
-        Superdoge.host = await getManager().save(Superdoge.host)
-
-        Superdoge.locked = false
-      }
-
-      return res
-    } catch (e) {
-      console.error(`Request failed: ${Superdoge.host.url}`)
-
-      await this.request(options, true)
-    }
+  private async request (options: RequestOpts): Promise<any> {
+    return rp({
+      ...options,
+      json: true,
+      url: config.superdogeip || 'http://localhost:11021',
+    })
   }
 }

@@ -1,11 +1,10 @@
 {
-  "superdogeURLs": [],
+  "superdogeip": "",
   "start": 2742726,
   "ssl": {
     "cert": "",
     "key": "",
     "root": "",
-    "bundle": "",
-    "domain": ""
+    "bundle": ""
   }
 }
