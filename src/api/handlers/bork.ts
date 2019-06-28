@@ -4,15 +4,11 @@ import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder } from 'typeo
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
-import { Superdoge } from '../../util/superdoge'
 import { BorkType } from 'borker-rs-node'
+import { broadcastReq } from '../../util/superdoge'
 
 @Path('/borks')
 export class BorkHandler {
-
-  constructor (
-    private readonly superdoge: Superdoge = new Superdoge(),
-  ) { }
 
   @Path('/')
   @GET
@@ -79,7 +75,7 @@ export class BorkHandler {
 
       query.andWhere(qb => {
         const subQuery = follows(qb)
-        return `(borks.sender_address IN ${subQuery} OR borks.sender_address = :myAddress) AND 
+        return `(borks.sender_address IN ${subQuery} OR borks.sender_address = :myAddress) AND
           (borks.type NOT IN ('${BorkType.Like}', '${BorkType.Flag}') OR (borks.recipient_address NOT IN ${subQuery} AND borks.sender_address <> :myAddress))`
       })
     }
@@ -100,14 +96,14 @@ export class BorkHandler {
         bork.parent = Object.assign(bork.parent, ...await Promise.all([
           this.iCommentReborkFlag(myAddress, parentTxid),
           this.getCounts(parentTxid),
-          this.getExtensionCount(bork.parent)
+          this.getExtensionCount(bork.parent),
         ]))
       }
       if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
         bork = Object.assign(bork, ...await Promise.all([
           this.iCommentReborkFlag(myAddress, bork.txid),
           this.getCounts(bork.txid),
-          this.getExtensionCount(bork)
+          this.getExtensionCount(bork),
         ]))
       }
 
@@ -137,7 +133,7 @@ export class BorkHandler {
   @Path('/broadcast')
   @POST
   async broadcast (txs: string[]): Promise<string[]> {
-    return this.superdoge.broadcast(txs)
+    return broadcastReq(txs)
   }
 
   @Path('/:txid')
