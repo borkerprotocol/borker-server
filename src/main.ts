@@ -15,18 +15,21 @@ let cleaning: number | null
 
 export async function sync () {
   console.log('Begin sync')
-  await setBlockHeight()
+
+  try {
+    await setBlockHeight()
+  } catch (e) {
+    console.error('Error in setBlockHeight(): ', e.message)
+  }
 
   try {
     await processBlocks()
     console.log('Sync complete')
-  }
-  catch (e) {
+  } catch (e) {
     console.error('Error in processBlocks(): ', e.message)
   }
-  finally {
-    setTimeout(sync, 4000)
-  }
+
+  setTimeout(sync, 4000)
 }
 
 async function setBlockHeight (): Promise<void> {
@@ -34,14 +37,7 @@ async function setBlockHeight (): Promise<void> {
   let keepGoing = true
   do {
     if (block) {
-      let hash: string
-      try {
-        const blockHash = await getBlockHashReq(block.height)
-        hash = blockHash
-      } catch (e) {
-        console.error('Error in superdoge.getBlock()', e.message)
-        return
-      }
+      const hash = await getBlockHashReq(block.height)
       // handle chain reorgs
       if (hash !== block.hash) {
         blockHeight = block.height - 6
@@ -63,15 +59,8 @@ async function setBlockHeight (): Promise<void> {
 async function processBlocks () {
   console.log(`syncing ${blockHeight}`)
 
-  let hash: string
-  let bytes: string
-  try {
-    hash = await getBlockHashReq(blockHeight)
-    bytes = await getBlockReq(hash)
-  } catch (e) {
-    console.error('Error in superdoge.getBlock()', e.message)
-    return
-  }
+  const hash = await getBlockHashReq(blockHeight)
+  const bytes = await getBlockReq(hash)
 
   const txs = await processBlock(bytes, blockHeight, Network.Dogecoin)
 
