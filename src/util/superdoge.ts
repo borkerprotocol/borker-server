@@ -74,5 +74,6 @@ async function request (options: RequestOpts): Promise<any> {
     ...options,
     json: true,
     url: base + options.url,
+    headers: { 'content-type': 'application/json' },
   })
 }

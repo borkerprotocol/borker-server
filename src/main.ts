@@ -20,6 +20,7 @@ export async function sync () {
     await setBlockHeight()
   } catch (e) {
     console.error('Error in setBlockHeight(): ', e.message)
+    return setTimeout(sync, 4000)
   }
 
   try {
@@ -27,9 +28,9 @@ export async function sync () {
     console.log('Sync complete')
   } catch (e) {
     console.error('Error in processBlocks(): ', e.message)
+  } finally {
+    setTimeout(sync, 4000)
   }
-
-  setTimeout(sync, 4000)
 }
 
 async function setBlockHeight (): Promise<void> {
