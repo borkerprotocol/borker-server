@@ -48,3 +48,9 @@ export interface RequestOpts {
   qs?: object
   body?: object
 }
+
+export interface rpcResponse {
+  id: number
+  result?: string
+  error?: string
+}

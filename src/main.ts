@@ -5,26 +5,27 @@ import { User } from './db/entities/user'
 import { Tag } from './db/entities/tag'
 import { Orphan } from './db/entities/orphan'
 import { eitherPartyBlocked, NullToUndefined } from './util/functions'
-import { processBlock, Network, BorkType, BorkTxData } from 'borker-rs-node'
 import { OrphanBork } from './util/types'
+import { BorkType, BorkTxData } from 'borker-rs-node'
+import * as borkerlib from 'borker-rs-node'
 import * as config from '../borkerconfig.json'
-import { getBlockHashReq, getBlockReq } from './util/superdoge'
+import * as superdoge from './util/superdoge'
 
-let blockHeight: number
 let cleaning: number | null
 
 export async function sync () {
   console.log('Begin sync')
+  let height: number
 
   try {
-    await setBlockHeight()
+    height = await getBlockHeight()
   } catch (e) {
     console.error('Error in setBlockHeight(): ', e.message)
     return setTimeout(sync, 4000)
   }
 
   try {
-    await processBlocks()
+    await processBlocks(height)
     console.log('Sync complete')
   } catch (e) {
     console.error('Error in processBlocks(): ', e.message)
@@ -33,62 +34,63 @@ export async function sync () {
   }
 }
 
-async function setBlockHeight (): Promise<void> {
+async function getBlockHeight (): Promise<number> {
   let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
   let keepGoing = true
   do {
     if (block) {
-      const hash = await getBlockHashReq(block.height)
+      const hash = await superdoge.getBlockHash(block.height)
       // handle chain reorgs
       if (hash !== block.hash) {
-        blockHeight = block.height - 6
-        console.log(`Block ${block.height} hash mismatch. Rolling back to ${blockHeight}`)
-        block = await getManager().findOne(TxBlock, blockHeight)
+        let newHeight = block.height - 6
+        console.log(`${block.height} hash mismatch. Rolling back to ${newHeight}`)
+        block = await getManager().findOne(TxBlock, newHeight)
         // next if no reorg
       } else {
-        blockHeight = block.height + 1
         keepGoing = false
       }
       // config.start if no block
     } else {
-      blockHeight = config.start
       keepGoing = false
     }
   } while (keepGoing)
+
+  return block ? block.height + 1 : config.start
 }
 
-async function processBlocks () {
-  console.log(`syncing ${blockHeight}`)
+async function processBlocks (height: number): Promise<void> {
+  const heightHashes = await superdoge.getBlockHashes(height)
+  const blocks = await superdoge.getBlocks(heightHashes)
+  for (let i = 0; i < blocks.length; i++) {
+    await processBlock(height + i, heightHashes[i].hash, blocks[i])
+  }
+}
 
-  const hash = await getBlockHashReq(blockHeight)
-  const bytes = await getBlockReq(hash)
-
-  const txs = await processBlock(bytes, blockHeight, Network.Dogecoin)
+async function processBlock (height: number, hash: string, block: string): Promise<void> {
+  console.log(height)
+  // @TODO move this up ^
+  const borks = borkerlib.processBlock(block, height, borkerlib.Network.Dogecoin)
 
   await getManager().transaction(async manager => {
     await Promise.all([
-      createTxBlock(manager, hash),
-      processBorks(manager, txs),
+      createTxBlock(manager, height, hash),
+      processBorks(manager, height, borks),
     ])
   })
 
   // cleanup orphans if not already cleaning
   if (!cleaning) {
-    cleaning = blockHeight
+    cleaning = height
     cleanupOrphans()
   }
-
-  blockHeight++
-
-  await processBlocks()
 }
 
-async function createTxBlock (manager: EntityManager, hash: string) {
+async function createTxBlock (manager: EntityManager, height: number, hash: string): Promise<void> {
   await manager.createQueryBuilder()
     .insert()
     .into(TxBlock)
     .values({
-      height: blockHeight,
+      height,
       hash,
     })
     .onConflict('(height) DO UPDATE SET hash = :hash')
@@ -96,15 +98,15 @@ async function createTxBlock (manager: EntityManager, hash: string) {
     .execute()
 }
 
-async function processBorks (manager: EntityManager, txs: BorkTxData[]): Promise<void> {
-  for (let tx of txs) {
-    await processBorkerTx(manager, tx)
+async function processBorks (manager: EntityManager, height: number, borks: BorkTxData[]): Promise<void> {
+  for (let bork of borks) {
+    await processBork(manager, height, bork)
   }
 }
 
-async function processBorkerTx (manager: EntityManager, tx: BorkTxData) {
+async function processBork (manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
 
-  const { time, type, senderAddress } = tx
+  const { time, type, senderAddress } = bork
 
   // create sender
   await manager.createQueryBuilder()
@@ -113,7 +115,7 @@ async function processBorkerTx (manager: EntityManager, tx: BorkTxData) {
     .values({
       address: senderAddress,
       createdAt: new Date(time),
-      birthBlock: blockHeight,
+      birthBlock: height,
       name: senderAddress.substr(0, 9),
     })
     .onConflict('(address) DO NOTHING')
@@ -124,40 +126,40 @@ async function processBorkerTx (manager: EntityManager, tx: BorkTxData) {
     case BorkType.SetName:
     case BorkType.SetBio:
     case BorkType.SetAvatar:
-      await handleProfileUpdate(manager, tx)
+      await handleProfileUpdate(manager, bork)
       break
     // bork
     case BorkType.Bork:
-      await createBork(manager, tx)
+      await createBork(manager, bork)
       break
     // comment, rebork, like
     case BorkType.Comment:
     case BorkType.Rebork:
     case BorkType.Like:
-      await handleCommentReborkLike(manager, tx)
+      await handleCommentReborkLike(manager, bork)
       break
     // extension
     case BorkType.Extension:
-      await handleExtension(manager, tx)
+      await handleExtension(manager, height, bork)
       break
     // flag
     case BorkType.Flag:
-      await handleFlag(manager, tx)
+      await handleFlag(manager, bork)
       break
     // follow, block
     case BorkType.Follow:
     case BorkType.Block:
-      await handleFollowBlock(manager, tx)
+      await handleFollowBlock(manager, bork)
       break
     // delete
     case BorkType.Delete:
-      await handleDelete(manager, tx)
+      await handleDelete(manager, bork)
       break
   }
 }
 
-async function handleProfileUpdate (manager: EntityManager, tx: BorkTxData) {
-  const { type, content, senderAddress } = tx
+async function handleProfileUpdate (manager: EntityManager, bork: BorkTxData): Promise<void> {
+  const { type, content, senderAddress } = bork
 
   let params: Partial<User> = {}
   switch (type) {
@@ -175,8 +177,8 @@ async function handleProfileUpdate (manager: EntityManager, tx: BorkTxData) {
   await manager.update(User, senderAddress, params)
 }
 
-async function createBork (manager: EntityManager, tx: BorkTxData & { parentTxid?: string }): Promise<void> {
-  const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions, tags } = tx
+async function createBork (manager: EntityManager, bork: BorkTxData & { parentTxid?: string }): Promise<void> {
+  const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions, tags } = bork
 
   // create bork
   await manager.createQueryBuilder()
@@ -206,8 +208,8 @@ async function createBork (manager: EntityManager, tx: BorkTxData & { parentTxid
   }
 }
 
-async function handleCommentReborkLike (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { referenceId, senderAddress, recipientAddress } = tx
+async function handleCommentReborkLike (manager: EntityManager, bork: BorkTxData): Promise<void> {
+  const { referenceId, senderAddress, recipientAddress } = bork
 
   // return if either party blocked
   if (await eitherPartyBlocked(recipientAddress!, senderAddress)) { return }
@@ -225,14 +227,14 @@ async function handleCommentReborkLike (manager: EntityManager, tx: BorkTxData):
 
   // create bork if parent exists, no need to save recipient
   await createBork(manager, {
-    ...tx,
+    ...bork,
     parentTxid: parent.txid,
     recipientAddress: null,
   })
 }
 
-async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { txid, time, nonce, position, content, senderAddress, mentions, tags } = tx
+async function handleExtension (manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
+  const { txid, time, nonce, position, content, senderAddress, mentions, tags } = bork
 
   // find parent
   const parent = await manager.findOne(Bork, {
@@ -247,7 +249,7 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
   // create bork if parent exists
   if (parent) {
     await createBork(manager, {
-      ...tx,
+      ...bork,
       parentTxid: parent.txid,
     })
     // create orphan if no parent
@@ -258,7 +260,7 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
       .values({
         txid,
         createdAt: new Date(time),
-        blockHeight: blockHeight,
+        blockHeight: height,
         nonce: nonce!,
         position: position!,
         content: content!,
@@ -271,8 +273,8 @@ async function handleExtension (manager: EntityManager, tx: BorkTxData): Promise
   }
 }
 
-async function handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void> {
-  const { referenceId, senderAddress } = tx
+async function handleFlag (manager: EntityManager, bork: BorkTxData): Promise<void> {
+  const { referenceId, senderAddress } = bork
 
   // find parent from content
   const parent = await manager.findOne(Bork, {
@@ -286,22 +288,22 @@ async function handleFlag (manager: EntityManager, tx: BorkTxData): Promise<void
 
   // create bork if parent exists
   await createBork(manager, {
-    ...tx,
+    ...bork,
     content: null,
     parentTxid: parent.txid,
     recipientAddress: parent.senderAddress,
   })
 }
 
-async function handleFollowBlock (manager: EntityManager, tx: BorkTxData): Promise<void> {
+async function handleFollowBlock (manager: EntityManager, bork: BorkTxData): Promise<void> {
 
   // find recipient from content
-  const recipient = await manager.findOne(User, tx.content!)
+  const recipient = await manager.findOne(User, bork.content!)
   if (!recipient) { return }
 
   // create bork if recipient exists
   await createBork(manager, {
-    ...tx,
+    ...bork,
     content: null,
     recipientAddress: recipient.address,
   })
@@ -396,7 +398,7 @@ async function cleanupOrphans (): Promise<void> {
   cleaning = null
 }
 
-async function attachTags (manager: EntityManager, txid: string, tags: string[]): Promise < void > {
+async function attachTags (manager: EntityManager, txid: string, tags: string[]): Promise<void> {
 
   const borkTags: {
     tag_name: string,
@@ -425,7 +427,7 @@ async function attachTags (manager: EntityManager, txid: string, tags: string[])
   }
 }
 
-async function attachMentions (manager: EntityManager, txid: string, unverified: string[]): Promise < void > {
+async function attachMentions (manager: EntityManager, txid: string, unverified: string[]): Promise<void> {
 
   const mentions: {
     user_address: string,

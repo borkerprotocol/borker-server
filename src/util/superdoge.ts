@@ -1,47 +1,99 @@
 import * as rp from 'request-promise'
-import { Utxo, RequestOpts } from './types'
+import { Utxo, RequestOpts, rpcResponse } from './types'
 import * as config from '../../borkerconfig.json'
 
-const base = config.externalip || 'http://localhost:11021'
-
-export async function getBlockHashReq (height: number): Promise<string> {
-  return rpcRequest({
+export async function getBlockHash (height: number): Promise<string> {
+  const res = await rpcRequest({
     method: 'POST',
     url: '/',
     body: {
       method: 'getblockhash',
       params: [height],
     },
-  })
+  }) as rpcResponse
+
+  return res.result!
 }
 
-export async function getBlockReq (hash: string): Promise<string> {
-  return rpcRequest({
+export async function getBlockHashes (startingHeight: number): Promise<{ height: number, hash: string }[]> {
+  let bodies: {
+    method: 'getblockhash'
+    id: number,
+    params: number[]
+  }[] = []
+
+  for (let i = 0; i < 40; i++) {
+    let height = startingHeight + i
+    bodies.push({ method: 'getblockhash', id: height, params: [height] })
+  }
+
+  const res = await rpcRequest({
+    method: 'POST',
+    url: '/',
+    body: bodies,
+  }) as rpcResponse[]
+
+  return res
+    .sort((a, b) => (a.id > b.id) ? 1 : -1)
+    .map(r => {
+      if (r.result) {
+        return { height: r.id, hash: r.result }
+      }
+    }) as { height: number, hash: string }[]
+}
+
+export async function getBlock (hash: string): Promise<string> {
+  const res = await rpcRequest({
     method: 'POST',
     url: '/',
     body: {
       method: 'getblock',
       params: [hash, false],
     },
-  })
+  }) as rpcResponse
+
+  return res.result!
 }
 
-export async function broadcastReq (txs: string[]): Promise<string[]> {
+export async function getBlocks (heightHashes: { height: number, hash: string }[]): Promise<string[]> {
+  let bodies: {
+    method: 'getblock'
+    id: number,
+    params: string[]
+  }[] = []
+
+  for (let obj of heightHashes) {
+    bodies.push({ method: 'getblock', id: obj.height, params: [obj.hash] })
+  }
+
+  const res = await rpcRequest({
+    method: 'POST',
+    url: '/',
+    body: bodies,
+  }) as rpcResponse[]
+
+  return res.sort((a, b) => (a.id > b.id) ? 1 : -1).map(r => r.result!)
+}
+
+export async function broadcast (txs: string[]): Promise<string[]> {
   let txids: string[] = []
   for (let tx of txs) {
-    txids.push(await rpcRequest({
+    const res = await rpcRequest({
       method: 'POST',
       url: '/',
       body: {
         method: 'sendrawtransaction',
         params: [tx],
       },
-    }))
+    }) as rpcResponse
+
+    txids.push(res.result!)
   }
+
   return txids
 }
 
-export async function getBalanceReq (address: string): Promise<number> {
+export async function getBalance (address: string): Promise<number> {
   return request({
     method: 'GET',
     url: '/balance',
@@ -49,7 +101,7 @@ export async function getBalanceReq (address: string): Promise<number> {
   })
 }
 
-export async function getUtxosReq (address: string, amount: number, minimum?: number): Promise<Utxo[]> {
+export async function getUtxos (address: string, amount: number, minimum?: number): Promise<Utxo[]> {
   return request({
     method: 'GET',
     url: '/utxos',
@@ -59,21 +111,15 @@ export async function getUtxosReq (address: string, amount: number, minimum?: nu
 
 // private
 
-async function rpcRequest (options: RequestOpts): Promise<any> {
-  const res: {
-    id: string
-    result: string
-    error: string | null
-  } = await request(options)
-
-  return res.result
+async function rpcRequest (options: RequestOpts): Promise<rpcResponse | rpcResponse[]> {
+  return request(options)
 }
 
 async function request (options: RequestOpts): Promise<any> {
   return rp({
     ...options,
     json: true,
-    url: base + options.url,
+    url: (config.externalip || 'http://localhost:11021') + options.url,
     headers: { 'content-type': 'application/json' },
   })
 }

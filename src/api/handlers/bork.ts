@@ -5,7 +5,7 @@ import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
 import { BorkType } from 'borker-rs-node'
-import { broadcastReq } from '../../util/superdoge'
+import * as superdoge from '../../util/superdoge'
 
 @Path('/borks')
 export class BorkHandler {
@@ -133,7 +133,7 @@ export class BorkHandler {
   @Path('/broadcast')
   @POST
   async broadcast (txs: string[]): Promise<string[]> {
-    return broadcastReq(txs)
+    return superdoge.broadcast(txs)
   }
 
   @Path('/:txid')
