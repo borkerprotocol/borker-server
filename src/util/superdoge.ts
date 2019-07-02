@@ -34,12 +34,9 @@ export async function getBlockHashes (startingHeight: number): Promise<{ height:
   }) as rpcResponse[]
 
   return res
+    .filter(r => r.result)
     .sort((a, b) => (a.id > b.id) ? 1 : -1)
-    .map(r => {
-      if (r.result) {
-        return { height: r.id, hash: r.result }
-      }
-    }) as { height: number, hash: string }[]
+    .map(s => { return { height: s.id, hash: s.result } }) as { height: number, hash: string }[]
 }
 
 export async function getBlock (hash: string): Promise<string> {

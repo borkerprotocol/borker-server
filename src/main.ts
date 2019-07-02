@@ -60,6 +60,7 @@ async function getBlockHeight (): Promise<number> {
 
 async function processBlocks (height: number): Promise<void> {
   const heightHashes = await superdoge.getBlockHashes(height)
+  if (!heightHashes.length) { return }
   const blocks = await superdoge.getBlocks(heightHashes)
   // @TODO remove 2nd param when borkerLib updated
   const borks = blocks.map(block => borkerlib.processBlock(block, 1, borkerlib.Network.Dogecoin))
