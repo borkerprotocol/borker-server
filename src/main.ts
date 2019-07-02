@@ -61,15 +61,18 @@ async function getBlockHeight (): Promise<number> {
 async function processBlocks (height: number): Promise<void> {
   const heightHashes = await superdoge.getBlockHashes(height)
   const blocks = await superdoge.getBlocks(heightHashes)
-  for (let i = 0; i < blocks.length; i++) {
-    await processBlock(height + i, heightHashes[i].hash, blocks[i])
+  // @TODO remove 2nd param when borkerLib updated
+  const borks = blocks.map(block => borkerlib.processBlock(block, 1, borkerlib.Network.Dogecoin))
+
+  for (let i = 0; i < borks.length; i++) {
+    await processBlock(height + i, heightHashes[i].hash, borks[i])
   }
+
+  await processBlocks(height + blocks.length)
 }
 
-async function processBlock (height: number, hash: string, block: string): Promise<void> {
+async function processBlock (height: number, hash: string, borks: BorkTxData[]): Promise<void> {
   console.log(height)
-  // @TODO move this up ^
-  const borks = borkerlib.processBlock(block, height, borkerlib.Network.Dogecoin)
 
   await getManager().transaction(async manager => {
     await Promise.all([

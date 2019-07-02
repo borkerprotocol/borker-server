@@ -56,15 +56,9 @@ export async function getBlock (hash: string): Promise<string> {
 }
 
 export async function getBlocks (heightHashes: { height: number, hash: string }[]): Promise<string[]> {
-  let bodies: {
-    method: 'getblock'
-    id: number,
-    params: string[]
-  }[] = []
-
-  for (let obj of heightHashes) {
-    bodies.push({ method: 'getblock', id: obj.height, params: [obj.hash] })
-  }
+  const bodies = heightHashes.map(heightHash => {
+    return { method: 'getblock', id: heightHash.height, params: [heightHash.hash, false] }
+  })
 
   const res = await rpcRequest({
     method: 'POST',
@@ -72,7 +66,9 @@ export async function getBlocks (heightHashes: { height: number, hash: string }[
     body: bodies,
   }) as rpcResponse[]
 
-  return res.sort((a, b) => (a.id > b.id) ? 1 : -1).map(r => r.result!)
+  return res
+    .sort((a, b) => (a.id > b.id) ? 1 : -1)
+    .map(r => r.result!)
 }
 
 export async function broadcast (txs: string[]): Promise<string[]> {
