@@ -117,7 +117,7 @@ export class BorkHandler {
   async getTags (
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
-  ): Promise<{ tag: string, count: number }[]> {
+  ): Promise<{ name: string, count: number }[]> {
     page = Number(page)
     perPage = Number(perPage)
 
@@ -130,7 +130,7 @@ export class BorkHandler {
 
     return Promise.all(tags.map(async tag => {
       return {
-        tag: tag.name,
+        name: tag.name,
         count: await getManager().createQueryBuilder()
           .select('borktags')
           .from('bork_tags', 'borktags')
