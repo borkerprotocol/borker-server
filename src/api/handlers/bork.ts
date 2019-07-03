@@ -6,6 +6,7 @@ import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
 import { BorkType } from 'borker-rs-node'
 import * as superdoge from '../../util/superdoge'
+import { Tag } from '../../db/entities/tag'
 
 @Path('/borks')
 export class BorkHandler {
@@ -109,6 +110,23 @@ export class BorkHandler {
 
       return bork
     }))
+  }
+
+  @Path('/tags')
+  @GET
+  async getTags (
+    @QueryParam('page') page: string | number = 1,
+    @QueryParam('perPage') perPage: string | number = 20,
+  ): Promise<Tag[]> {
+    page = Number(page)
+    perPage = Number(perPage)
+
+    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
+
+    return getRepository(Tag).find({
+      take: perPage,
+      skip: perPage * (page - 1),
+    })
   }
 
   @Path('/referenceId')
