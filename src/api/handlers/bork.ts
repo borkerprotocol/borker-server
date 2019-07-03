@@ -1,6 +1,6 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors, POST } from 'typescript-rest'
 import { Bork } from '../../db/entities/bork'
-import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder } from 'typeorm'
+import { getRepository, IsNull, Brackets, Like, SelectQueryBuilder, getManager } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, ApiBork } from '../../util/types'
@@ -117,16 +117,27 @@ export class BorkHandler {
   async getTags (
     @QueryParam('page') page: string | number = 1,
     @QueryParam('perPage') perPage: string | number = 20,
-  ): Promise<Tag[]> {
+  ): Promise<{ tag: string, count: number }[]> {
     page = Number(page)
     perPage = Number(perPage)
 
     if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
-    return getRepository(Tag).find({
+    const tags = await getRepository(Tag).find({
       take: perPage,
       skip: perPage * (page - 1),
     })
+
+    return Promise.all(tags.map(async tag => {
+      return {
+        tag: tag.name,
+        count: await getManager().createQueryBuilder()
+          .select('borktags')
+          .from('bork_tags', 'borktags')
+          .where('tag_name = :name', { name: tag.name })
+          .getCount(),
+      }
+    }))
   }
 
   @Path('/referenceId')
