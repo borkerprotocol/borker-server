@@ -96,15 +96,13 @@ export class BorkHandler {
         parentTxid = bork.parent.txid
         bork.parent = Object.assign(bork.parent, ...await Promise.all([
           this.iCommentReborkFlag(myAddress, parentTxid),
-          this.getCounts(parentTxid),
-          this.getExtensionCount(bork.parent),
+          this.getCounts(bork.parent),
         ]))
       }
       if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
         bork = Object.assign(bork, ...await Promise.all([
           this.iCommentReborkFlag(myAddress, bork.txid),
-          this.getCounts(bork.txid),
-          this.getExtensionCount(bork),
+          this.getCounts(bork),
         ]))
       }
 
@@ -184,12 +182,12 @@ export class BorkHandler {
     if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(bork.type)) {
       Object.assign(bork, ...await Promise.all([
         this.iCommentReborkFlag(myAddress, bork.txid),
-        this.getCounts(bork.txid),
+        this.getCounts(bork),
       ]))
       if (bork.parent) {
         Object.assign(bork.parent, ...await Promise.all([
           this.iCommentReborkFlag(myAddress, bork.parent.txid),
-          this.getCounts(bork.parent.txid),
+          this.getCounts(bork.parent),
         ]))
       }
     }
@@ -244,7 +242,8 @@ export class BorkHandler {
     }))
   }
 
-  private async getCounts (txid: string): Promise<{
+  private async getCounts (bork: Bork): Promise<{
+    extensionsCount: number
     commentsCount: number
     reborksCount: number
     likesCount: number
@@ -252,18 +251,23 @@ export class BorkHandler {
   }> {
 
     const conditions = {
-      parent: { txid },
+      parent: { txid: bork.txid },
       deletedAt: IsNull(),
     }
 
-    const [commentsCount, reborksCount, likesCount, flagsCount] = await Promise.all([
+    const [extensionsCount, commentsCount, reborksCount, likesCount, flagsCount] = await Promise.all([
+      getRepository(Bork).count({
+        type: BorkType.Extension,
+        parent: { txid: bork.type === BorkType.Extension ? bork.parentTxid! : bork.txid },
+        deletedAt: IsNull(),
+      }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Comment }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Rebork }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Like }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Flag }),
     ])
 
-    return { commentsCount, reborksCount, likesCount, flagsCount }
+    return { extensionsCount, commentsCount, reborksCount, likesCount, flagsCount }
   }
 
   private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
@@ -292,15 +296,5 @@ export class BorkHandler {
       iLike: like ? like.txid : null,
       iFlag: flag ? flag.txid : null,
     }
-  }
-
-  private async getExtensionCount (bork: Bork): Promise<{ extensionsCount: number }> {
-    let txid: string
-    if (bork.type === BorkType.Extension) {
-      txid = bork.parentTxid!
-    } else {
-      txid = bork.txid
-    }
-    return { extensionsCount: 1 + await getRepository(Bork).count({ type: BorkType.Extension, parent: { txid } }) }
   }
 }
