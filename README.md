@@ -38,17 +38,13 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json
-```"superdogeURLs": [], // array of preferred superdoge urls
-"registryURLs": [], // array of prefered registry urls
-"discover": true, // should the node use a registry to discover superdoge nodes?
-"register": true, // should the node register itself with a registry?
+```"externalip": "", // ip/url of prefered superdoge node
 "start": 2776580, // starting block height to begin sync. Cannot be below 2776580 (borker genesis)
 "ssl": { // ssl information to run node over https
   "cert": "",
-  "key": "",
-  "root": "",
-  "bundle": "",
-  "domain": ""
+  "privkey": "",
+  "chain": "",
+  "fullchain": ""
 }
 ```
 ### Install packages
