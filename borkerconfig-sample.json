@@ -3,8 +3,8 @@
   "start": 2742726,
   "ssl": {
     "cert": "",
-    "key": "",
-    "root": "",
-    "bundle": ""
+    "privkey": "",
+    "chain": "",
+    "fullchain": ""
   }
 }

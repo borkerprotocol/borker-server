@@ -39,11 +39,11 @@ Server.ignoreNextMiddlewares(true)
 let ssl = config.ssl
 if (ssl.cert) {
   app = https.createServer({
-    key: fs.readFileSync(ssl.key),
     cert: fs.readFileSync(ssl.cert),
+    key: fs.readFileSync(ssl.privkey),
     ca: [
-      fs.readFileSync(ssl.root),
-      fs.readFileSync(ssl.bundle),
+      fs.readFileSync(ssl.chain),
+      fs.readFileSync(ssl.fullchain),
     ],
   }, app)
 }
