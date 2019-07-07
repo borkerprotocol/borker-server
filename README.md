@@ -39,7 +39,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 
 ### Edit borkerconfig.json
 ```"externalip": "", // ip/url of prefered superdoge node
-"start": 2776580, // starting block height to begin sync. Cannot be below 2776580 (borker genesis)
+"start": 2795597, // starting block height to begin sync. Cannot be below 2795597 (borker genesis)
 "ssl": { // ssl information to run node over https
   "cert": "",
   "privkey": "",
