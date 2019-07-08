@@ -39,7 +39,8 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json
-```"externalip": "", // ip/url of prefered superdoge node
+```
+"externalip": "", // ip or url of prefered superdoge node. If blank, default is localhost
 "start": 2795597, // starting block height to begin sync. Should be below 2795597 (borker genesis)
 "ssl": { // optional ssl information for running your node over https
   "cert": "",
