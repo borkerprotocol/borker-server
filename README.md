@@ -2,10 +2,9 @@
 
 Borker is a first-of-its-kind, Twitter-like microblogging platform built on top of the Dogecoin p2p network. Borker is open-source, decentralized, borderless, permissionless, pseudonymous, immutable, and censorship-resistant.
 
-**Borker-Server serves three purposes:**
-  1. Syncing and parsing blocks from the dogecoin blockchain that conform to the borker protocol spec.
-  2. Persisting borker-specific data synced from the Dogecoin blockchain.
-  3. Serving up a REST API consumable via http.
+**Borker-Server serves two purposes:**
+  1. Syncing and persisting borker-specific data synced from the Dogecoin blockchain.
+  2. Serving up a REST API consumable via http.
 
 ## API Documentation
 ### Users API:
@@ -32,15 +31,15 @@ https://github.com/nodesource/distributions/blob/master/README.md
 
 ```cd borker-server```
 
-### Create borkerconfig.json and ormconfig.json from samples
+### Copy borkerconfig.json and ormconfig.json files from samples
 ```cp borkerconfig-sample.json borkerconfig.json```
 
 ```cp ormconfig-sample.json ormconfig.json```
 
 ### Edit borkerconfig.json
 ```"externalip": "", // ip/url of prefered superdoge node
-"start": 2795597, // starting block height to begin sync. Cannot be below 2795597 (borker genesis)
-"ssl": { // ssl information to run node over https
+"start": 2795597, // starting block height to begin sync. Should be below 2795597 (borker genesis)
+"ssl": { // optional ssl information for running your node over https
   "cert": "",
   "privkey": "",
   "chain": "",
@@ -50,7 +49,7 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ### Install packages
 ```npm install```
 
-### Build Borker
+### Build
 ```npm run build```
 
 ### Start the server and Bork on
