@@ -1,5 +1,5 @@
 import { GET, Path, PathParam, QueryParam, HeaderParam, Errors } from 'typescript-rest'
-import { getRepository, FindManyOptions, Like } from 'typeorm'
+import { getRepository, FindManyOptions, Like, getManager } from 'typeorm'
 import { User } from '../../db/entities/user'
 import { checkBlocked, iFollowBlock } from '../../util/functions'
 import { OrderBy, ApiUser, Utxo } from '../../util/types'
@@ -157,15 +157,16 @@ export class UserHandler {
     followingCount: number
   }> {
 
-    const conditions = {
-      type: BorkType.Follow,
-    }
+    const subquery = 'SELECT COUNT(*) as count FROM (SELECT DISTINCT sender_address, recipient_address FROM borks WHERE type = $1'
 
-    const [followersCount, followingCount] = await Promise.all([
-      getRepository(Bork).count({ ...conditions, recipient: { address } }),
-      getRepository(Bork).count({ ...conditions, sender: { address } }),
+    const [followersQuery, followingQuery] = await Promise.all([
+      getManager().query(subquery + ' AND recipient_address = $2)', [BorkType.Follow, address]),
+      getManager().query(subquery + ' AND sender_address = $2)', [BorkType.Follow, address]),
     ])
 
-    return { followersCount, followingCount }
+    return {
+      followersCount: followersQuery[0].count,
+      followingCount: followingQuery[0].count,
+    }
   }
 }

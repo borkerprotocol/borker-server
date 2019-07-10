@@ -254,8 +254,9 @@ export class BorkHandler {
       parent: { txid: bork.txid },
       deletedAt: IsNull(),
     }
+    const query = `SELECT COUNT(*) as count FROM (SELECT DISTINCT sender_address, parent_txid FROM borks WHERE type = $1 AND parent_txid = $2)`
 
-    const [extensionsCount, commentsCount, reborksCount, likesCount, flagsCount] = await Promise.all([
+    const [extensionsCount, commentsCount, reborksCount, likesQuery, flagsQuery] = await Promise.all([
       getRepository(Bork).count({
         type: BorkType.Extension,
         parent: { txid: bork.type === BorkType.Extension ? bork.parentTxid! : bork.txid },
@@ -263,11 +264,17 @@ export class BorkHandler {
       }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Comment }),
       getRepository(Bork).count({ ...conditions, type: BorkType.Rebork }),
-      getRepository(Bork).count({ ...conditions, type: BorkType.Like }),
-      getRepository(Bork).count({ ...conditions, type: BorkType.Flag }),
+      getManager().query(query, [BorkType.Like, bork.txid]),
+      getManager().query(query, [BorkType.Flag, bork.txid]),
     ])
 
-    return { extensionsCount, commentsCount, reborksCount, likesCount, flagsCount }
+    return {
+      extensionsCount,
+      commentsCount,
+      reborksCount,
+      likesCount: likesQuery[0].count,
+      flagsCount: flagsQuery[0].count,
+    }
   }
 
   private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
