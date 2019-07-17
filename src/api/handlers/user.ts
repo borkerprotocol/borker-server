@@ -16,14 +16,9 @@ export class UserHandler {
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('name') name?: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
-    @QueryParam('page') page: string | number = 1,
-    @QueryParam('perPage') perPage: string | number = 20,
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
-
-    page = Number(page)
-    perPage = Number(perPage)
-
-    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     let options: FindManyOptions<User> = {
       take: perPage,
@@ -96,14 +91,9 @@ export class UserHandler {
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
-    @QueryParam('page') page: string | number = 1,
-    @QueryParam('perPage') perPage: string | number = 20,
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
-
-    page = Number(page)
-    perPage = Number(perPage)
-
-    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`

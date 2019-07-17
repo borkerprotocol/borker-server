@@ -21,14 +21,9 @@ export class BorkHandler {
     @QueryParam('tags') tags?: string[],
     @QueryParam('order') order: OrderBy<Bork> = { createdAt: 'DESC' },
     @QueryParam('filterFollowing') filterFollowing: boolean = false,
-    @QueryParam('page') page: string | number = 1,
-    @QueryParam('perPage') perPage: string | number = 20,
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiBork[]> {
-
-    page = Number(page)
-    perPage = Number(perPage)
-
-    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
       const newkey = `borks.${key}`
@@ -113,13 +108,9 @@ export class BorkHandler {
   @Path('/tags')
   @GET
   async getTags (
-    @QueryParam('page') page: string | number = 1,
-    @QueryParam('perPage') perPage: string | number = 20,
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
   ): Promise<{ name: string, count: number }[]> {
-    page = Number(page)
-    perPage = Number(perPage)
-
-    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     const tags = await getRepository(Tag).find({
       take: perPage,
@@ -202,14 +193,9 @@ export class BorkHandler {
     @PathParam('txid') txid: string,
     @QueryParam('type') type: BorkType,
     @QueryParam('order') order: OrderBy<User> = { createdAt: 'ASC' },
-    @QueryParam('page') page: string | number = 1,
-    @QueryParam('perPage') perPage: string | number = 20,
+    @QueryParam('page') page: number = 1,
+    @QueryParam('perPage') perPage: number = 20,
   ): Promise<ApiUser[]> {
-
-    page = Number(page)
-    perPage = Number(perPage)
-
-    if (perPage > 40) { throw new Errors.BadRequestError('perPage limit is 40') }
 
     Object.keys(order).forEach(key => {
       const newkey = `users.${key}`
