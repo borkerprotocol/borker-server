@@ -4,7 +4,7 @@ import { TxBlock } from './db/entities/tx-block'
 import { User } from './db/entities/user'
 import { Tag } from './db/entities/tag'
 import { Orphan } from './db/entities/orphan'
-import { eitherPartyBlocked, NullToUndefined } from './util/functions'
+import { eitherPartyBlocked, NullToUndefined, isPost } from './util/functions'
 import { OrphanBork } from './util/types'
 import { BorkType, BorkTxData } from 'borker-rs-node'
 import * as borkerlib from 'borker-rs-node'
@@ -201,7 +201,7 @@ async function createBork (manager: EntityManager, bork: BorkTxData & { parentTx
     .onConflict('(txid) DO NOTHING')
     .execute()
 
-  if ([BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(type)) {
+  if (isPost(type)) {
     await Promise.all([
       // attach tags
       attachTags(manager, txid, tags),

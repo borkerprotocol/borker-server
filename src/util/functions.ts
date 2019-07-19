@@ -54,3 +54,7 @@ export async function iFollowBlock (myAddress: string, address: string): Promise
 
   return { iFollow, iBlock }
 }
+
+export function isPost (type: BorkType): boolean {
+  return [BorkType.Bork, BorkType.Comment, BorkType.Rebork, BorkType.Extension].includes(type)
+}
