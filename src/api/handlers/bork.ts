@@ -55,7 +55,6 @@ export class BorkHandler {
       .take(perPage)
       .skip(perPage * (page - 1))
 
-
     if (types) {
       query.andWhere('borks.type IN (:...types)', { types })
     }
@@ -67,14 +66,14 @@ export class BorkHandler {
     if (filterFollowing) {
       const follows = (qb: SelectQueryBuilder<Bork>) => qb.subQuery()
         .select('recipient_address')
-        .from(Bork, 'borks')
+        .from(Bork, 'follows')
         .where('type = :followType', { followType: BorkType.Follow })
         .andWhere('sender_address = :myAddress')
         .getQuery()
 
       query.andWhere(new Brackets(qb => {
         qb.where(qb2 => `borks.sender_address IN ${follows(qb2)}`)
-        .orWhere('borks.sender_address = :myAddress', { myAddress })
+          .orWhere('borks.sender_address = :myAddress')
       }))
     }
 
@@ -91,6 +90,7 @@ export class BorkHandler {
     }
 
     const borks = await query
+      .setParameter('myAddress', myAddress)
       .getMany()
 
     return Promise.all(borks.map(async bork => await this.withCountsAndRelatives(bork, myAddress)))
