@@ -162,11 +162,13 @@ export class BorkHandler {
     }
 
     if (consolidate && bork.type !== BorkType.Extension) {
-      const moreContent = (await getRepository(Bork).query(
+      const res: { parent_txid: string, content: string } | undefined = (await getRepository(Bork).query(
         `SELECT parent_txid, group_concat(content, '') as content FROM borks WHERE parent_txid = $1 AND type = $2 GROUP BY parent_txid`,
         [bork.txid, BorkType.Extension],
-      ))[0].content
-      bork.content = bork.content! + moreContent
+      ))[0]
+      if (res) {
+        bork.content = bork.content! + res.content
+      }
     }
 
     let parentOptions: FindOneOptions<Bork> = { relations: ['sender'] }
