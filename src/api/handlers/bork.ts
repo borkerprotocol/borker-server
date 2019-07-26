@@ -161,7 +161,7 @@ export class BorkHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    if (consolidate && bork.type !== BorkType.Extension) {
+    if (consolidate && isPost(bork.type)) {
       const res: { parent_txid: string, content: string } | undefined = (await getRepository(Bork).query(
         `SELECT parent_txid, group_concat(content, '') as content FROM borks WHERE parent_txid = $1 AND type = $2 GROUP BY parent_txid`,
         [bork.txid, BorkType.Extension],
