@@ -150,6 +150,7 @@ export class BorkHandler {
   async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
+    @QueryParam('consolidate') consolidate: boolean = true,
   ): Promise<ApiBork> {
 
     const bork = await getRepository(Bork).findOne(txid, { relations: ['sender'] })
@@ -160,18 +161,26 @@ export class BorkHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    let options: FindOneOptions<Bork> = { relations: ['sender'] }
+    if (consolidate && bork.type !== BorkType.Extension) {
+      const moreContent = (await getRepository(Bork).query(
+        `SELECT parent_txid, group_concat(content, '') as content FROM borks WHERE parent_txid = $1 AND type = $2 GROUP BY parent_txid`,
+        [bork.txid, BorkType.Extension],
+      ))[0].content
+      bork.content = bork.content! + moreContent
+    }
+
+    let parentOptions: FindOneOptions<Bork> = { relations: ['sender'] }
     if (bork.type === BorkType.Extension && bork.position! > 1) {
-      options.where = {
+      parentOptions.where = {
         parent: { txid: bork.parentTxid! },
         type: BorkType.Extension,
         position: bork.position! - 1,
       }
     } else {
-      options.where = { txid: bork.parentTxid! }
+      parentOptions.where = { txid: bork.parentTxid! }
     }
 
-    bork.parent = await getRepository(Bork).findOne(options) || null
+    bork.parent = await getRepository(Bork).findOne(parentOptions) || null
 
     return this.withCountsAndRelatives(bork, myAddress)
   }
