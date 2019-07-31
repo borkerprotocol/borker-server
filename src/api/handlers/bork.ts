@@ -91,7 +91,7 @@ export class BorkHandler {
       if (filterFollowing) {
         query.andWhere(qb => {
           const subQuery = follows(qb)
-          return `(borks.type NOT IN ('${BorkType.Like}', '${BorkType.Flag}') OR (parent.sender NOT IN ${subQuery} AND parent.sender <> :myAddress AND bork.sender <> :myAddress))`
+          return `(borks.type NOT IN ('${BorkType.Like}', '${BorkType.Flag}') OR (parent.sender NOT IN ${subQuery} AND parent.sender <> :myAddress AND borks.sender_address <> :myAddress))`
         })
       }
     }
