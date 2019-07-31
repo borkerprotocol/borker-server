@@ -63,8 +63,9 @@ export class BorkHandler {
       query.andWhere('borks.txid IN (SELECT bork_txid FROM bork_tags WHERE tag_name IN (:...tags))', { tags })
     }
 
+    let follows
     if (filterFollowing) {
-      const follows = (qb: SelectQueryBuilder<Bork>) => qb.subQuery()
+      follows = (qb: SelectQueryBuilder<Bork>) => qb.subQuery()
         .select('recipient_address')
         .from(Bork, 'follows')
         .where('type = :followType', { followType: BorkType.Follow })
