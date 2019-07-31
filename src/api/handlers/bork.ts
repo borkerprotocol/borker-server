@@ -75,11 +75,6 @@ export class BorkHandler {
         qb.where(qb2 => `borks.sender_address IN ${follows(qb2)}`)
           .orWhere('borks.sender_address = :myAddress')
       }))
-
-      query.andWhere(qb => {
-        const subQuery = follows(qb)
-        return `(borks.type NOT IN ('${BorkType.Like}', '${BorkType.Flag}') OR (borks.recipient_address NOT IN ${subQuery} AND borks.recipient_address <> :myAddress))`
-      })
     }
 
     if (senderAddress) {
@@ -92,6 +87,12 @@ export class BorkHandler {
       query
         .leftJoinAndSelect('borks.parent', 'parent')
         .leftJoinAndSelect('parent.sender', 'parentSender')
+      if (filterFollowing) {
+        query.andWhere(qb => {
+          const subQuery = follows(qb)
+          return `(borks.type NOT IN ('${BorkType.Like}', '${BorkType.Flag}') OR (parentSender NOT IN ${subQuery} AND parentSender <> :myAddress))`
+        })
+      }
     }
 
     const borks = await query
