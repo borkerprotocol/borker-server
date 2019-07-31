@@ -135,7 +135,6 @@ export class BorkHandler {
       moreThanOne = (await getRepository(Bork).count({ where: { sender: { address }, txid: Like(ref) } })) > 1
       i++
     } while (moreThanOne)
-    console.log('**REF**', ref)
 
     return { referenceId: ref }
   }
