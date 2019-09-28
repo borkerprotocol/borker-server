@@ -55,5 +55,8 @@ https://github.com/nodesource/distributions/blob/master/README.md
 ### Build
 ```npm run build```
 
+### Get latest DB dump (optional)
+If you don't want to sync from Borker genesis (which can take a while...), you can get the latest DB in the `releases` tab.
+
 ### Start the server and Bork on
 ```npm start```
