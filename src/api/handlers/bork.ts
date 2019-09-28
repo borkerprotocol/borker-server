@@ -139,7 +139,7 @@ export class BorkHandler {
 
     do {
       ref = txid.substr(0, i * 2)
-      moreThanOne = (await getRepository(Bork).count({ where: { sender: { address }, txid: Like(ref) } })) > 1
+      moreThanOne = (await getRepository(Bork).count({ where: { sender: { address }, txid: Like(`${ref}%`) } })) > 1
       i++
     } while (moreThanOne)
 
