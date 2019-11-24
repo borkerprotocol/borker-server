@@ -39,19 +39,6 @@ export async function getBlockHashes (startingHeight: number): Promise<{ height:
     .map(s => { return { height: s.id, hash: s.result } }) as { height: number, hash: string }[]
 }
 
-export async function getBlock (hash: string): Promise<string> {
-  const res = await rpcRequest({
-    method: 'POST',
-    url: '/',
-    body: {
-      method: 'getblock',
-      params: [hash, false],
-    },
-  }) as rpcResponse
-
-  return res.result!
-}
-
 export async function getBlocks (heightHashes: { height: number, hash: string }[]): Promise<string[]> {
   const bodies = heightHashes.map(heightHash => {
     return { method: 'getblock', id: heightHash.height, params: [heightHash.hash, false] }

@@ -20,7 +20,7 @@ export async function sync () {
   try {
     height = await getBlockHeight()
   } catch (e) {
-    console.error('Error in setBlockHeight(): ', e.message)
+    console.error('Error in getBlockHeight(): ', e.message)
     return setTimeout(sync, 4000)
   }
 
