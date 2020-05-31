@@ -64,7 +64,7 @@ export class UserHandler {
     return {
       ...user,
       ...counts,
-      ...iStuff,
+      ...iStuff!,
     }
   }
 
@@ -134,7 +134,7 @@ export class UserHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    return Promise.all(users.map(async user => {
+    return Promise.all(users!.map(async user => {
       return {
         ...user,
         ...await iFollowBlock(myAddress, user.address),
