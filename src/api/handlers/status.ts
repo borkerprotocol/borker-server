@@ -10,7 +10,7 @@ export class StatusHandler {
 
   @Path('/')
   @GET
-  async getStatus(): Promise<number> {
+  async getStatus (): Promise<number> {
     return RPD.count
   }
 }

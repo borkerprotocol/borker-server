@@ -13,7 +13,7 @@ import * as superdoge from './util/superdoge'
 
 let cleaning: number | null
 
-export async function sync() {
+export async function sync () {
   console.log('Begin sync')
   let height: number
 
@@ -34,7 +34,7 @@ export async function sync() {
   }
 }
 
-async function getBlockHeight(): Promise<number> {
+async function getBlockHeight (): Promise<number> {
   let block = await getManager().findOne(TxBlock, { order: { height: 'DESC' } })
   let keepGoing = true
   do {
@@ -58,7 +58,7 @@ async function getBlockHeight(): Promise<number> {
   return block ? block.height + 1 : config.start
 }
 
-async function processBlocks(height: number): Promise<void> {
+async function processBlocks (height: number): Promise<void> {
   const heightHashes = await superdoge.getBlockHashes(height)
   if (!heightHashes.length) { return }
   const blocks = await superdoge.getBlocks(heightHashes)
@@ -71,7 +71,7 @@ async function processBlocks(height: number): Promise<void> {
   await processBlocks(height + blocks.length)
 }
 
-async function processBlock(height: number, hash: string, borks: BorkTxData[]): Promise<void> {
+async function processBlock (height: number, hash: string, borks: BorkTxData[]): Promise<void> {
   console.log(height)
 
   await getManager().transaction(async manager => {
@@ -88,7 +88,7 @@ async function processBlock(height: number, hash: string, borks: BorkTxData[]): 
   }
 }
 
-async function createTxBlock(manager: EntityManager, height: number, hash: string): Promise<void> {
+async function createTxBlock (manager: EntityManager, height: number, hash: string): Promise<void> {
   await manager.createQueryBuilder()
     .insert()
     .into(TxBlock)
@@ -101,13 +101,13 @@ async function createTxBlock(manager: EntityManager, height: number, hash: strin
     .execute()
 }
 
-async function processBorks(manager: EntityManager, height: number, borks: BorkTxData[]): Promise<void> {
+async function processBorks (manager: EntityManager, height: number, borks: BorkTxData[]): Promise<void> {
   for (let bork of borks) {
     await processBork(manager, height, bork)
   }
 }
 
-async function processBork(manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
+async function processBork (manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
 
   const { time, type, senderAddress } = bork
 
@@ -161,7 +161,7 @@ async function processBork(manager: EntityManager, height: number, bork: BorkTxD
   }
 }
 
-async function handleProfileUpdate(manager: EntityManager, bork: BorkTxData): Promise<void> {
+async function handleProfileUpdate (manager: EntityManager, bork: BorkTxData): Promise<void> {
   const { type, content, senderAddress } = bork
 
   let params: Partial<User> = { }
@@ -180,7 +180,7 @@ async function handleProfileUpdate(manager: EntityManager, bork: BorkTxData): Pr
   await manager.update(User, senderAddress, params)
 }
 
-async function createBork(manager: EntityManager, bork: BorkTxData & { parentTxid?: string }): Promise<void> {
+async function createBork (manager: EntityManager, bork: BorkTxData & { parentTxid?: string }): Promise<void> {
   const { txid, time, nonce, position, type, content, senderAddress, recipientAddress, parentTxid, mentions, tags } = bork
 
   // create bork
@@ -211,7 +211,7 @@ async function createBork(manager: EntityManager, bork: BorkTxData & { parentTxi
   }
 }
 
-async function handleCommentReborkLike(manager: EntityManager, bork: BorkTxData): Promise<void> {
+async function handleCommentReborkLike (manager: EntityManager, bork: BorkTxData): Promise<void> {
   const { referenceId, senderAddress, recipientAddress } = bork
 
   // return if either party blocked
@@ -236,7 +236,7 @@ async function handleCommentReborkLike(manager: EntityManager, bork: BorkTxData)
   })
 }
 
-async function handleExtension(manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
+async function handleExtension (manager: EntityManager, height: number, bork: BorkTxData): Promise<void> {
   const { txid, time, nonce, position, content, senderAddress, mentions, tags } = bork
 
   // find parent
@@ -276,7 +276,7 @@ async function handleExtension(manager: EntityManager, height: number, bork: Bor
   }
 }
 
-async function handleFlag(manager: EntityManager, bork: BorkTxData): Promise<void> {
+async function handleFlag (manager: EntityManager, bork: BorkTxData): Promise<void> {
   const { referenceId, senderAddress } = bork
 
   // find parent from content
@@ -298,7 +298,7 @@ async function handleFlag(manager: EntityManager, bork: BorkTxData): Promise<voi
   })
 }
 
-async function handleFollowBlock(manager: EntityManager, bork: BorkTxData): Promise<void> {
+async function handleFollowBlock (manager: EntityManager, bork: BorkTxData): Promise<void> {
 
   // find recipient from content
   const recipient = await manager.findOne(User, bork.content!)
@@ -312,7 +312,7 @@ async function handleFollowBlock(manager: EntityManager, bork: BorkTxData): Prom
   })
 }
 
-async function handleDelete(manager: EntityManager, tx: BorkTxData): Promise<void> {
+async function handleDelete (manager: EntityManager, tx: BorkTxData): Promise<void> {
   const { time, referenceId, senderAddress } = tx
 
   // find parent from sender and content
@@ -361,7 +361,7 @@ async function handleDelete(manager: EntityManager, tx: BorkTxData): Promise<voi
   }
 }
 
-async function cleanupOrphans(): Promise<void> {
+async function cleanupOrphans (): Promise<void> {
 
   try {
     // find orphans
@@ -401,7 +401,7 @@ async function cleanupOrphans(): Promise<void> {
   cleaning = null
 }
 
-async function attachTags(manager: EntityManager, txid: string, tags: string[]): Promise<void> {
+async function attachTags (manager: EntityManager, txid: string, tags: string[]): Promise<void> {
 
   const borkTags: {
     tag_name: string,
@@ -430,7 +430,7 @@ async function attachTags(manager: EntityManager, txid: string, tags: string[]):
   }
 }
 
-async function attachMentions(manager: EntityManager, txid: string, unverified: string[]): Promise<void> {
+async function attachMentions (manager: EntityManager, txid: string, unverified: string[]): Promise<void> {
 
   const mentions: {
     user_address: string,
@@ -455,6 +455,6 @@ async function attachMentions(manager: EntityManager, txid: string, unverified: 
   }
 }
 
-function getCutoff(now: Date): Date {
+function getCutoff (now: Date): Date {
   return new Date(now.setHours(now.getHours() - 24))
 }

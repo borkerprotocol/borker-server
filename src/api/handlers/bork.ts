@@ -13,7 +13,7 @@ export class BorkHandler {
 
   @Path('/')
   @GET
-  async index(
+  async index (
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('senderAddress') senderAddress?: string,
     @QueryParam('parentTxid') parentTxid?: string,
@@ -105,7 +105,7 @@ export class BorkHandler {
 
   @Path('/tags')
   @GET
-  async getTags(
+  async getTags (
     @QueryParam('page') page: number = 1,
     @QueryParam('perPage') perPage: number = 20,
   ): Promise<{ name: string, count: number }[]> {
@@ -129,7 +129,7 @@ export class BorkHandler {
 
   @Path('/referenceId')
   @GET
-  async getReferenceId(
+  async getReferenceId (
     @QueryParam('txid') txid: string,
     @QueryParam('address') address: string,
   ): Promise<{ referenceId: string }> {
@@ -148,13 +148,13 @@ export class BorkHandler {
 
   @Path('/broadcast')
   @POST
-  async broadcast(txs: string[]): Promise<string[]> {
+  async broadcast (txs: string[]): Promise<string[]> {
     return superdoge.broadcast(txs)
   }
 
   @Path('/:txid')
   @GET
-  async get(
+  async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('consolidate') consolidate: boolean = true,
@@ -196,7 +196,7 @@ export class BorkHandler {
 
   @Path('/:txid/users')
   @GET
-  async indexBorkUsers(
+  async indexBorkUsers (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('txid') txid: string,
     @QueryParam('type') type: BorkType,
@@ -236,7 +236,7 @@ export class BorkHandler {
     }))
   }
 
-  private async withCountsAndRelatives(bork: Bork, myAddress: string): Promise<ApiBork> {
+  private async withCountsAndRelatives (bork: Bork, myAddress: string): Promise<ApiBork> {
     if (isPost(bork.type)) {
       Object.assign(bork, ...await Promise.all([
         this.iCommentReborkFlag(myAddress, bork.txid),
@@ -253,7 +253,7 @@ export class BorkHandler {
     return bork
   }
 
-  private async getCounts(bork: Bork): Promise<{
+  private async getCounts (bork: Bork): Promise<{
     extensionsCount: number
     commentsCount: number
     reborksCount: number
@@ -288,7 +288,7 @@ export class BorkHandler {
     }
   }
 
-  private async iCommentReborkFlag(myAddress: string, txid: string): Promise<{
+  private async iCommentReborkFlag (myAddress: string, txid: string): Promise<{
     iComment: string | null
     iRebork: string | null
     iLike: string | null

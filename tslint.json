@@ -8,6 +8,7 @@
       true,
       "single"
     ],
+    "space-before-function-paren": true,
     "no-unused-variable": true,
     "no-trailing-whitespace": true,
 		"whitespace": [

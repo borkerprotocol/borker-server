@@ -12,7 +12,7 @@ export class UserHandler {
 
   @Path('/')
   @GET
-  async index(
+  async index (
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('name') name?: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
@@ -40,7 +40,7 @@ export class UserHandler {
 
   @Path('/:address')
   @GET
-  async get(
+  async get (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
@@ -86,7 +86,7 @@ export class UserHandler {
 
   @Path('/:address/users')
   @GET
-  async indexFollows(
+  async indexFollows (
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
@@ -142,7 +142,7 @@ export class UserHandler {
     }))
   }
 
-  private async getCounts(address: string): Promise<{
+  private async getCounts (address: string): Promise<{
     followersCount: number
     followingCount: number
   }> {
