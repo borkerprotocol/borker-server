@@ -2,7 +2,7 @@ import * as rp from 'request-promise'
 import { Utxo, RequestOpts, rpcResponse } from './types'
 import * as config from '../../borkerconfig.json'
 
-export async function getBlockHash (height: number): Promise<string> {
+export async function getBlockHash(height: number): Promise<string> {
   const res = await rpcRequest({
     method: 'POST',
     url: '/',
@@ -15,7 +15,7 @@ export async function getBlockHash (height: number): Promise<string> {
   return res.result!
 }
 
-export async function getBlockHashes (startingHeight: number): Promise<{ height: number, hash: string }[]> {
+export async function getBlockHashes(startingHeight: number): Promise<{ height: number, hash: string }[]> {
   let bodies: {
     method: 'getblockhash'
     id: number,
@@ -39,7 +39,7 @@ export async function getBlockHashes (startingHeight: number): Promise<{ height:
     .map(s => { return { height: s.id, hash: s.result } }) as { height: number, hash: string }[]
 }
 
-export async function getBlocks (heightHashes: { height: number, hash: string }[]): Promise<string[]> {
+export async function getBlocks(heightHashes: { height: number, hash: string }[]): Promise<string[]> {
   const bodies = heightHashes.map(heightHash => {
     return { method: 'getblock', id: heightHash.height, params: [heightHash.hash, false] }
   })
@@ -55,7 +55,7 @@ export async function getBlocks (heightHashes: { height: number, hash: string }[
     .map(r => r.result!)
 }
 
-export async function broadcast (txs: string[]): Promise<string[]> {
+export async function broadcast(txs: string[]): Promise<string[]> {
   let txids: string[] = []
   for (let tx of txs) {
     const res = await rpcRequest({
@@ -73,33 +73,33 @@ export async function broadcast (txs: string[]): Promise<string[]> {
   return txids
 }
 
-export async function getBalance (address: string): Promise<number> {
-  return request({
-    method: 'GET',
-    url: '/balance',
-    qs: { address },
-  })
-}
+// export async function getBalance(address: string): Promise<number> {
+//   return request({
+//     method: 'GET',
+//     url: '/balance',
+//     qs: { address },
+//   })
+// }
 
-export async function getUtxos (address: string, amount: number, minimum?: number): Promise<Utxo[]> {
-  return request({
-    method: 'GET',
-    url: '/utxos',
-    qs: { address, amount, minimum },
-  })
-}
+// export async function getUtxos(address: string, amount: number, minimum?: number): Promise<Utxo[]> {
+//   return request({
+//     method: 'GET',
+//     url: '/utxos',
+//     qs: { address, amount, minimum },
+//   })
+// }
 
 // private
 
-async function rpcRequest (options: RequestOpts): Promise<rpcResponse | rpcResponse[]> {
+async function rpcRequest(options: RequestOpts): Promise<rpcResponse | rpcResponse[]> {
   return request(options)
 }
 
-async function request (options: RequestOpts): Promise<any> {
+async function request(options: RequestOpts): Promise<any> {
   return rp({
     ...options,
     json: true,
-    url: (config.externalip || 'http://localhost:11021') + options.url,
-    headers: { 'content-type': 'application/json' },
+    url: (config.externalip || 'http://localhost:8332') + options.url,
+    headers: { 'content-type': 'application/json', 'Authorization': `Basic ${btoa(`${config.rpcuser}:${config.rpcpassword}`)}` },
   })
 }

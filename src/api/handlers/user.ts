@@ -12,7 +12,7 @@ export class UserHandler {
 
   @Path('/')
   @GET
-  async index (
+  async index(
     @HeaderParam('my-address') myAddress: string,
     @QueryParam('name') name?: string,
     @QueryParam('order') order: OrderBy<User> = { birthBlock: 'ASC' },
@@ -40,7 +40,7 @@ export class UserHandler {
 
   @Path('/:address')
   @GET
-  async get (
+  async get(
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
   ): Promise<ApiUser> {
@@ -64,29 +64,29 @@ export class UserHandler {
     return {
       ...user,
       ...counts,
-      ...iStuff,
+      ...iStuff!,
     }
   }
 
-  @Path('/:address/balance')
-  @GET
-  async getBalance (@PathParam('address') address: string): Promise<number> {
-    return superdoge.getBalance(address)
-  }
+  // @Path('/:address/balance')
+  // @GET
+  // async getBalance (@PathParam('address') address: string): Promise<number> {
+  //   return superdoge.getBalance(address)
+  // }
 
-  @Path('/:address/utxos')
-  @GET
-  async getUtxos (
-    @PathParam('address') address: string,
-    @QueryParam('amount') amount: number,
-    @QueryParam('minimum') minimum: number = 100,
-  ): Promise<Utxo[]> {
-    return superdoge.getUtxos(address, amount, minimum)
-  }
+  // @Path('/:address/utxos')
+  // @GET
+  // async getUtxos (
+  //   @PathParam('address') address: string,
+  //   @QueryParam('amount') amount: number,
+  //   @QueryParam('minimum') minimum: number = 100,
+  // ): Promise<Utxo[]> {
+  //   return superdoge.getUtxos(address, amount, minimum)
+  // }
 
   @Path('/:address/users')
   @GET
-  async indexFollows (
+  async indexFollows(
     @HeaderParam('my-address') myAddress: string,
     @PathParam('address') address: string,
     @QueryParam('type') type: 'following' | 'followers',
@@ -134,7 +134,7 @@ export class UserHandler {
       throw new Errors.NotAcceptableError('blocked')
     }
 
-    return Promise.all(users.map(async user => {
+    return Promise.all(users!.map(async user => {
       return {
         ...user,
         ...await iFollowBlock(myAddress, user.address),
@@ -142,7 +142,7 @@ export class UserHandler {
     }))
   }
 
-  private async getCounts (address: string): Promise<{
+  private async getCounts(address: string): Promise<{
     followersCount: number
     followingCount: number
   }> {

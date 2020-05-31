@@ -6,5 +6,7 @@
     "privkey": "",
     "chain": "",
     "fullchain": ""
-  }
+  },
+  "rpcuser": "bitcoin",
+  "rpcpassword": "local321"
 }
