@@ -164,7 +164,7 @@ async function processBork(manager: EntityManager, height: number, bork: BorkTxD
 async function handleProfileUpdate(manager: EntityManager, bork: BorkTxData): Promise<void> {
   const { type, content, senderAddress } = bork
 
-  let params: Partial<User> = {}
+  let params: Partial<User> = { }
   switch (type) {
     case BorkType.SetName:
       params.name = NullToUndefined(content) // content || undefined (instead?)

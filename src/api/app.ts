@@ -24,7 +24,7 @@ router.use('/', (req, res, next) => {
     return res.status(403).json({ error: 'missing "my-address" header' })
   }
   const perPage = req.query['perPage']
-  if (perPage && perPage > 40) {
+  if (Number(perPage) && Number(perPage) > 40) {
     return res.status(400).json({ error: 'perPage limit is 40' })
   }
   next()

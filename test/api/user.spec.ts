@@ -55,7 +55,7 @@ describe('User Handler', async () => {
   describe('GET /users/:address/users', async () => {
 
     it('returns all followers', async () => {
-      const users = await userHandler.indexFollows(user1.address, user1.address, 'followers')
+      const users = await userHandler.indexFollows(user1.address, user1.address, 'following')
 
       assert.equal(users.length, 1)
       assert.equal(users[0].address, user2.address)
