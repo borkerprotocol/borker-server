@@ -19,7 +19,7 @@
 	"dependencies": {
 		"borker-rs-node": "0.1.30",
 		"cors": "^2.8.0",
-		"express": "^4.17.0",
+		"express": "^4.17.3",
 		"reflect-metadata": "^0.1.0",
 		"request": "^2.88.2",
 		"request-promise": "^4.2.0",
